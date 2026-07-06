@@ -1,0 +1,1749 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
+import { toast } from 'sonner';
+
+import HeroEditorDrawer from '@/components/website/HeroEditorDrawer';
+import FeaturesEditorDrawer from '@/components/website/FeaturesEditorDrawer';
+import CollectionsEditorDrawer from '@/components/website/CollectionsEditorDrawer';
+import OurStoryEditorDrawer from '@/components/website/OurStoryEditorDrawer';
+import BestSellersEditorDrawer from '@/components/website/BestSellersEditorDrawer';
+import HomeBackgroundEditorDrawer from '@/components/website/HomeBackgroundEditorDrawer';
+import HomePagePreviewCard from '@/components/website/HomePagePreviewCard';
+import HomePageSectionsCard from '@/components/website/HomePageSectionsCard';
+import { homeSections } from '@/components/website/homePageBuilderData';
+import { useAppContext } from '@/context/AppContext';
+import {
+    createFeature,
+    deleteFeature,
+    fetchFeatures,
+    updateFeature,
+} from '@/pages/Features/api';
+import { createHero, fetchHeroes, updateHero } from '@/pages/Hero/api';
+import { fetchCollections, updateCollections } from '@/pages/Website/collectionsApi';
+import { fetchProducts } from '@/pages/Product/api';
+import { fetchOurStory, updateOurStory } from '@/pages/Website/ourStoryApi';
+import {
+    fetchHomeBackgroundSection,
+    updateHomeBackgroundSection,
+} from '@/pages/Website/homeBackgroundApi';
+import {
+    fetchBestSellersSectionSettings,
+    updateBestSellersSectionSettings,
+} from '@/pages/Website/bestSellersApi';
+
+const defaultHeroDraft = {
+    title: 'Custom apparel solutions',
+    description:
+        'Elevate your brand with premium customized apparel designed for teams, events, corporate identity, and professional wear.',
+    image_url: '/uploads/heroes/images/hero1.webp',
+    video_url: '',
+    title_display_mode: 'double',
+    title_font_size: 124,
+    title_font_family: 'instrument-sans',
+    description_font_size: 24,
+    description_font_family: 'instrument-sans',
+    text_offset_x: 0,
+    text_offset_y: 0,
+    title_offset_x: 0,
+    title_offset_y: 0,
+    description_offset_x: 0,
+    description_offset_y: 0,
+    button_offset_x: 0,
+    button_offset_y: 0,
+    button_enabled: true,
+    button_url: '/shop',
+};
+
+const defaultFeaturesDraft = {
+    columns: 4,
+    titleFontFamily: 'instrument-sans',
+    titleFontSize: 28,
+    descriptionFontFamily: 'instrument-sans',
+    descriptionFontSize: 16,
+    items: [
+        {
+            title: 'Premium Quality Materials',
+            short_description: 'Durable fabrics designed for comfort and long-term use.',
+            icon: null,
+            icon_url: null,
+        },
+        {
+            title: 'Personalized Products',
+            short_description: 'Customize designs, colors, and details to match your identity.',
+            icon: null,
+            icon_url: null,
+        },
+        {
+            title: 'Bulk Order Solutions',
+            short_description: 'Efficient production and scalable solutions for businesses of all sizes.',
+            icon: null,
+            icon_url: null,
+        },
+       
+    ],
+};
+
+const defaultCollectionsDraft = {
+    title: 'Collections',
+    titlePosition: 'left',
+    itemsPerView: 4,
+    items: [
+        {
+            name: 'New Arrivals',
+            slug: 'new-arrivals',
+            image: '/uploads/heroes/images/hero1.webp',
+            productIds: [],
+        },
+        {
+            name: 'Essentials',
+            slug: 'essentials',
+            image: '/uploads/heroes/images/hero1.webp',
+            productIds: [],
+        },
+        {
+            name: 'Tees',
+            slug: 'tees',
+            image: '/uploads/heroes/images/hero1.webp',
+            productIds: [],
+        },
+        {
+            name: 'Bottoms',
+            slug: 'bottoms',
+            image: '/uploads/heroes/images/hero1.webp',
+            productIds: [],
+        },
+    ],
+};
+
+const defaultOurStoryDraft = {
+    story_image: '/uploads/heroes/images/hero1.webp',
+    story_logo: '',
+    section_title: 'Our Story',
+    title: 'Heritage, Refined.',
+    description:
+        '1971Co blends cultural identity with modern streetwear discipline - built to feel confident without shouting. Our pieces are designed for those who value restraint over noise, quality over quantity.',
+    background_color: '#c8b89a',
+    show_image: true,
+    show_text: true,
+};
+
+const defaultHomeBackgroundDraft = {
+    items: [
+        {
+            id: 1,
+            image: '/uploads/heroes/images/hero1.webp',
+            title: 'Built For Everyday Confidence',
+            description:
+                'Elevated essentials with clean cuts, durable fabrics, and a refined streetwear silhouette.',
+            button_text: 'Explore The Drop',
+            button_url: '/shop',
+            show_button: true,
+            sort_order: 0,
+            image_file: null,
+        },
+    ],
+};
+
+function moveItemByKeys(items, sourceKey, targetKey, keySelector) {
+    const sourceIndex = items.findIndex((item) => keySelector(item) === sourceKey);
+    const targetIndex = items.findIndex((item) => keySelector(item) === targetKey);
+
+    if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) {
+        return items;
+    }
+
+    const next = [...items];
+    const [moved] = next.splice(sourceIndex, 1);
+    next.splice(targetIndex, 0, moved);
+    return next;
+}
+
+export default function HomePageBuilder() {
+    const { setPageTitle } = useAppContext();
+    const iframeRef = useRef(null);
+    const [sections, setSections] = useState(homeSections);
+    const [isHeroDrawerOpen, setIsHeroDrawerOpen] = useState(false);
+    const [isFeaturesDrawerOpen, setIsFeaturesDrawerOpen] = useState(false);
+    const [isCollectionsDrawerOpen, setIsCollectionsDrawerOpen] = useState(false);
+    const [isOurStoryDrawerOpen, setIsOurStoryDrawerOpen] = useState(false);
+    const [isHomeBackgroundDrawerOpen, setIsHomeBackgroundDrawerOpen] = useState(false);
+    const [isBestSellersDrawerOpen, setIsBestSellersDrawerOpen] = useState(false);
+    const [activeFeatureItemIndex, setActiveFeatureItemIndex] = useState(null);
+    const [activeCollectionItemIndex, setActiveCollectionItemIndex] = useState(null);
+    const [activeBestSellerItemIndex, setActiveBestSellerItemIndex] = useState(null);
+    const [activeHeroConfigPart, setActiveHeroConfigPart] = useState('all');
+    const [selectedSectionKey, setSelectedSectionKey] = useState(null);
+    const [heroDraft, setHeroDraft] = useState(defaultHeroDraft);
+    const [featuresDraft, setFeaturesDraft] = useState(defaultFeaturesDraft);
+    const [collectionsDraft, setCollectionsDraft] = useState(defaultCollectionsDraft);
+    const [collectionProductOptions, setCollectionProductOptions] = useState([]);
+    const [ourStoryDraft, setOurStoryDraft] = useState(defaultOurStoryDraft);
+    const [homeBackgroundDraft, setHomeBackgroundDraft] = useState(defaultHomeBackgroundDraft);
+    const [heroUploadFiles, setHeroUploadFiles] = useState({ image: null, video: null });
+    const [ourStoryUploadFiles, setOurStoryUploadFiles] = useState({
+        story_image: null,
+        story_logo: null,
+    });
+    const [homeBackgroundUploadFiles, setHomeBackgroundUploadFiles] = useState({});
+    const [activeHeroId, setActiveHeroId] = useState(null);
+    const [isSavingHero, setIsSavingHero] = useState(false);
+    const [isSavingFeatures, setIsSavingFeatures] = useState(false);
+    const [isSavingCollections, setIsSavingCollections] = useState(false);
+    const [isSavingOurStory, setIsSavingOurStory] = useState(false);
+    const [isSavingHomeBackground, setIsSavingHomeBackground] = useState(false);
+    const [bestSellersDraft, setBestSellersDraft] = useState({
+        title: 'Best Sellers',
+        position: 3,
+    });
+    const [isSavingBestSellers, setIsSavingBestSellers] = useState(false);
+
+    function applyBestSellersConfigToSections(currentSections, config) {
+        const next = currentSections.map((section) =>
+            section.key === 'best-sellers'
+                ? { ...section, title: config.title || 'Best Sellers' }
+                : section,
+        );
+
+        const sourceIndex = next.findIndex((section) => section.key === 'best-sellers');
+        if (sourceIndex < 0) {
+            return next;
+        }
+
+        const [bestSellersSection] = next.splice(sourceIndex, 1);
+        const targetIndex = Math.max(0, Math.min(next.length, Number(config.position || 3) - 1));
+        next.splice(targetIndex, 0, bestSellersSection);
+        return next;
+    }
+
+    useEffect(() => {
+        setPageTitle('Home Page Builder');
+    }, [setPageTitle]);
+
+    useEffect(() => {
+        let ignore = false;
+
+        async function loadBestSellersDraft() {
+            try {
+                const payload = await fetchBestSellersSectionSettings();
+                if (!payload || ignore) {
+                    return;
+                }
+
+                const normalized = {
+                    title: String(payload.title || 'Best Sellers').trim() || 'Best Sellers',
+                    position: Math.max(1, Math.min(6, Number(payload.position) || 3)),
+                };
+
+                setBestSellersDraft(normalized);
+                setSections((previous) => applyBestSellersConfigToSections(previous, normalized));
+            } catch {
+                // Keep default draft when best sellers settings fail to load.
+            }
+        }
+
+        loadBestSellersDraft();
+
+        async function loadActiveHero() {
+            try {
+                const heroes = await fetchHeroes();
+                const latestHero = Array.isArray(heroes) && heroes.length > 0 ? heroes[0] : null;
+                if (!latestHero || ignore) {
+                    return;
+                }
+
+                setActiveHeroId(latestHero.id);
+                setHeroDraft((previous) => ({
+                    ...previous,
+                    title: latestHero.title || previous.title,
+                    description: latestHero.description || previous.description,
+                    title_display_mode: latestHero.title_display_mode || previous.title_display_mode,
+                    title_font_size: latestHero.title_font_size ?? previous.title_font_size,
+                    title_font_family: latestHero.title_font_family || previous.title_font_family,
+                    description_font_size:
+                        latestHero.description_font_size ?? previous.description_font_size,
+                    description_font_family:
+                        latestHero.description_font_family || previous.description_font_family,
+                    text_offset_x: latestHero.text_offset_x ?? previous.text_offset_x,
+                    text_offset_y: latestHero.text_offset_y ?? previous.text_offset_y,
+                    title_offset_x: latestHero.title_offset_x ?? previous.title_offset_x,
+                    title_offset_y: latestHero.title_offset_y ?? previous.title_offset_y,
+                    description_offset_x:
+                        latestHero.description_offset_x ?? previous.description_offset_x,
+                    description_offset_y:
+                        latestHero.description_offset_y ?? previous.description_offset_y,
+                    button_offset_x: latestHero.button_offset_x ?? previous.button_offset_x,
+                    button_offset_y: latestHero.button_offset_y ?? previous.button_offset_y,
+                    button_enabled: latestHero.button_enabled ?? previous.button_enabled,
+                    button_url: latestHero.button_url || previous.button_url,
+                    image_url: latestHero.image_url || previous.image_url,
+                    video_url: latestHero.video_url || previous.video_url,
+                }));
+                setHeroUploadFiles({ image: null, video: null });
+            } catch {
+                // Keep default draft when hero list fails to load.
+            }
+        }
+
+        loadActiveHero();
+
+        return () => {
+            ignore = true;
+        };
+    }, []);
+
+    useEffect(() => {
+        let ignore = false;
+
+        async function loadHomeBackgroundDraft() {
+            try {
+                const payload = await fetchHomeBackgroundSection();
+                if (!payload || ignore) {
+                    return;
+                }
+
+                setHomeBackgroundDraft((previous) => ({
+                    ...previous,
+                    items:
+                        Array.isArray(payload.items) && payload.items.length > 0
+                            ? payload.items.map((item, index) => ({
+                                  id: item.id || index + 1,
+                                  image: item.image || '/uploads/heroes/images/hero1.webp',
+                                  title: item.title || '',
+                                  description: item.description || '',
+                                  button_text: item.button_text || 'Explore The Drop',
+                                  button_url: item.button_url || '/shop',
+                                  show_button:
+                                      typeof item.show_button === 'boolean'
+                                          ? item.show_button
+                                          : true,
+                                  sort_order: Number.isInteger(item.sort_order)
+                                      ? item.sort_order
+                                      : index,
+                                  image_file: null,
+                              }))
+                            : previous.items,
+                }));
+            } catch {
+                // Keep default draft when background section fails to load.
+            }
+        }
+
+        loadHomeBackgroundDraft();
+
+        return () => {
+            ignore = true;
+        };
+    }, []);
+
+    useEffect(() => {
+        let ignore = false;
+
+        async function loadOurStoryDraft() {
+            try {
+                const payload = await fetchOurStory();
+                if (!payload || ignore) {
+                    return;
+                }
+
+                setOurStoryDraft((previous) => ({
+                    ...previous,
+                    story_image: payload.story_image || previous.story_image,
+                    story_logo: payload.story_logo || previous.story_logo,
+                    section_title: payload.section_title || previous.section_title,
+                    title: payload.title || previous.title,
+                    description: payload.description ?? previous.description,
+                    background_color: payload.background_color || previous.background_color,
+                    show_image:
+                        typeof payload.show_image === 'boolean'
+                            ? payload.show_image
+                            : previous.show_image,
+                    show_text:
+                        typeof payload.show_text === 'boolean'
+                            ? payload.show_text
+                            : previous.show_text,
+                }));
+            } catch {
+                // Keep default draft when our story fails to load.
+            }
+        }
+
+        loadOurStoryDraft();
+
+        return () => {
+            ignore = true;
+        };
+    }, []);
+
+    useEffect(() => {
+        let ignore = false;
+
+        async function loadCollectionsDraft() {
+            try {
+                const payload = await fetchCollections();
+                if (!payload || ignore) {
+                    return;
+                }
+
+                const section = payload.section || {};
+                const items = Array.isArray(payload.items)
+                    ? [...payload.items].sort((a, b) => {
+                          const aOrder = Number.isFinite(Number(a.sort_order))
+                              ? Number(a.sort_order)
+                              : Number(a.id || 0);
+                          const bOrder = Number.isFinite(Number(b.sort_order))
+                              ? Number(b.sort_order)
+                              : Number(b.id || 0);
+                          return aOrder - bOrder;
+                      })
+                    : [];
+
+                setCollectionsDraft((previous) => ({
+                    ...previous,
+                    title: section.title || previous.title,
+                    titlePosition: section.titlePosition || previous.titlePosition,
+                    itemsPerView:
+                        Number(section.itemsPerView) > 0
+                            ? Number(section.itemsPerView)
+                            : previous.itemsPerView,
+                    items:
+                        items.length > 0
+                            ? items.map((item, index) => ({
+                                  id: item.id,
+                                  name: item.name || previous.items[index]?.name || '',
+                                  slug: item.slug || previous.items[index]?.slug || '',
+                                  image: item.image || previous.items[index]?.image || '',
+                                                                    productIds: Array.isArray(item.productIds)
+                                                                            ? item.productIds
+                                            .map((value) => Number(value))
+                                            .filter((value) => Number.isInteger(value) && value > 0)
+                                                                            : Array.isArray(item.product_ids)
+                                                                                ? item.product_ids
+                                                                                            .map((value) => Number(value))
+                                                                                            .filter((value) => Number.isInteger(value) && value > 0)
+                                      : previous.items[index]?.productIds || [],
+                              }))
+                            : previous.items,
+                }));
+            } catch {
+                // Keep default draft when collections fail to load.
+            }
+        }
+
+        loadCollectionsDraft();
+
+        return () => {
+            ignore = true;
+        };
+    }, []);
+
+    useEffect(() => {
+        let ignore = false;
+
+        async function loadCollectionProductOptions() {
+            try {
+                const products = await fetchProducts();
+
+                if (!ignore) {
+                    setCollectionProductOptions(
+                        (Array.isArray(products) ? products : [])
+                            .map((item) => ({
+                                id: Number(item?.id),
+                                name: String(item?.name || '').trim(),
+                            }))
+                            .filter((item) => Number.isInteger(item.id) && item.id > 0 && item.name)
+                            .sort((a, b) => a.name.localeCompare(b.name)),
+                    );
+                }
+            } catch {
+                if (!ignore) {
+                    setCollectionProductOptions([]);
+                }
+            }
+        }
+
+        loadCollectionProductOptions();
+
+        return () => {
+            ignore = true;
+        };
+    }, []);
+
+    useEffect(() => {
+        let ignore = false;
+
+        async function loadFeaturesDraft() {
+            try {
+                const features = await fetchFeatures();
+                if (!Array.isArray(features) || features.length === 0 || ignore) {
+                    return;
+                }
+
+                const ordered = [...features].sort((a, b) => {
+                    const aOrder = Number.isFinite(Number(a.sort_order)) ? Number(a.sort_order) : Number(a.id);
+                    const bOrder = Number.isFinite(Number(b.sort_order)) ? Number(b.sort_order) : Number(b.id);
+                    return aOrder - bOrder;
+                });
+
+                const first = ordered[0] || {};
+
+                setFeaturesDraft((previous) => ({
+                    ...previous,
+                    columns:
+                        Number(first.columns_per_view) > 0
+                            ? Number(first.columns_per_view)
+                            : previous.columns,
+                    titleFontFamily: first.title_font_family || previous.titleFontFamily,
+                    titleFontSize: first.title_font_size ?? previous.titleFontSize,
+                    descriptionFontFamily:
+                        first.description_font_family || previous.descriptionFontFamily,
+                    descriptionFontSize:
+                        first.description_font_size ?? previous.descriptionFontSize,
+                    items: ordered.map((feature, index) => ({
+                        id: feature.id,
+                        title: feature.title || previous.items[index]?.title || '',
+                        short_description:
+                            feature.short_description ||
+                            feature.description ||
+                            previous.items[index]?.short_description ||
+                            '',
+                        icon: feature.icon || previous.items[index]?.icon || null,
+                        icon_url: feature.icon_url || previous.items[index]?.icon_url || null,
+                    })),
+                }));
+            } catch {
+                // Keep default draft when feature list fails to load.
+            }
+        }
+
+        loadFeaturesDraft();
+
+        return () => {
+            ignore = true;
+        };
+    }, []);
+
+    const publishHeroDraft = useCallback(() => {
+        const target = iframeRef.current?.contentWindow;
+        if (!target) {
+            return;
+        }
+
+        target.postMessage(
+            {
+                type: 'TIMLESS_PAGE_BUILDER_HERO_PREVIEW_UPDATE',
+                payload: heroDraft,
+            },
+            window.location.origin
+        );
+    }, [heroDraft]);
+
+    useEffect(() => {
+        publishHeroDraft();
+    }, [publishHeroDraft]);
+
+    const publishSectionsLayout = useCallback(() => {
+        const target = iframeRef.current?.contentWindow;
+        if (!target) {
+            return;
+        }
+
+        const activeSections = sections.filter((section) => section.status === 'active');
+
+        target.postMessage(
+            {
+                type: 'TIMLESS_PAGE_BUILDER_HOME_LAYOUT_UPDATE',
+                payload: {
+                    order: activeSections.map((section) => section.key),
+                },
+            },
+            window.location.origin
+        );
+    }, [sections]);
+
+    useEffect(() => {
+        publishSectionsLayout();
+    }, [publishSectionsLayout]);
+
+    const publishPreviewMode = useCallback(() => {
+        const target = iframeRef.current?.contentWindow;
+        if (!target) {
+            return;
+        }
+
+        target.postMessage(
+            {
+                type: 'TIMLESS_PAGE_BUILDER_PREVIEW_MODE',
+                payload: { enabled: true },
+            },
+            window.location.origin
+        );
+    }, []);
+
+    const publishFeaturesDraft = useCallback(() => {
+        const target = iframeRef.current?.contentWindow;
+        if (!target) {
+            return;
+        }
+
+        target.postMessage(
+            {
+                type: 'TIMLESS_PAGE_BUILDER_FEATURES_PREVIEW_UPDATE',
+                payload: featuresDraft,
+            },
+            window.location.origin
+        );
+    }, [featuresDraft]);
+
+    useEffect(() => {
+        publishFeaturesDraft();
+    }, [publishFeaturesDraft]);
+
+    const publishCollectionsDraft = useCallback(() => {
+        const target = iframeRef.current?.contentWindow;
+        if (!target) {
+            return;
+        }
+
+        target.postMessage(
+            {
+                type: 'TIMLESS_PAGE_BUILDER_COLLECTIONS_PREVIEW_UPDATE',
+                payload: collectionsDraft,
+            },
+            window.location.origin
+        );
+    }, [collectionsDraft]);
+
+    useEffect(() => {
+        publishCollectionsDraft();
+    }, [publishCollectionsDraft]);
+
+    const publishOurStoryDraft = useCallback(() => {
+        const target = iframeRef.current?.contentWindow;
+        if (!target) {
+            return;
+        }
+
+        target.postMessage(
+            {
+                type: 'TIMLESS_PAGE_BUILDER_OUR_STORY_PREVIEW_UPDATE',
+                payload: ourStoryDraft,
+            },
+            window.location.origin
+        );
+    }, [ourStoryDraft]);
+
+    useEffect(() => {
+        publishOurStoryDraft();
+    }, [publishOurStoryDraft]);
+
+    const publishHomeBackgroundDraft = useCallback(() => {
+        const target = iframeRef.current?.contentWindow;
+        if (!target) {
+            return;
+        }
+
+        target.postMessage(
+            {
+                type: 'TIMLESS_PAGE_BUILDER_HOME_BACKGROUND_PREVIEW_UPDATE',
+                payload: homeBackgroundDraft,
+            },
+            window.location.origin
+        );
+    }, [homeBackgroundDraft]);
+
+    useEffect(() => {
+        publishHomeBackgroundDraft();
+    }, [publishHomeBackgroundDraft]);
+
+    const navigatePreviewToSection = useCallback((sectionKey) => {
+        const target = iframeRef.current?.contentWindow;
+        if (!target) {
+            return;
+        }
+
+        target.postMessage(
+            {
+                type: 'TIMLESS_PAGE_BUILDER_SCROLL_TO_SECTION',
+                payload: { sectionKey },
+            },
+            window.location.origin
+        );
+    }, []);
+
+    useEffect(() => {
+        function handlePreviewMessage(event) {
+            if (event.origin !== window.location.origin) {
+                return;
+            }
+
+            const data = event.data;
+            if (!data) {
+                return;
+            }
+
+            if (data.type === 'TIMLESS_PAGE_BUILDER_HERO_PART_SELECTED') {
+                const part = data.payload?.part;
+                if (part === 'title' || part === 'description' || part === 'button') {
+                    setActiveHeroConfigPart(part);
+                    setSelectedSectionKey('hero');
+                    setIsHeroDrawerOpen(true);
+                    setIsFeaturesDrawerOpen(false);
+                    setIsCollectionsDrawerOpen(false);
+                    setIsOurStoryDrawerOpen(false);
+                    setIsHomeBackgroundDrawerOpen(false);
+                    setIsBestSellersDrawerOpen(false);
+                }
+                return;
+            }
+
+            if (data.type === 'TIMLESS_PAGE_BUILDER_FEATURES_SECTION_SELECTED') {
+                const incomingIndex = data.payload?.itemIndex;
+                const parsedIndex = Number.isInteger(incomingIndex)
+                    ? incomingIndex
+                    : Number.isFinite(Number(incomingIndex))
+                      ? Number(incomingIndex)
+                      : null;
+
+                setSelectedSectionKey('features');
+                setActiveFeatureItemIndex(
+                    parsedIndex !== null && parsedIndex >= 0 ? parsedIndex : null
+                );
+                setIsFeaturesDrawerOpen(true);
+                setIsHeroDrawerOpen(false);
+                setIsCollectionsDrawerOpen(false);
+                setIsOurStoryDrawerOpen(false);
+                setIsHomeBackgroundDrawerOpen(false);
+                setIsBestSellersDrawerOpen(false);
+                return;
+            }
+
+            if (data.type === 'TIMLESS_PAGE_BUILDER_COLLECTIONS_SECTION_SELECTED') {
+                const incomingIndex = data.payload?.itemIndex;
+                const parsedIndex = Number.isInteger(incomingIndex)
+                    ? incomingIndex
+                    : Number.isFinite(Number(incomingIndex))
+                      ? Number(incomingIndex)
+                      : null;
+
+                setSelectedSectionKey('collections');
+                setActiveCollectionItemIndex(
+                    parsedIndex !== null && parsedIndex >= 0 ? parsedIndex : null
+                );
+                setIsCollectionsDrawerOpen(true);
+                setIsHeroDrawerOpen(false);
+                setIsFeaturesDrawerOpen(false);
+                setIsOurStoryDrawerOpen(false);
+                setIsHomeBackgroundDrawerOpen(false);
+                setIsBestSellersDrawerOpen(false);
+                return;
+            }
+
+            if (data.type === 'TIMLESS_PAGE_BUILDER_OUR_STORY_SECTION_SELECTED') {
+                setSelectedSectionKey('our-story');
+                setIsOurStoryDrawerOpen(true);
+                setIsHeroDrawerOpen(false);
+                setIsFeaturesDrawerOpen(false);
+                setIsCollectionsDrawerOpen(false);
+                setIsHomeBackgroundDrawerOpen(false);
+                setIsBestSellersDrawerOpen(false);
+                return;
+            }
+
+            if (data.type === 'TIMLESS_PAGE_BUILDER_HOME_BACKGROUND_SECTION_SELECTED') {
+                setSelectedSectionKey('home-background-image');
+                setIsHomeBackgroundDrawerOpen(true);
+                setIsHeroDrawerOpen(false);
+                setIsFeaturesDrawerOpen(false);
+                setIsCollectionsDrawerOpen(false);
+                setIsOurStoryDrawerOpen(false);
+                setIsBestSellersDrawerOpen(false);
+                return;
+            }
+
+            if (data.type === 'TIMLESS_PAGE_BUILDER_BEST_SELLERS_SECTION_SELECTED') {
+                const incomingIndex = data.payload?.itemIndex;
+                const parsedIndex = Number.isInteger(incomingIndex)
+                    ? incomingIndex
+                    : Number.isFinite(Number(incomingIndex))
+                      ? Number(incomingIndex)
+                      : null;
+
+                setSelectedSectionKey('best-sellers');
+                setActiveBestSellerItemIndex(
+                    parsedIndex !== null && parsedIndex >= 0 ? parsedIndex : null
+                );
+                setIsBestSellersDrawerOpen(true);
+                setIsHeroDrawerOpen(false);
+                setIsFeaturesDrawerOpen(false);
+                setIsCollectionsDrawerOpen(false);
+                setIsOurStoryDrawerOpen(false);
+                setIsHomeBackgroundDrawerOpen(false);
+                return;
+            }
+
+            if (data.type === 'TIMLESS_PAGE_BUILDER_COLLECTIONS_ITEMS_REORDERED') {
+                const sourceIndex = Number(data.payload?.sourceIndex);
+                const targetIndex = Number(data.payload?.targetIndex);
+
+                if (
+                    Number.isInteger(sourceIndex) &&
+                    Number.isInteger(targetIndex) &&
+                    sourceIndex >= 0 &&
+                    targetIndex >= 0
+                ) {
+                    handleCollectionReorder(sourceIndex, targetIndex);
+                }
+                return;
+            }
+
+            if (data.type === 'TIMLESS_PAGE_BUILDER_REQUEST_COLLECTIONS_PREVIEW') {
+                if (event.source && typeof event.source.postMessage === 'function') {
+                    event.source.postMessage(
+                        {
+                            type: 'TIMLESS_PAGE_BUILDER_COLLECTIONS_PREVIEW_UPDATE',
+                            payload: collectionsDraft,
+                        },
+                        window.location.origin
+                    );
+                }
+                return;
+            }
+
+            if (data.type === 'TIMLESS_PAGE_BUILDER_REQUEST_OUR_STORY_PREVIEW') {
+                if (event.source && typeof event.source.postMessage === 'function') {
+                    event.source.postMessage(
+                        {
+                            type: 'TIMLESS_PAGE_BUILDER_OUR_STORY_PREVIEW_UPDATE',
+                            payload: ourStoryDraft,
+                        },
+                        window.location.origin
+                    );
+                }
+                return;
+            }
+
+            if (data.type === 'TIMLESS_PAGE_BUILDER_REQUEST_HOME_BACKGROUND_PREVIEW') {
+                if (event.source && typeof event.source.postMessage === 'function') {
+                    event.source.postMessage(
+                        {
+                            type: 'TIMLESS_PAGE_BUILDER_HOME_BACKGROUND_PREVIEW_UPDATE',
+                            payload: homeBackgroundDraft,
+                        },
+                        window.location.origin
+                    );
+                }
+                return;
+            }
+
+            if (data.type === 'TIMLESS_PAGE_BUILDER_FEATURES_ITEMS_REORDERED') {
+                const sourceIndex = Number(data.payload?.sourceIndex);
+                const targetIndex = Number(data.payload?.targetIndex);
+
+                if (
+                    Number.isInteger(sourceIndex) &&
+                    Number.isInteger(targetIndex) &&
+                    sourceIndex >= 0 &&
+                    targetIndex >= 0
+                ) {
+                    handleFeatureReorder(sourceIndex, targetIndex);
+                }
+                return;
+            }
+
+            if (data.type !== 'TIMLESS_PAGE_BUILDER_HERO_POSITION_CHANGED') {
+                return;
+            }
+
+            const payload = data.payload || {};
+            const fields = [
+                'text_offset_x',
+                'text_offset_y',
+                'title_offset_x',
+                'title_offset_y',
+                'description_offset_x',
+                'description_offset_y',
+                'button_offset_x',
+                'button_offset_y',
+            ];
+
+            setHeroDraft((previous) => ({
+                ...previous,
+                ...fields.reduce((accumulator, field) => {
+                    if (Object.prototype.hasOwnProperty.call(payload, field)) {
+                        accumulator[field] = Number(payload[field]) || 0;
+                    }
+                    return accumulator;
+                }, {}),
+            }));
+        }
+
+        window.addEventListener('message', handlePreviewMessage);
+        return () => {
+            window.removeEventListener('message', handlePreviewMessage);
+        };
+    }, [collectionsDraft, homeBackgroundDraft, ourStoryDraft]);
+
+    function handleEditSection(section) {
+        setSelectedSectionKey(section.key);
+        if (section.key === 'hero') {
+            setActiveHeroConfigPart('all');
+            setIsHeroDrawerOpen(true);
+            setIsFeaturesDrawerOpen(false);
+            setIsCollectionsDrawerOpen(false);
+            setIsOurStoryDrawerOpen(false);
+            setIsHomeBackgroundDrawerOpen(false);
+            setIsBestSellersDrawerOpen(false);
+            return;
+        }
+
+        if (section.key === 'features') {
+            setActiveFeatureItemIndex(null);
+            setIsFeaturesDrawerOpen(true);
+            setIsHeroDrawerOpen(false);
+            setIsCollectionsDrawerOpen(false);
+            setIsOurStoryDrawerOpen(false);
+            setIsHomeBackgroundDrawerOpen(false);
+            setIsBestSellersDrawerOpen(false);
+            return;
+        }
+
+        if (section.key === 'collections') {
+            setActiveCollectionItemIndex(null);
+            setIsCollectionsDrawerOpen(true);
+            setIsHeroDrawerOpen(false);
+            setIsFeaturesDrawerOpen(false);
+            setIsOurStoryDrawerOpen(false);
+            setIsHomeBackgroundDrawerOpen(false);
+            setIsBestSellersDrawerOpen(false);
+            return;
+        }
+
+        if (section.key === 'best-sellers') {
+            setActiveBestSellerItemIndex(null);
+            setIsBestSellersDrawerOpen(true);
+            setIsHeroDrawerOpen(false);
+            setIsFeaturesDrawerOpen(false);
+            setIsCollectionsDrawerOpen(false);
+            setIsOurStoryDrawerOpen(false);
+            setIsHomeBackgroundDrawerOpen(false);
+            return;
+        }
+
+        if (section.key === 'home-background-image') {
+            setIsHomeBackgroundDrawerOpen(true);
+            setIsHeroDrawerOpen(false);
+            setIsFeaturesDrawerOpen(false);
+            setIsCollectionsDrawerOpen(false);
+            setIsOurStoryDrawerOpen(false);
+            setIsBestSellersDrawerOpen(false);
+            return;
+        }
+
+        if (section.key === 'our-story') {
+            setIsOurStoryDrawerOpen(true);
+            setIsHeroDrawerOpen(false);
+            setIsFeaturesDrawerOpen(false);
+            setIsCollectionsDrawerOpen(false);
+            setIsHomeBackgroundDrawerOpen(false);
+            setIsBestSellersDrawerOpen(false);
+            return;
+        }
+
+        setIsHeroDrawerOpen(false);
+        setIsFeaturesDrawerOpen(false);
+        setIsCollectionsDrawerOpen(false);
+        setIsOurStoryDrawerOpen(false);
+        setIsHomeBackgroundDrawerOpen(false);
+        setIsBestSellersDrawerOpen(false);
+    }
+
+    function handleReorderSection(sourceKey, targetKey) {
+        setSections((previous) => moveItemByKeys(previous, sourceKey, targetKey, (section) => section.key));
+    }
+
+    async function handleSaveBestSellersToDatabase() {
+        setIsSavingBestSellers(true);
+
+        try {
+            const payload = await updateBestSellersSectionSettings({
+                title: String(bestSellersDraft.title || '').trim() || 'Best Sellers',
+                position: Math.max(1, Math.min(6, Number(bestSellersDraft.position) || 3)),
+            });
+
+            const normalized = {
+                title: String(payload?.title || 'Best Sellers').trim() || 'Best Sellers',
+                position: Math.max(1, Math.min(6, Number(payload?.position) || 3)),
+            };
+
+            setBestSellersDraft(normalized);
+            setSections((previous) => applyBestSellersConfigToSections(previous, normalized));
+
+            const target = iframeRef.current?.contentWindow;
+            if (target) {
+                target.postMessage(
+                    {
+                        type: 'TIMLESS_PAGE_BUILDER_BEST_SELLERS_SECTION_CONFIG_UPDATE',
+                        payload: normalized,
+                    },
+                    window.location.origin,
+                );
+            }
+
+            toast.success('Best Sellers settings saved to database.', {
+                style: { color: '#16a34a' },
+            });
+        } catch (error) {
+            toast.error(error?.message || 'Failed to save Best Sellers settings.', {
+                style: { color: '#dc2626' },
+            });
+        } finally {
+            setIsSavingBestSellers(false);
+        }
+    }
+
+    function handleToggleSectionStatus(sectionKey) {
+        setSections((previous) =>
+            previous.map((section) =>
+                section.key === sectionKey
+                    ? {
+                          ...section,
+                          status: section.status === 'active' ? 'inactive' : 'active',
+                      }
+                    : section
+            )
+        );
+    }
+
+    function handleHeroDraftChange(field, value) {
+        setHeroDraft((previous) => ({
+            ...previous,
+            [field]: value,
+        }));
+    }
+
+    function handleUploadHeroAsset(field, fileField) {
+        return (file) => {
+            setHeroUploadFiles((previous) => ({
+                ...previous,
+                [fileField]: file,
+            }));
+
+            const reader = new FileReader();
+            reader.onload = () => {
+                if (typeof reader.result === 'string') {
+                    handleHeroDraftChange(field, reader.result);
+                }
+            };
+            reader.readAsDataURL(file);
+        };
+    }
+
+    function handleFeaturesFieldChange(field, value) {
+        setFeaturesDraft((previous) => ({ ...previous, [field]: value }));
+    }
+
+    function handleFeatureItemChange(index, field, value) {
+        setFeaturesDraft((previous) => ({
+            ...previous,
+            items: previous.items.map((item, itemIndex) =>
+                itemIndex === index ? { ...item, [field]: value } : item
+            ),
+        }));
+    }
+
+    function handleFeatureReorder(sourceIndex, targetIndex) {
+        setFeaturesDraft((previous) => {
+            const nextItems = [...previous.items];
+            const [moved] = nextItems.splice(sourceIndex, 1);
+            nextItems.splice(targetIndex, 0, moved);
+            return { ...previous, items: nextItems };
+        });
+    }
+
+    function handleFeatureIconUpload(index, file) {
+        const reader = new FileReader();
+        reader.onload = () => {
+            if (typeof reader.result === 'string') {
+                setFeaturesDraft((previous) => ({
+                    ...previous,
+                    items: previous.items.map((item, itemIndex) =>
+                        itemIndex === index
+                            ? {
+                                  ...item,
+                                  // Send the real File to backend; keep data URL only for local preview.
+                                  icon: file,
+                                  icon_url: reader.result,
+                              }
+                            : item
+                    ),
+                }));
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function handleAddFeatureItem() {
+        setFeaturesDraft((previous) => ({
+            ...previous,
+            items: [
+                ...previous.items,
+                {
+                    title: `Feature ${previous.items.length + 1}`,
+                    short_description: 'Add short description',
+                    icon: null,
+                    icon_url: null,
+                },
+            ],
+        }));
+    }
+
+    function handleRemoveFeatureItem(index) {
+        setFeaturesDraft((previous) => {
+            if (previous.items.length <= 1) {
+                return previous;
+            }
+
+            return {
+                ...previous,
+                items: previous.items.filter((_, itemIndex) => itemIndex !== index),
+            };
+        });
+
+        setActiveFeatureItemIndex((previous) => {
+            if (!Number.isInteger(previous)) {
+                return previous;
+            }
+            if (previous === index) {
+                return null;
+            }
+            if (previous > index) {
+                return previous - 1;
+            }
+            return previous;
+        });
+    }
+
+    function handleCollectionsFieldChange(field, value) {
+        setCollectionsDraft((previous) => ({ ...previous, [field]: value }));
+    }
+
+    function handleCollectionItemChange(index, field, value) {
+        setCollectionsDraft((previous) => ({
+            ...previous,
+            items: previous.items.map((item, itemIndex) =>
+                itemIndex === index ? { ...item, [field]: value } : item
+            ),
+        }));
+    }
+
+    function handleCollectionImageUpload(index, file) {
+        const reader = new FileReader();
+        reader.onload = () => {
+            if (typeof reader.result === 'string') {
+                handleCollectionItemChange(index, 'image', reader.result);
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function handleAddCollectionItem() {
+        setCollectionsDraft((previous) => ({
+            ...previous,
+            items: [
+                ...previous.items,
+                {
+                    name: `Collection ${previous.items.length + 1}`,
+                    slug: `collection-${previous.items.length + 1}`,
+                    image: '/uploads/heroes/images/hero1.webp',
+                    productIds: [],
+                },
+            ],
+        }));
+    }
+
+    function handleRemoveCollectionItem(index) {
+        setCollectionsDraft((previous) => {
+            if (previous.items.length <= 1) {
+                return previous;
+            }
+
+            return {
+                ...previous,
+                items: previous.items.filter((_, itemIndex) => itemIndex !== index),
+            };
+        });
+
+        setActiveCollectionItemIndex((previous) => {
+            if (!Number.isInteger(previous)) {
+                return previous;
+            }
+            if (previous === index) {
+                return null;
+            }
+            if (previous > index) {
+                return previous - 1;
+            }
+            return previous;
+        });
+    }
+
+    function handleCollectionReorder(sourceIndex, targetIndex) {
+        setCollectionsDraft((previous) => {
+            const nextItems = [...previous.items];
+            const [moved] = nextItems.splice(sourceIndex, 1);
+            nextItems.splice(targetIndex, 0, moved);
+            return { ...previous, items: nextItems };
+        });
+    }
+
+    function handleOurStoryFieldChange(field, value) {
+        setOurStoryDraft((previous) => ({
+            ...previous,
+            [field]: value,
+        }));
+    }
+
+    function handleOurStoryAssetUpload(field) {
+        return (file) => {
+            setOurStoryUploadFiles((previous) => ({
+                ...previous,
+                [field]: file,
+            }));
+
+            const reader = new FileReader();
+            reader.onload = () => {
+                if (typeof reader.result === 'string') {
+                    handleOurStoryFieldChange(field, reader.result);
+                }
+            };
+            reader.readAsDataURL(file);
+        };
+    }
+
+    function handleHomeBackgroundItemChange(index, field, value) {
+        setHomeBackgroundDraft((previous) => ({
+            ...previous,
+            items: previous.items.map((item, itemIndex) =>
+                itemIndex === index
+                    ? {
+                          ...item,
+                          [field]: value,
+                      }
+                    : item
+            ),
+        }));
+    }
+
+    function handleHomeBackgroundImageUpload(index, file) {
+        setHomeBackgroundUploadFiles((previous) => ({
+            ...previous,
+            [index]: file,
+        }));
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            if (typeof reader.result === 'string') {
+                setHomeBackgroundDraft((previous) => ({
+                    ...previous,
+                    items: previous.items.map((item, itemIndex) =>
+                        itemIndex === index
+                            ? {
+                                  ...item,
+                                  image: reader.result,
+                                  image_file: file,
+                              }
+                            : item
+                    ),
+                }));
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function handleAddHomeBackgroundItem() {
+        setHomeBackgroundDraft((previous) => ({
+            ...previous,
+            items: [
+                ...previous.items,
+                {
+                    id: previous.items.length + 1,
+                    image: '/uploads/heroes/images/hero1.webp',
+                    title: 'New slide title',
+                    description: 'Add your slide description.',
+                    button_text: 'Explore The Drop',
+                    button_url: '/shop',
+                    show_button: true,
+                    sort_order: previous.items.length,
+                    image_file: null,
+                },
+            ],
+        }));
+    }
+
+    function handleRemoveHomeBackgroundItem(index) {
+        setHomeBackgroundDraft((previous) => {
+            if (previous.items.length <= 1) {
+                return previous;
+            }
+
+            return {
+                ...previous,
+                items: previous.items
+                    .filter((_, itemIndex) => itemIndex !== index)
+                    .map((item, itemIndex) => ({
+                        ...item,
+                        sort_order: itemIndex,
+                    })),
+            };
+        });
+
+        setHomeBackgroundUploadFiles((previous) => {
+            const next = { ...previous };
+            delete next[index];
+
+            const remapped = {};
+            Object.entries(next).forEach(([key, value]) => {
+                const numericKey = Number(key);
+                remapped[numericKey > index ? numericKey - 1 : numericKey] = value;
+            });
+
+            return remapped;
+        });
+    }
+
+    async function handleSaveHomeBackgroundToDatabase() {
+        setIsSavingHomeBackground(true);
+
+        try {
+            const payload = {
+                items: homeBackgroundDraft.items.map((item, index) => ({
+                    id: item.id || index + 1,
+                    image: item.image || '',
+                    title: item.title || '',
+                    description: item.description || '',
+                    button_text: item.button_text || 'Explore The Drop',
+                    button_url: item.button_url || '/shop',
+                    show_button: Boolean(item.show_button),
+                    sort_order: index,
+                    image_file: homeBackgroundUploadFiles[index] || item.image_file || null,
+                })),
+            };
+
+            const saved = await updateHomeBackgroundSection(payload);
+            if (saved) {
+                setHomeBackgroundDraft((previous) => ({
+                    ...previous,
+                    items:
+                        Array.isArray(saved.items) && saved.items.length > 0
+                            ? saved.items.map((item, index) => ({
+                                  id: item.id || index + 1,
+                                  image: item.image || '/uploads/heroes/images/hero1.webp',
+                                  title: item.title || '',
+                                  description: item.description || '',
+                                  button_text: item.button_text || 'Explore The Drop',
+                                  button_url: item.button_url || '/shop',
+                                  show_button:
+                                      typeof item.show_button === 'boolean'
+                                          ? item.show_button
+                                          : true,
+                                  sort_order: Number.isInteger(item.sort_order)
+                                      ? item.sort_order
+                                      : index,
+                                  image_file: null,
+                              }))
+                            : previous.items,
+                }));
+            }
+
+            setHomeBackgroundUploadFiles({});
+
+            toast.success('Home background image saved to database.', {
+                style: { color: '#16a34a' },
+            });
+        } catch (error) {
+            toast.error(error?.message || 'Failed to save home background image.', {
+                style: { color: '#dc2626' },
+            });
+        } finally {
+            setIsSavingHomeBackground(false);
+        }
+    }
+
+    async function handleSaveCollectionsToDatabase() {
+        setIsSavingCollections(true);
+
+        try {
+            const payload = {
+                title: collectionsDraft.title,
+                titlePosition: collectionsDraft.titlePosition,
+                itemsPerView: Number(collectionsDraft.itemsPerView) || 4,
+                items: collectionsDraft.items.map((item) => ({
+                    id: item.id,
+                    name: item.name || '',
+                    slug: item.slug || '',
+                    image: item.image || null,
+                    productIds: Array.isArray(item.productIds)
+                        ? item.productIds
+                              .map((value) => Number(value))
+                              .filter((value) => Number.isInteger(value) && value > 0)
+                        : Array.isArray(item.product_ids)
+                            ? item.product_ids
+                                  .map((value) => Number(value))
+                                  .filter((value) => Number.isInteger(value) && value > 0)
+                        : [],
+                })),
+            };
+
+            const saved = await updateCollections(payload);
+            if (saved?.section && Array.isArray(saved.items)) {
+                setCollectionsDraft((previous) => ({
+                    ...previous,
+                    title: saved.section.title || previous.title,
+                    titlePosition: saved.section.titlePosition || previous.titlePosition,
+                    itemsPerView:
+                        Number(saved.section.itemsPerView) > 0
+                            ? Number(saved.section.itemsPerView)
+                            : previous.itemsPerView,
+                    items: saved.items.map((item, index) => ({
+                        id: item.id,
+                        name: item.name || previous.items[index]?.name || '',
+                        slug: item.slug || previous.items[index]?.slug || '',
+                        image: item.image || previous.items[index]?.image || '',
+                        productIds: Array.isArray(item.productIds)
+                            ? item.productIds
+                                  .map((value) => Number(value))
+                                  .filter((value) => Number.isInteger(value) && value > 0)
+                            : Array.isArray(item.product_ids)
+                                ? item.product_ids
+                                      .map((value) => Number(value))
+                                      .filter((value) => Number.isInteger(value) && value > 0)
+                            : previous.items[index]?.productIds || [],
+                    })),
+                }));
+            }
+
+            toast.success('Collections settings saved to database.', {
+                style: { color: '#16a34a' },
+            });
+        } catch (error) {
+            toast.error(error?.message || 'Failed to save collections settings.', {
+                style: { color: '#dc2626' },
+            });
+        } finally {
+            setIsSavingCollections(false);
+        }
+    }
+
+    async function handleSaveHeroToDatabase() {
+        setIsSavingHero(true);
+
+        const payload = {
+            title: heroDraft.title,
+            description: heroDraft.description,
+            title_display_mode: heroDraft.title_display_mode,
+            image_url: heroUploadFiles.image ? '' : heroDraft.image_url,
+            video_url: heroUploadFiles.video ? '' : heroDraft.video_url,
+            title_font_size: heroDraft.title_font_size,
+            title_font_family: heroDraft.title_font_family,
+            description_font_size: heroDraft.description_font_size,
+            description_font_family: heroDraft.description_font_family,
+            text_offset_x: heroDraft.text_offset_x,
+            text_offset_y: heroDraft.text_offset_y,
+            title_offset_x: heroDraft.title_offset_x,
+            title_offset_y: heroDraft.title_offset_y,
+            description_offset_x: heroDraft.description_offset_x,
+            description_offset_y: heroDraft.description_offset_y,
+            button_offset_x: heroDraft.button_offset_x,
+            button_offset_y: heroDraft.button_offset_y,
+            button_enabled: heroDraft.button_enabled,
+            button_url: heroDraft.button_url,
+            image: heroUploadFiles.image,
+            video: heroUploadFiles.video,
+        };
+
+        try {
+            let savedHero;
+
+            if (activeHeroId) {
+                savedHero = await updateHero(activeHeroId, payload);
+            } else {
+                const createdHero = await createHero(payload);
+                if (createdHero?.id) {
+                    setActiveHeroId(createdHero.id);
+                }
+                savedHero = createdHero;
+            }
+
+            if (savedHero) {
+                setHeroDraft((previous) => ({
+                    ...previous,
+                    image_url: savedHero.image_url || previous.image_url,
+                    video_url: savedHero.video_url || previous.video_url,
+                }));
+            }
+
+            setHeroUploadFiles({ image: null, video: null });
+
+            toast.success('Hero settings saved to database.', {
+                style: { color: '#16a34a' },
+            });
+        } catch (error) {
+            toast.error(error?.message || 'Failed to save hero settings.', {
+                style: { color: '#dc2626' },
+            });
+        } finally {
+            setIsSavingHero(false);
+        }
+    }
+
+    async function handleSaveOurStoryToDatabase() {
+        setIsSavingOurStory(true);
+
+        try {
+            const payload = {
+                story_image: ourStoryUploadFiles.story_image
+                    ? ourStoryUploadFiles.story_image
+                    : ourStoryDraft.story_image,
+                story_logo: ourStoryUploadFiles.story_logo
+                    ? ourStoryUploadFiles.story_logo
+                    : ourStoryDraft.story_logo,
+                section_title: ourStoryDraft.section_title || '',
+                title: ourStoryDraft.title || '',
+                description: ourStoryDraft.description || '',
+                background_color: ourStoryDraft.background_color || '#c8b89a',
+                show_image: Boolean(ourStoryDraft.show_image),
+                show_text: Boolean(ourStoryDraft.show_text),
+            };
+
+            const saved = await updateOurStory(payload);
+
+            if (saved) {
+                setOurStoryDraft((previous) => ({
+                    ...previous,
+                    story_image: saved.story_image || previous.story_image,
+                    story_logo: saved.story_logo || previous.story_logo,
+                    section_title: saved.section_title || previous.section_title,
+                    title: saved.title || previous.title,
+                    description: saved.description ?? previous.description,
+                    background_color: saved.background_color || previous.background_color,
+                    show_image:
+                        typeof saved.show_image === 'boolean'
+                            ? saved.show_image
+                            : previous.show_image,
+                    show_text:
+                        typeof saved.show_text === 'boolean'
+                            ? saved.show_text
+                            : previous.show_text,
+                }));
+            }
+
+            setOurStoryUploadFiles({ story_image: null, story_logo: null });
+
+            toast.success('Our Story settings saved to database.', {
+                style: { color: '#16a34a' },
+            });
+        } catch (error) {
+            toast.error(error?.message || 'Failed to save Our Story settings.', {
+                style: { color: '#dc2626' },
+            });
+        } finally {
+            setIsSavingOurStory(false);
+        }
+    }
+
+    async function handleSaveFeaturesToDatabase() {
+        setIsSavingFeatures(true);
+
+        try {
+            const existing = await fetchFeatures();
+            const existingById = new Map(
+                existing.filter((item) => item?.id).map((item) => [Number(item.id), item])
+            );
+
+            const usedIds = new Set();
+
+            for (let index = 0; index < featuresDraft.items.length; index += 1) {
+                const item = featuresDraft.items[index] || {};
+                const payload = {
+                    title: item.title || '',
+                    short_description: item.short_description || '',
+                    description: item.short_description || '',
+                    icon: item.icon,
+                    sort_order: index,
+                    columns_per_view: Number(featuresDraft.columns) || 3,
+                    title_font_size: Number(featuresDraft.titleFontSize) || 28,
+                    title_font_family: featuresDraft.titleFontFamily || 'instrument-sans',
+                    description_font_size: Number(featuresDraft.descriptionFontSize) || 16,
+                    description_font_family:
+                        featuresDraft.descriptionFontFamily || 'instrument-sans',
+                };
+
+                const itemId = Number(item.id);
+                if (itemId && existingById.has(itemId)) {
+                    const saved = await updateFeature(itemId, payload);
+                    usedIds.add(itemId);
+                    setFeaturesDraft((previous) => ({
+                        ...previous,
+                        items: previous.items.map((draftItem, draftIndex) =>
+                            draftIndex === index
+                                ? {
+                                      ...draftItem,
+                                      id: saved?.id || draftItem.id,
+                                  }
+                                : draftItem
+                        ),
+                    }));
+                } else {
+                    const created = await createFeature(payload);
+                    if (created?.id) {
+                        usedIds.add(Number(created.id));
+                        setFeaturesDraft((previous) => ({
+                            ...previous,
+                            items: previous.items.map((draftItem, draftIndex) =>
+                                draftIndex === index
+                                    ? {
+                                          ...draftItem,
+                                          id: created.id,
+                                      }
+                                    : draftItem
+                            ),
+                        }));
+                    }
+                }
+            }
+
+            for (const feature of existing) {
+                const featureId = Number(feature?.id);
+                if (featureId && !usedIds.has(featureId)) {
+                    await deleteFeature(featureId);
+                }
+            }
+
+            toast.success('Features settings saved to database.', {
+                style: { color: '#16a34a' },
+            });
+        } catch (error) {
+            toast.error(error?.message || 'Failed to save features settings.', {
+                style: { color: '#dc2626' },
+            });
+        } finally {
+            setIsSavingFeatures(false);
+        }
+    }
+
+    return (
+        <DndProvider backend={HTML5Backend}>
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-[280px_minmax(0,1fr)] 2xl:grid-cols-[300px_minmax(0,1fr)]">
+                <HomePageSectionsCard
+                    sections={sections}
+                    selectedSectionKey={selectedSectionKey}
+                    onEditSection={handleEditSection}
+                    onReorderSection={handleReorderSection}
+                    onToggleSectionStatus={handleToggleSectionStatus}
+                    onNavigatePreview={navigatePreviewToSection}
+                />
+                <HomePagePreviewCard
+                    iframeRef={iframeRef}
+                    onIframeLoad={() => {
+                        publishHeroDraft();
+                        publishSectionsLayout();
+                        publishPreviewMode();
+                        publishFeaturesDraft();
+                        publishCollectionsDraft();
+                        publishOurStoryDraft();
+                        publishHomeBackgroundDraft();
+                    }}
+                />
+            </div>
+
+            <HeroEditorDrawer
+                open={isHeroDrawerOpen}
+                onOpenChange={setIsHeroDrawerOpen}
+                activePart={activeHeroConfigPart}
+                value={heroDraft}
+                onChange={handleHeroDraftChange}
+                onUploadImage={handleUploadHeroAsset('image_url', 'image')}
+                onUploadVideo={handleUploadHeroAsset('video_url', 'video')}
+                onSave={handleSaveHeroToDatabase}
+                isSaving={isSavingHero}
+            />
+
+            <FeaturesEditorDrawer
+                open={isFeaturesDrawerOpen}
+                onOpenChange={setIsFeaturesDrawerOpen}
+                value={featuresDraft}
+                activeItemIndex={activeFeatureItemIndex}
+                onChangeField={handleFeaturesFieldChange}
+                onChangeItem={handleFeatureItemChange}
+                onUploadIcon={handleFeatureIconUpload}
+                onAddItem={handleAddFeatureItem}
+                onRemoveItem={handleRemoveFeatureItem}
+                onReorderItem={handleFeatureReorder}
+                onSave={handleSaveFeaturesToDatabase}
+                isSaving={isSavingFeatures}
+            />
+
+            <CollectionsEditorDrawer
+                open={isCollectionsDrawerOpen}
+                onOpenChange={setIsCollectionsDrawerOpen}
+                value={collectionsDraft}
+                activeItemIndex={activeCollectionItemIndex}
+                onChangeField={handleCollectionsFieldChange}
+                onChangeItem={handleCollectionItemChange}
+                onUploadImage={handleCollectionImageUpload}
+                onAddItem={handleAddCollectionItem}
+                onRemoveItem={handleRemoveCollectionItem}
+                onReorderItem={handleCollectionReorder}
+                productOptions={collectionProductOptions}
+                onSave={handleSaveCollectionsToDatabase}
+                isSaving={isSavingCollections}
+            />
+
+            <OurStoryEditorDrawer
+                open={isOurStoryDrawerOpen}
+                onOpenChange={setIsOurStoryDrawerOpen}
+                value={ourStoryDraft}
+                onChangeField={handleOurStoryFieldChange}
+                onUploadImage={handleOurStoryAssetUpload('story_image')}
+                onUploadLogo={handleOurStoryAssetUpload('story_logo')}
+                onSave={handleSaveOurStoryToDatabase}
+                isSaving={isSavingOurStory}
+            />
+
+            <HomeBackgroundEditorDrawer
+                open={isHomeBackgroundDrawerOpen}
+                onOpenChange={setIsHomeBackgroundDrawerOpen}
+                value={homeBackgroundDraft}
+                onUploadImage={handleHomeBackgroundImageUpload}
+                onAddItem={handleAddHomeBackgroundItem}
+                onRemoveItem={handleRemoveHomeBackgroundItem}
+                onChangeItem={handleHomeBackgroundItemChange}
+                onSave={handleSaveHomeBackgroundToDatabase}
+                isSaving={isSavingHomeBackground}
+            />
+
+            <BestSellersEditorDrawer
+                open={isBestSellersDrawerOpen}
+                onOpenChange={setIsBestSellersDrawerOpen}
+                activeItemIndex={activeBestSellerItemIndex}
+                sectionTitle={bestSellersDraft.title}
+                sectionPosition={bestSellersDraft.position}
+                onChangeTitle={(value) =>
+                    setBestSellersDraft((previous) => ({
+                        ...previous,
+                        title: value,
+                    }))
+                }
+                onChangePosition={(value) =>
+                    setBestSellersDraft((previous) => ({
+                        ...previous,
+                        position: Math.max(1, Math.min(6, Number(value) || 1)),
+                    }))
+                }
+                onSave={handleSaveBestSellersToDatabase}
+                isSaving={isSavingBestSellers}
+            />
+        </DndProvider>
+    );
+}

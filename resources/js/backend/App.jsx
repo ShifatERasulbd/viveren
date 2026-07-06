@@ -1,0 +1,160 @@
+import React, { Suspense, lazy } from 'react'
+import { LoginForm } from '@/components/login-form';
+import { Toaster } from '@/components/ui/sonner';
+import { AppProvider } from '@/context/AppContext';
+import AppLayout from '@/layouts/AppLayout';
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
+
+function lazyWithRetry(importer, key) {
+    return lazy(async () => {
+        const storageKey = `lazy-retry:${key}`;
+
+        try {
+            const module = await importer();
+            sessionStorage.removeItem(storageKey);
+            return module;
+        } catch (error) {
+            const hasRetried = sessionStorage.getItem(storageKey) === '1';
+
+            if (!hasRetried && error instanceof TypeError) {
+                sessionStorage.setItem(storageKey, '1');
+                window.location.reload();
+                return new Promise(() => {});
+            }
+
+            sessionStorage.removeItem(storageKey);
+            throw error;
+        }
+    });
+}
+
+const Dashboard = lazyWithRetry(() => import('@/pages/dashboard'), 'dashboard');
+
+// size Management
+const Size  = lazyWithRetry(() => import('@/pages/Size/size'), 'size');
+const AddSize  = lazyWithRetry(() => import('@/pages/Size/addSize'), 'add-size');
+const EditSize  = lazyWithRetry(() => import('@/pages/Size/editSize'), 'edit-size');
+
+// Color Management
+const Color = lazyWithRetry(() => import('@/pages/Color/color'), 'color');
+const AddColor = lazyWithRetry(() => import('@/pages/Color/addColor'), 'add-color');
+const EditColor = lazyWithRetry(() => import('@/pages/Color/editColor'), 'edit-color');
+
+// Website Management
+const HomePageBuilder = lazyWithRetry(() => import('@/pages/Website/homePageBuilder'), 'website-home-page-builder');
+const AboutPageBuilder = lazyWithRetry(() => import('@/pages/Website/aboutPageBuilder'), 'website-about-page-builder');
+const CommunityPageBuilder = lazyWithRetry(() => import('@/pages/Website/communityPageBuilder'), 'website-community-page-builder');
+
+// Category Management
+const Categories = lazyWithRetry(() => import('@/pages/Category/category'), 'categories');
+const AddCategory = lazyWithRetry(() => import('@/pages/Category/addCategory'), 'add-category');
+const EditCategory = lazyWithRetry(() => import('@/pages/Category/editCategory'), 'edit-category');
+
+// SubCategory Management
+const SubCategories = lazyWithRetry(() => import('@/pages/SubCategory/subcategory'), 'sub-categories');
+const AddSubCategory = lazyWithRetry(() => import('@/pages/SubCategory/addSubCategory'), 'add-sub-category');
+const EditSubCategory = lazyWithRetry(() => import('@/pages/SubCategory/editSubCategory'), 'edit-sub-category');
+
+// GrandChild Management
+const GrandChilds = lazyWithRetry(() => import('@/pages/GrandChild/grandchild'), 'grand-childs');
+const AddGrandChild = lazyWithRetry(() => import('@/pages/GrandChild/addGrandChild'), 'add-grand-child');
+const EditGrandChild = lazyWithRetry(() => import('@/pages/GrandChild/editGrandChild'), 'edit-grand-child');
+
+
+
+// Product Management
+const Products = lazyWithRetry(() => import('@/pages/Product/products'), 'products');
+const AddProduct = lazyWithRetry(() => import('@/pages/Product/addProduct'), 'add-product');
+const EditProduct = lazyWithRetry(() => import('@/pages/Product/editProduct'), 'edit-product');
+
+// Order Management
+const Orders = lazyWithRetry(() => import('@/pages/Order/orders'), 'orders');
+const EditOrder = lazyWithRetry(() => import('@/pages/Order/editOrder'), 'edit-order');
+
+// Settings Management
+const Settings = lazyWithRetry(() => import('@/pages/Settings/settings'), 'settings');
+const AddSettings = lazyWithRetry(() => import('@/pages/Settings/addSettings'), 'add-settings');
+const EditSettings = lazyWithRetry(() => import('@/pages/Settings/editSettings'), 'edit-settings');
+const PublicApiKeys = lazyWithRetry(() => import('@/pages/PublicApiKeys/publicApiKeys'), 'public-api-keys');
+
+
+
+export default function App() {
+    return (
+        <AppProvider>
+            <BrowserRouter>
+                <Suspense fallback={<div className="text-center p-10">Loading...</div>}>
+                    <Routes>
+                        <Route
+                            path="/admin"
+                            element={
+                                <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
+                                    <LoginForm />
+                                </main>
+                            }
+                        />
+                        {/* user Managemnent */}
+                        <Route path="/admin" element={<AppLayout />}>
+                            <Route path="dashboard" element={<Dashboard />} />
+
+                            {/* Size Management */}
+                            <Route path="size" element={<Size />} />
+                            <Route path="size/add" element={<AddSize />} />
+                            <Route path="size/:id/edit" element={<EditSize />} />
+
+                            {/* Color Management */}
+                            <Route path="color" element={<Color />} />
+                            <Route path="color/add" element={<AddColor />} />
+                            <Route path="color/:id/edit" element={<EditColor />} />
+
+                            {/* Website Management */}
+                            <Route path="website/home-page" element={<HomePageBuilder />} />
+                            <Route path="website/about-page" element={<AboutPageBuilder />} />
+                            <Route path="website/community-page" element={<CommunityPageBuilder />} />
+
+                            {/* Category Management */}
+                            <Route path="category" element={<Categories />} />
+                            <Route path="category/add" element={<AddCategory />} />
+                            <Route path="category/:id/edit" element={<EditCategory />} />
+
+                            {/* SubCategory Management */}
+                            <Route path="sub-category" element={<SubCategories />} />
+                            <Route path="sub-category/add" element={<AddSubCategory />} />
+                            <Route path="sub-category/:id/edit" element={<EditSubCategory />} />
+
+                            {/* GrandChild Management */}
+                            <Route path="grand-child" element={<GrandChilds />} />
+                            <Route path="grand-child/add" element={<AddGrandChild />} />
+                            <Route path="grand-child/:id/edit" element={<EditGrandChild />} />
+
+
+                            {/* Product Management */}
+                            <Route path="products" element={<Products />} />
+                            <Route path="products/add" element={<AddProduct />} />
+                            <Route path="products/:id/edit" element={<EditProduct />} />
+
+                            {/* Order Management */}
+                            <Route path="orders" element={<Orders />} />
+                            <Route path="orders/:id/edit" element={<EditOrder />} />
+
+                            {/* Settings Management */}
+                            <Route path="settings" element={<Settings />} />
+                            <Route path="settings/add" element={<AddSettings />} />
+                            <Route path="settings/:id/edit" element={<EditSettings />} />
+                            <Route path="public-api-keys" element={<PublicApiKeys />} />
+
+                           
+
+                        </Route>
+                        <Route path="/" element={<main />} />
+
+                        {/* Hero Management */}
+                       
+                    </Routes>
+                </Suspense>
+            </BrowserRouter>
+            <Toaster position="top-right" richColors />
+        </AppProvider>
+    );
+}
+
