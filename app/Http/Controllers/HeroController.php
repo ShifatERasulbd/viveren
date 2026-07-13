@@ -20,19 +20,8 @@ class HeroController extends Controller
                 'description' => 'Elevate your brand with premium customized apparel designed for teams, events, corporate identity, and professional wear.',
                 'image' => '/uploads/heroes/images/hero1.webp',
                 'video' => null,
-                'title_display_mode' => 'double',
-                'title_font_size' => 124,
-                'title_font_family' => 'instrument-sans',
-                'description_font_size' => 24,
-                'description_font_family' => 'instrument-sans',
-                'text_offset_x' => 0,
-                'text_offset_y' => 0,
-                'title_offset_x' => 0,
-                'title_offset_y' => 0,
-                'description_offset_x' => 0,
-                'description_offset_y' => 0,
-                'button_offset_x' => 0,
-                'button_offset_y' => 0,
+                'display_title_mode' => 'double',
+                'header_title' => 'SUBSCRIBE AND SAVE 10% ON YOUR FIRST ORDER',
                 'button_enabled' => true,
                 'button_url' => '/shop',
             ]);
@@ -100,10 +89,11 @@ class HeroController extends Controller
         return [
             'id' => $hero->id,
             'title' => $hero->title,
+            'header_title' => $hero->header_title,
             'description' => $hero->description,
             'image_url' => $this->resolveAssetUrl($hero->image),
             'video_url' => $this->resolveAssetUrl($hero->video),
-            'title_display_mode' => $hero->title_display_mode ?: 'double',
+            'title_display_mode' => $hero->display_title_mode ?: 'double',
             'title_font_size' => $hero->title_font_size,
             'title_font_family' => $hero->title_font_family,
             'description_font_size' => $hero->description_font_size,
@@ -131,18 +121,7 @@ class HeroController extends Controller
             'image_file' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp,avif', 'max:4096'],
             'video_file' => ['nullable', 'file', 'mimetypes:video/mp4,video/webm,video/ogg,video/quicktime', 'max:51200'],
             'title_display_mode' => ['nullable', 'in:single,double'],
-            'title_font_size' => ['nullable', 'integer', 'min:8', 'max:300'],
-            'title_font_family' => ['nullable', 'string', 'max:100'],
-            'description_font_size' => ['nullable', 'integer', 'min:8', 'max:120'],
-            'description_font_family' => ['nullable', 'string', 'max:100'],
-            'text_offset_x' => ['nullable', 'integer', 'min:-100', 'max:100'],
-            'text_offset_y' => ['nullable', 'integer', 'min:-100', 'max:100'],
-            'title_offset_x' => ['nullable', 'integer', 'min:-100', 'max:100'],
-            'title_offset_y' => ['nullable', 'integer', 'min:-100', 'max:100'],
-            'description_offset_x' => ['nullable', 'integer', 'min:-100', 'max:100'],
-            'description_offset_y' => ['nullable', 'integer', 'min:-100', 'max:100'],
-            'button_offset_x' => ['nullable', 'integer', 'min:-100', 'max:100'],
-            'button_offset_y' => ['nullable', 'integer', 'min:-100', 'max:100'],
+            'header_title' => ['nullable', 'string', 'max:255'],
             'button_enabled' => ['nullable', 'boolean'],
             'button_url' => ['nullable', 'string', 'max:2048'],
         ]);
@@ -195,6 +174,11 @@ class HeroController extends Controller
     public function update(Request $request, Hero $hero): JsonResponse
     {
         $validated = $this->validatePayload($request);
+
+        // Map frontend payload (title_display_mode) to DB column (display_title_mode)
+        if (array_key_exists('title_display_mode', $validated) && ! array_key_exists('display_title_mode', $validated)) {
+            $validated['display_title_mode'] = $validated['title_display_mode'];
+        }
 
         if ($request->hasFile('image_file')) {
             $this->deleteAssetIfLocal($hero->image);

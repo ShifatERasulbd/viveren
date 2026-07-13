@@ -256,8 +256,16 @@ export default function Hero() {
                 ))}
               </h1>
               
+              {displayHeroData?.header_title ? (
+                <div className="text-white text-sm sm:text-base leading-tight" style={{ fontFamily: titleFamily }}>
+                  {displayHeroData.header_title}
+                </div>
+              ) : null}
+
               {Boolean(displayHeroData?.button_enabled ?? true) && (
-                <a href={'/new-arrivals'} className={sectionTypography.heroPrimaryButton}>Shop New Arrivals</a>
+                <a href={displayHeroData?.button_url || '/new-arrivals'} className={sectionTypography.heroPrimaryButton}>
+                  {displayHeroData?.button_enabled ? 'Shop New Arrivals' : ''}
+                </a>
               )}
             </>
           )}

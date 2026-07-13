@@ -150,168 +150,29 @@ export default function HeroEditorDrawer({
 
                     {showTitle ? (
                     <div className="space-y-2">
-                        <Label htmlFor="hero-title-size">Title size</Label>
+                        <Label htmlFor="Header-title">Header title</Label>
                         <Input
-                            id="hero-title-size"
-                            type="number"
-                            min={32}
-                            max={180}
-                            value={value.title_font_size || 124}
-                            onChange={(event) => onChange('title_font_size', Number(event.target.value) || 124)}
+                            id="header-title"
+                            value={value.header_title || ''}
+                            onChange={(event) => onChange('header_title', event.target.value)}
+                            placeholder="SUBSCRIBE AND SAVE 10% ON YOUR FIRST ORDER"
                         />
                     </div>
                     ) : null}
 
-                    {showTitle ? (
-                    <div className="space-y-2">
-                        <Label htmlFor="hero-title-font">Title font family</Label>
-                        <select
-                            id="hero-title-font"
-                            value={value.title_font_family || 'instrument-sans'}
-                            onChange={(event) => onChange('title_font_family', event.target.value)}
-                            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                        >
-                            <option value="instrument-sans">Instrument Sans</option>
-                            <option value="sora">Sora</option>
-                            <option value="manrope">Manrope</option>
-                            <option value="inter">Inter</option>
-                            <option value="playfair-display">Playfair Display</option>
-                        </select>
-                    </div>
-                    ) : null}
+                    
 
-                    {showDescription ? (
-                    <div className="space-y-2">
-                        <Label htmlFor="hero-description">Hero description</Label>
-                        <textarea
-                            id="hero-description"
-                            value={value.description}
-                            onChange={(event) => onChange('description', event.target.value)}
-                            rows={6}
-                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                            placeholder="Elevate your brand with premium customized apparel..."
-                        />
-                    </div>
-                    ) : null}
+                
+                   
 
-                    {showDescription ? (
-                    <div className="space-y-2">
-                        <Label htmlFor="hero-description-size">Description size</Label>
-                        <Input
-                            id="hero-description-size"
-                            type="number"
-                            min={12}
-                            max={64}
-                            value={value.description_font_size || 24}
-                            onChange={(event) =>
-                                onChange('description_font_size', Number(event.target.value) || 24)
-                            }
-                        />
-                    </div>
-                    ) : null}
+                 
 
-                    {showDescription ? (
-                    <div className="space-y-2">
-                        <Label htmlFor="hero-description-font">Description font family</Label>
-                        <select
-                            id="hero-description-font"
-                            value={value.description_font_family || 'instrument-sans'}
-                            onChange={(event) => onChange('description_font_family', event.target.value)}
-                            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                        >
-                            <option value="instrument-sans">Instrument Sans</option>
-                            <option value="sora">Sora</option>
-                            <option value="manrope">Manrope</option>
-                            <option value="inter">Inter</option>
-                            <option value="playfair-display">Playfair Display</option>
-                        </select>
-                    </div>
-                    ) : null}
+           
 
-                    {showAll ? (
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-2">
-                            <Label htmlFor="hero-offset-x">Text X position</Label>
-                            <Input
-                                id="hero-offset-x"
-                                type="number"
-                                min={-60}
-                                max={60}
-                                value={value.text_offset_x || 0}
-                                onChange={(event) => onChange('text_offset_x', Number(event.target.value) || 0)}
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="hero-offset-y">Text Y position</Label>
-                            <Input
-                                id="hero-offset-y"
-                                type="number"
-                                min={-60}
-                                max={60}
-                                value={value.text_offset_y || 0}
-                                onChange={(event) => onChange('text_offset_y', Number(event.target.value) || 0)}
-                            />
-                        </div>
-                    </div>
-                    ) : null}
+                  
 
-                    {showTitle ? (
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-2">
-                            <Label htmlFor="hero-title-offset-x">Title X position</Label>
-                            <Input
-                                id="hero-title-offset-x"
-                                type="number"
-                                min={-60}
-                                max={60}
-                                value={value.title_offset_x || 0}
-                                onChange={(event) => onChange('title_offset_x', Number(event.target.value) || 0)}
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="hero-title-offset-y">Title Y position</Label>
-                            <Input
-                                id="hero-title-offset-y"
-                                type="number"
-                                min={-60}
-                                max={60}
-                                value={value.title_offset_y || 0}
-                                onChange={(event) => onChange('title_offset_y', Number(event.target.value) || 0)}
-                            />
-                        </div>
-                    </div>
-                    ) : null}
-
-                    {showDescription ? (
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-2">
-                            <Label htmlFor="hero-description-offset-x">Description X position</Label>
-                            <Input
-                                id="hero-description-offset-x"
-                                type="number"
-                                min={-60}
-                                max={60}
-                                value={value.description_offset_x || 0}
-                                onChange={(event) =>
-                                    onChange('description_offset_x', Number(event.target.value) || 0)
-                                }
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="hero-description-offset-y">Description Y position</Label>
-                            <Input
-                                id="hero-description-offset-y"
-                                type="number"
-                                min={-60}
-                                max={60}
-                                value={value.description_offset_y || 0}
-                                onChange={(event) =>
-                                    onChange('description_offset_y', Number(event.target.value) || 0)
-                                }
-                            />
-                        </div>
-                    </div>
-                    ) : null}
+                    
+                    
 
                     {showButton ? (
                     <div className="space-y-2">
@@ -346,32 +207,7 @@ export default function HeroEditorDrawer({
                     </div>
                     ) : null}
 
-                    {showButton ? (
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-2">
-                            <Label htmlFor="hero-button-offset-x">Button X position</Label>
-                            <Input
-                                id="hero-button-offset-x"
-                                type="number"
-                                min={-60}
-                                max={60}
-                                value={value.button_offset_x || 0}
-                                onChange={(event) => onChange('button_offset_x', Number(event.target.value) || 0)}
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="hero-button-offset-y">Button Y position</Label>
-                            <Input
-                                id="hero-button-offset-y"
-                                type="number"
-                                min={-60}
-                                max={60}
-                                value={value.button_offset_y || 0}
-                                onChange={(event) => onChange('button_offset_y', Number(event.target.value) || 0)}
-                            />
-                        </div>
-                    </div>
-                    ) : null}
+                  
                 </div>
 
                 <SheetFooter>

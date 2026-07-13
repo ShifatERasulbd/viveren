@@ -56,6 +56,7 @@ export default function Header() {
     const [expandedMobileSubItems, setExpandedMobileSubItems] = useState({});
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [heroHeaderText, setHeroHeaderText] = useState('');
     
     
     const closeMenuTimerRef = useRef(null);
@@ -223,6 +224,53 @@ export default function Header() {
         setSiteSettings(getSettingsPayload() || {});
 
         return unsubscribe;
+    }, []);
+
+    useEffect(() => {
+        let ignore = false;
+
+        async function loadHeroHeader() {
+            try {
+                const response = await fetch('/api/public/hero', {
+                    headers: { Accept: 'application/json' },
+                });
+
+                if (!response.ok) {
+                    return;
+                }
+
+                const payload = await response.json();
+                if (!ignore) {
+                    setHeroHeaderText(String(payload?.header_title || '').trim());
+                }
+            } catch {
+                // Keep the fallback text when the hero endpoint is unavailable.
+            }
+        }
+
+        loadHeroHeader();
+
+        return () => {
+            ignore = true;
+        };
+    }, []);
+
+    useEffect(() => {
+        function handleHeroPreviewMessage(event) {
+            if (event.origin !== window.location.origin) {
+                return;
+            }
+
+            const data = event.data;
+            if (data?.type !== 'TIMLESS_PAGE_BUILDER_HERO_PREVIEW_UPDATE') {
+                return;
+            }
+
+            setHeroHeaderText(String(data.payload?.header_title || '').trim());
+        }
+
+        window.addEventListener('message', handleHeroPreviewMessage);
+        return () => window.removeEventListener('message', handleHeroPreviewMessage);
     }, []);
 
     useEffect(() => {
@@ -442,10 +490,11 @@ export default function Header() {
     }, [siteSettings]);
 
     const headerLogo = useMemo(() => resolveMediaUrl(siteSettings?.header_logo || ''), [siteSettings]);
+    const headerText = heroHeaderText || siteSettings?.header_title || 'SUBSCRIBE AND SAVE 10% ON YOUR FIRST ORDER';
 
     return (
         <>
-        <TopBar text={siteSettings?.top_bar_text || 'SUBSCRIBE AND SAVE 10% ON YOUR FIRST ORDER'} />
+        <TopBar text={headerText} />
 
         <header className={`${timelessFontClass} site-header sticky top-0 z-[300] border-b border-zinc-200 bg-white text-zinc-950 backdrop-blur`}>
            <div className="site-header-inner mx-auto flex h-[90px] w-full max-w-[1920px] items-center justify-between px-4 sm:px-6 lg:px-10 xl:grid xl:grid-cols-[1fr_auto_1fr]">

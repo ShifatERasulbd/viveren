@@ -34,6 +34,7 @@ import {
 
 const defaultHeroDraft = {
     title: 'Custom apparel solutions',
+    header_title: 'SUBSCRIBE AND SAVE 10% ON YOUR FIRST ORDER',
     description:
         'Elevate your brand with premium customized apparel designed for teams, events, corporate identity, and professional wear.',
     image_url: '/uploads/heroes/images/hero1.webp',
@@ -256,6 +257,7 @@ export default function HomePageBuilder() {
                 setHeroDraft((previous) => ({
                     ...previous,
                     title: latestHero.title || previous.title,
+                    header_title: latestHero.header_title || previous.header_title,
                     description: latestHero.description || previous.description,
                     title_display_mode: latestHero.title_display_mode || previous.title_display_mode,
                     title_font_size: latestHero.title_font_size ?? previous.title_font_size,
@@ -1438,8 +1440,9 @@ export default function HomePageBuilder() {
     async function handleSaveHeroToDatabase() {
         setIsSavingHero(true);
 
-        const payload = {
+    const payload = {
             title: heroDraft.title,
+            header_title: heroDraft.header_title,
             description: heroDraft.description,
             title_display_mode: heroDraft.title_display_mode,
             image_url: heroUploadFiles.image ? '' : heroDraft.image_url,
@@ -1480,6 +1483,7 @@ export default function HomePageBuilder() {
                     ...previous,
                     image_url: savedHero.image_url || previous.image_url,
                     video_url: savedHero.video_url || previous.video_url,
+                    header_title: savedHero.header_title || previous.header_title,
                 }));
             }
 

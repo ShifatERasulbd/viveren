@@ -28,7 +28,7 @@ export default function HomePagePreviewCard({ iframeRef, onIframeLoad }) {
             <CardContent>
                 <div className="overflow-hidden rounded-md border border-border bg-muted">
                     <iframe
-                        title="Timeless Homepage Preview"
+                        title="Vivaren Homepage Preview"
                         src="/"
                         ref={iframeRef}
                         onLoad={onIframeLoad}

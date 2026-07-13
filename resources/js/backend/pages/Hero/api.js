@@ -4,22 +4,13 @@ function buildHeroFormData(payload = {}) {
     const formData = new FormData();
 
     formData.append('title', payload.title || '');
+    formData.append('header_title', payload.header_title || '');
     formData.append('description', payload.description || '');
     formData.append('title_display_mode', payload.title_display_mode || 'double');
     formData.append('image_url', payload.image_url || '');
     formData.append('video_url', payload.video_url || '');
-    formData.append('title_font_size', String(payload.title_font_size ?? ''));
-    formData.append('title_font_family', payload.title_font_family || '');
-    formData.append('description_font_size', String(payload.description_font_size ?? ''));
-    formData.append('description_font_family', payload.description_font_family || '');
-    formData.append('text_offset_x', String(payload.text_offset_x ?? 0));
-    formData.append('text_offset_y', String(payload.text_offset_y ?? 0));
-    formData.append('title_offset_x', String(payload.title_offset_x ?? 0));
-    formData.append('title_offset_y', String(payload.title_offset_y ?? 0));
-    formData.append('description_offset_x', String(payload.description_offset_x ?? 0));
-    formData.append('description_offset_y', String(payload.description_offset_y ?? 0));
-    formData.append('button_offset_x', String(payload.button_offset_x ?? 0));
-    formData.append('button_offset_y', String(payload.button_offset_y ?? 0));
+
+    
     formData.append('button_enabled', payload.button_enabled ? '1' : '0');
     formData.append('button_url', payload.button_url || '');
 

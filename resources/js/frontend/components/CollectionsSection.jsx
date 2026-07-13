@@ -272,19 +272,21 @@ export default function CollectionsSection() {
                     slidesPerView={1.5}
                     breakpoints={{
                         640: { slidesPerView: 3 },
-                        1024: { slidesPerView: 4 }
+                        1024: { slidesPerView: 4 },
                     }}
                     className="collections-swiper px-4" // Added side padding to swiper so arrows don't clip
                 >
                     {collections.map((col, index) => (
                         <SwiperSlide key={col.id || index}>
-                            <CollectionCard
-                                name={col.name}
-                                slug={col.slug}
-                                image={col.image}
-                                isBuilderPreview={isBuilderPreview}
-                                index={index}
-                            />
+                            <div className="w-full">
+                                <CollectionCard
+                                    name={col.name}
+                                    slug={col.slug}
+                                    image={col.image}
+                                    isBuilderPreview={isBuilderPreview}
+                                    index={index}
+                                />
+                            </div>
                         </SwiperSlide>
                     ))}
                 </Swiper>
