@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
+
+import FadeInOutOnView from './FadeInOutOnView.jsx';
 
 import { timelessFontClass } from '../utils/typography';
+
 
 const HOME_BACKGROUND_PREVIEW_UPDATE_EVENT = 'TIMLESS_PAGE_BUILDER_HOME_BACKGROUND_PREVIEW_UPDATE';
 const HOME_BACKGROUND_PREVIEW_REQUEST_EVENT = 'TIMLESS_PAGE_BUILDER_REQUEST_HOME_BACKGROUND_PREVIEW';
@@ -158,14 +160,17 @@ export default function HomeBackgroundImageSection() {
     }
 
     return (
-        <motion.section
+        <FadeInOutOnView
+            as="section"
             className={`${timelessFontClass} w-full bg-white`}
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: false, amount: 0.2 }}
-            transition={{ duration: 0.8, ease: 'easeOut' }}
+            rootMargin="0px 0px -10% 0px"
+            threshold={0.01}
+            durationMs={800}
+            yPx={30}
+            
             onClick={handleSectionSelect}
         >
+
             <div className="grid grid-cols-1 md:grid-cols-2">
                 {items.map((item) => (
                     <Link
@@ -203,6 +208,7 @@ export default function HomeBackgroundImageSection() {
                     </Link>
                 ))}
             </div>
-        </motion.section>
+        </FadeInOutOnView>
     );
 }
+

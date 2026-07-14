@@ -1,8 +1,6 @@
-# TODO
+- [ ] Add scroll-based fade-in when TrendingProduct section enters viewport and fade-out when it leaves.
+- [x] Implement using IntersectionObserver (no new dependencies) inside TrendingProduct.jsx.
 
-## CollectionsSection zoom-in/out on scroll
-- [ ] Analyze current animation/zoom styles inside `resources/js/frontend/components/CollectionsSection.jsx`.
-- [ ] Add IntersectionObserver + Framer Motion (or CSS) so section zooms in when entering viewport and zooms out when leaving.
-- [ ] Ensure animation resets correctly on quick scroll, and does not break Swiper.
-- [ ] Run build/dev checks (lint/compile) to confirm no syntax/runtime errors.
+- [ ] Ensure animation doesn't break existing layout/3D carousel.
+- [ ] Sanity check in browser (scroll into/out of Trending Products section).
 

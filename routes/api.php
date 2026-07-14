@@ -26,6 +26,7 @@ use App\Http\Controllers\Payment\StripeController;
 use App\Http\Controllers\ShipStationController;
 use App\Http\Controllers\UPSCourierController;
 use App\Http\Controllers\UsLocationController;
+use App\Http\Controllers\TrendingSectionController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\GoogleAuthController;
@@ -44,6 +45,7 @@ Route::get('/public/hero', [HeroController::class, 'publicIndex']);
 Route::get('/public/heroes', [HeroController::class, 'publicList']);
 Route::get('/public/features', [FeatureController::class, 'publicIndex']);
 Route::get('/public/home-background-section', [HomeBackgroundSectionController::class, 'publicIndex']);
+Route::get('/public/trending-section', [TrendingSectionController::class, 'publicIndex']);
 Route::get('/public/our-story', [OurStorySectionController::class, 'publicIndex']);
 Route::get('/public/products', [ProductController::class, 'publicIndex']);
 Route::get('/public/shop-products', [ProductController::class, 'publicShopIndex']);
@@ -70,6 +72,12 @@ Route::post('auth/google/callback', [GoogleAuthController::class, 'handleGoogleC
 Route::post('/shipping/orders', [ShipStationController::class, 'storeOrder']);
 Route::post('/ups/shipments', [UPSCourierController::class, 'storeShipment']);
 Route::middleware('auth:sanctum')->group(function () {
+
+    // Admin: update trending personalization
+    Route::post('/trending-section', [TrendingSectionController::class, 'update']);
+
+    // Public endpoints below are also defined above (outside this group) for reading.
+
 	Route::get('/user', function (Request $request) {
 		return response()->json($request->user());
 	});
