@@ -10,6 +10,12 @@ function buildHeroFormData(payload = {}) {
     formData.append('image_url', payload.image_url || '');
     formData.append('video_url', payload.video_url || '');
 
+    if (Array.isArray(payload.header_title_items)) {
+        payload.header_title_items.forEach((item) => {
+            formData.append('header_title_items[]', item || '');
+        });
+    }
+
     
     formData.append('button_enabled', payload.button_enabled ? '1' : '0');
     formData.append('button_url', payload.button_url || '');

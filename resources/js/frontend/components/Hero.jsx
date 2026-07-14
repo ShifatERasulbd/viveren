@@ -5,6 +5,7 @@ import {
   resolveHeroFontSize,
 } from '../../utils/heroTypography';
 import { sectionTypography } from '../utils/sectionTypography';
+import TextGenerateEffect from './TextGenerateEffect';
 
 function resolveMediaUrl(value = '') {
   const raw = String(value || '').trim();
@@ -34,6 +35,19 @@ function splitHeroTitle(value, mode = 'double') {
   }
   const middle = Math.ceil(words.length / 2);
   return [words.slice(0, middle).join(' '), words.slice(middle).join(' ')];
+}
+
+function normalizeHeaderTitleItems(items, fallback = '') {
+  const normalized = Array.isArray(items)
+    ? items.map((item) => String(item || '').trim()).filter(Boolean)
+    : [];
+
+  if (normalized.length > 0) {
+    return normalized;
+  }
+
+  const fallbackValue = String(fallback || '').trim();
+  return fallbackValue ? [fallbackValue] : [];
 }
 
 export default function Hero() {
@@ -137,6 +151,11 @@ export default function Hero() {
     () => splitHeroTitle(displayHeroData?.title, displayHeroData?.title_display_mode || 'double'),
     [displayHeroData?.title, displayHeroData?.title_display_mode]
   );
+  const headerTitleItems = useMemo(
+    () => normalizeHeaderTitleItems(displayHeroData?.header_title_items, displayHeroData?.header_title),
+    [displayHeroData?.header_title_items, displayHeroData?.header_title]
+  );
+  const [headerTitleIndex, setHeaderTitleIndex] = useState(0);
   
   const fullDescription = String(displayHeroData?.description || '');
   const heroImage = useMemo(
@@ -159,6 +178,34 @@ export default function Hero() {
     const intervalId = window.setInterval(() => setTitleAnimationCycle((c) => c + 1), cycleDurationMs);
     return () => window.clearInterval(intervalId);
   }, [isLoading, titleLines, maxTitleCharIndex]);
+
+  useEffect(() => {
+    setHeaderTitleIndex(0);
+
+    if (headerTitleItems.length <= 1) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setHeaderTitleIndex((current) => (current + 1) % headerTitleItems.length);
+    }, 2400);
+
+    return () => window.clearInterval(intervalId);
+  }, [headerTitleItems]);
+
+  useEffect(() => {
+    if (headerTitleItems.length === 0) {
+      return;
+    }
+
+    setHeaderTitleIndex((current) => {
+      if (current >= headerTitleItems.length) {
+        return 0;
+      }
+
+      return current;
+    });
+  }, [headerTitleItems]);
 
   useEffect(() => {
     setTypedDescription('');
@@ -242,10 +289,10 @@ export default function Hero() {
                 }}
               >
                 {titleLines.map((line, i) => (
-                  <span key={i} className="block">
+                  <span key={`${titleAnimationCycle}-${i}`} className="block">
                     {Array.from(line).map((char, ci) => (
                       <span 
-                        key={ci} 
+                        key={`${titleAnimationCycle}-${i}-${ci}`} 
                         className="hero-scale-in-char" 
                         style={{ animationDelay: `${(i * 12 + ci) * 0.08}s` }}
                       >
@@ -256,11 +303,7 @@ export default function Hero() {
                 ))}
               </h1>
               
-              {displayHeroData?.header_title ? (
-                <div className="text-white text-sm sm:text-base leading-tight" style={{ fontFamily: titleFamily }}>
-                  {displayHeroData.header_title}
-                </div>
-              ) : null}
+            
 
               {Boolean(displayHeroData?.button_enabled ?? true) && (
                 <a href={displayHeroData?.button_url || '/new-arrivals'} className={sectionTypography.heroPrimaryButton}>

@@ -10,20 +10,57 @@ use Illuminate\Support\Facades\File;
 
 class HeroController extends Controller
 {
+    private function normalizeHeaderTitleItems(mixed $items, ?string $fallback = null): array
+    {
+        $normalized = [];
+
+        if (is_array($items)) {
+            foreach ($items as $item) {
+                $value = trim((string) $item);
+                if ($value !== '') {
+                    $normalized[] = $value;
+                }
+            }
+        }
+
+        if (empty($normalized) && $fallback !== null) {
+            $value = trim($fallback);
+            if ($value !== '') {
+                $normalized[] = $value;
+            }
+        }
+
+        return array_values(array_unique($normalized));
+    }
+
+    private function resolveHeaderTitleText(array $items, ?string $fallback = null): string
+    {
+        if (! empty($items)) {
+            return trim((string) $items[0]);
+        }
+
+        return trim((string) $fallback);
+    }
+
     private function ensureDefaultHero(): Hero
     {
         $hero = Hero::query()->orderBy('id')->first();
 
         if (! $hero) {
             $hero = Hero::query()->create([
-                'title' => 'Custom apparel solutions',
+            'title' => 'Custom apparel solutions',
                 'description' => 'Elevate your brand with premium customized apparel designed for teams, events, corporate identity, and professional wear.',
                 'image' => '/uploads/heroes/images/hero1.webp',
                 'video' => null,
                 'display_title_mode' => 'double',
                 'header_title' => 'SUBSCRIBE AND SAVE 10% ON YOUR FIRST ORDER',
+                'header_title_items' => ['SUBSCRIBE AND SAVE 10% ON YOUR FIRST ORDER'],
                 'button_enabled' => true,
+
                 'button_url' => '/shop',
+
+
+
             ]);
         }
 
@@ -86,10 +123,16 @@ class HeroController extends Controller
 
     private function toResponse(Hero $hero): array
     {
+        $headerTitleItems = $this->normalizeHeaderTitleItems(
+            $hero->header_title_items,
+            $hero->header_title,
+        );
+
         return [
             'id' => $hero->id,
             'title' => $hero->title,
             'header_title' => $hero->header_title,
+            'header_title_items' => $headerTitleItems,
             'description' => $hero->description,
             'image_url' => $this->resolveAssetUrl($hero->image),
             'video_url' => $this->resolveAssetUrl($hero->video),
@@ -122,6 +165,8 @@ class HeroController extends Controller
             'video_file' => ['nullable', 'file', 'mimetypes:video/mp4,video/webm,video/ogg,video/quicktime', 'max:51200'],
             'title_display_mode' => ['nullable', 'in:single,double'],
             'header_title' => ['nullable', 'string', 'max:255'],
+            'header_title_items' => ['nullable', 'array'],
+            'header_title_items.*' => ['nullable', 'string', 'max:255'],
             'button_enabled' => ['nullable', 'boolean'],
             'button_url' => ['nullable', 'string', 'max:2048'],
         ]);
@@ -151,6 +196,10 @@ class HeroController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $this->validatePayload($request);
+        $headerTitleItems = $this->normalizeHeaderTitleItems(
+            $validated['header_title_items'] ?? null,
+            $validated['header_title'] ?? null,
+        );
 
         if ($request->hasFile('image_file')) {
             $validated['image'] = $this->storeAssetInPublicDir($request->file('image_file'), 'uploads/heroes/images', 'hero_image_');
@@ -164,6 +213,9 @@ class HeroController extends Controller
             $validated['video'] = trim((string) ($validated['video_url'] ?? '')) ?: null;
         }
 
+        $validated['header_title_items'] = $headerTitleItems;
+        $validated['header_title'] = $this->resolveHeaderTitleText($headerTitleItems, $validated['header_title'] ?? null);
+
         unset($validated['image_url'], $validated['video_url'], $validated['image_file'], $validated['video_file']);
 
         $hero = Hero::query()->create($validated);
@@ -174,6 +226,10 @@ class HeroController extends Controller
     public function update(Request $request, Hero $hero): JsonResponse
     {
         $validated = $this->validatePayload($request);
+        $headerTitleItems = $this->normalizeHeaderTitleItems(
+            $validated['header_title_items'] ?? null,
+            $validated['header_title'] ?? null,
+        );
 
         // Map frontend payload (title_display_mode) to DB column (display_title_mode)
         if (array_key_exists('title_display_mode', $validated) && ! array_key_exists('display_title_mode', $validated)) {
@@ -193,6 +249,9 @@ class HeroController extends Controller
         } elseif (array_key_exists('video_url', $validated)) {
             $validated['video'] = trim((string) $validated['video_url']) ?: null;
         }
+
+        $validated['header_title_items'] = $headerTitleItems;
+        $validated['header_title'] = $this->resolveHeaderTitleText($headerTitleItems, $validated['header_title'] ?? null);
 
         unset($validated['image_url'], $validated['video_url'], $validated['image_file'], $validated['video_file']);
 

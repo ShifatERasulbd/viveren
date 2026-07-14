@@ -4,11 +4,11 @@ import SectionSkeleton from '../components/SectionSkeleton.jsx';
 
 const Hero = lazy(() => import('../components/Hero.jsx'));
 const CollectionsSection = lazy(() => import('../components/CollectionsSection.jsx'));
-const BestSellersSection = lazy(() => import('../components/BestSellersSection.jsx'));
 const FeaturesSection = lazy(() => import('../components/FeaturesSection.jsx'));
-const HomeBackgroundImageSection = lazy(() => import('../components/HomeBackgroundImageSection.jsx'));
+const HomeBackgroundImageSection = lazy(
+    () => import('../components/HomeBackgroundImageSection.jsx'),
+);
 const NewsletterSection = lazy(() => import('../components/NewsletterSection.jsx'));
-
 
 function LazySection({ children, heightClass, variant = 'generic', defer = true }) {
     const containerRef = useRef(null);
@@ -60,21 +60,21 @@ function LazySection({ children, heightClass, variant = 'generic', defer = true 
 const sectionRegistry = {
     hero: { height: 'h-[520px]', variant: 'hero', component: Hero },
     collections: { height: 'h-[560px]', variant: 'catalog', component: CollectionsSection },
-    'home-background-image': { height: 'h-[520px] sm:h-[620px] lg:h-screen', variant: 'hero', component: HomeBackgroundImageSection },
-    'best-sellers': { height: 'h-[520px]', variant: 'catalog', component: BestSellersSection },
-    
-    
+    'home-background-image': {
+        height: 'h-[520px] sm:h-[620px] lg:h-screen',
+        variant: 'hero',
+        component: HomeBackgroundImageSection,
+    },
+
+    'our-story': { height: 'h-[520px]', variant: 'catalog', component: lazy(() => import('../components/OurStorySection.jsx')) },
     newsletter: { height: 'h-[220px]', variant: 'newsletter', component: NewsletterSection },
 };
 
 const defaultSectionOrder = [
     'hero',
     'collections',
-    'product-divider',
     'home-background-image',
-    'best-sellers',
     'our-story',
-   
     'newsletter',
 ];
 
@@ -98,46 +98,8 @@ export default function HomePage() {
             return false;
         }
     });
+
     const [sectionOrder, setSectionOrder] = useState(() => normalizeSectionOrder(defaultSectionOrder));
-    const [bestSellersConfig, setBestSellersConfig] = useState({
-        title: 'Trending',
-        position: 3,
-    });
-
-    useEffect(() => {
-        let ignore = false;
-
-        async function loadBestSellersConfig() {
-            try {
-                const response = await fetch('/api/public/best-sellers-section', {
-                    headers: { Accept: 'application/json' },
-                });
-
-                if (!response.ok) {
-                    return;
-                }
-
-                const payload = await response.json();
-                if (ignore || !payload) {
-                    return;
-                }
-
-                const normalized = {
-                    title: String(payload.title || 'Trending').trim() || 'Trending',
-                    position: Math.max(1, Math.min(6, Number(payload.position) || 3)),
-                };
-
-                setBestSellersConfig(normalized);
-            } catch {
-                // Keep default config when endpoint is unavailable.
-            }
-        }
-
-        loadBestSellersConfig();
-        return () => {
-            ignore = true;
-        };
-    }, []);
 
     useEffect(() => {
         function handleBuilderLayoutMessage(event) {
@@ -163,17 +125,6 @@ export default function HomePage() {
                 return;
             }
 
-            if (data.type === 'TIMLESS_PAGE_BUILDER_BEST_SELLERS_SECTION_CONFIG_UPDATE') {
-                const payload = data.payload || {};
-                const normalized = {
-                    title: String(payload.title || 'Trending').trim() || 'Trending',
-                    position: Math.max(1, Math.min(6, Number(payload.position) || 3)),
-                };
-
-                setBestSellersConfig(normalized);
-                return;
-            }
-
             if (data.type !== 'TIMLESS_PAGE_BUILDER_HOME_LAYOUT_UPDATE') {
                 return;
             }
@@ -190,9 +141,7 @@ export default function HomePage() {
         }
 
         window.addEventListener('message', handleBuilderLayoutMessage);
-        return () => {
-            window.removeEventListener('message', handleBuilderLayoutMessage);
-        };
+        return () => window.removeEventListener('message', handleBuilderLayoutMessage);
     }, []);
 
     return (
@@ -216,11 +165,7 @@ export default function HomePage() {
                             variant={section.variant}
                             defer={!isBuilderPreview && sectionKey !== 'hero'}
                         >
-                            {sectionKey === 'best-sellers' ? (
-                                <Component sectionTitle="Trending" />
-                            ) : (
-                                <Component />
-                            )}
+                            <Component />
                         </LazySection>
                     </div>
                 );
@@ -228,3 +173,4 @@ export default function HomePage() {
         </>
     );
 }
+

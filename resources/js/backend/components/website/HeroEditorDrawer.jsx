@@ -1,4 +1,5 @@
 import { Settings2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +24,29 @@ export default function HeroEditorDrawer({
     onSave,
     isSaving,
 }) {
+    const headerTitleItems = Array.isArray(value.header_title_items) && value.header_title_items.length > 0
+        ? value.header_title_items
+        : [value.header_title || ''];
+
+    function updateHeaderTitleItem(index, nextValue) {
+        const nextItems = [...headerTitleItems];
+        nextItems[index] = nextValue;
+        onChange('header_title_items', nextItems);
+        onChange('header_title', nextItems.find((item) => String(item || '').trim()) || '');
+    }
+
+    function addHeaderTitleItem() {
+        const nextItems = [...headerTitleItems, ''];
+        onChange('header_title_items', nextItems);
+    }
+
+    function removeHeaderTitleItem(index) {
+        const nextItems = headerTitleItems.filter((_, itemIndex) => itemIndex !== index);
+        const safeItems = nextItems.length > 0 ? nextItems : [''];
+        onChange('header_title_items', safeItems);
+        onChange('header_title', safeItems.find((item) => String(item || '').trim()) || '');
+    }
+
     const showAll = !activePart || activePart === 'all';
     const showTitle = showAll || activePart === 'title';
     const showDescription = showAll || activePart === 'description';
@@ -149,14 +173,41 @@ export default function HeroEditorDrawer({
                     ) : null}
 
                     {showTitle ? (
-                    <div className="space-y-2">
-                        <Label htmlFor="Header-title">Header title</Label>
-                        <Input
-                            id="header-title"
-                            value={value.header_title || ''}
-                            onChange={(event) => onChange('header_title', event.target.value)}
-                            placeholder="SUBSCRIBE AND SAVE 10% ON YOUR FIRST ORDER"
-                        />
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between gap-3">
+                            <Label>Header title repeater</Label>
+                            <Button type="button" variant="outline" size="sm" onClick={addHeaderTitleItem}>
+                                <Plus className="mr-2 size-4" />
+                                Add title
+                            </Button>
+                        </div>
+
+                        <div className="space-y-3">
+                            {headerTitleItems.map((item, index) => (
+                                <div key={index} className="space-y-2 rounded-md border border-border bg-background p-3">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <Label htmlFor={`header-title-${index}`}>Title {index + 1}</Label>
+                                        {headerTitleItems.length > 1 ? (
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => removeHeaderTitleItem(index)}
+                                                aria-label={`Remove title ${index + 1}`}
+                                            >
+                                                <Trash2 className="size-4" />
+                                            </Button>
+                                        ) : null}
+                                    </div>
+                                    <Input
+                                        id={`header-title-${index}`}
+                                        value={item || ''}
+                                        onChange={(event) => updateHeaderTitleItem(index, event.target.value)}
+                                        placeholder="SUBSCRIBE AND SAVE 10% ON YOUR FIRST ORDER"
+                                    />
+                                </div>
+                            ))}
+                        </div>
                     </div>
                     ) : null}
 

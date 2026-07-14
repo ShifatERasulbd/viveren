@@ -3,6 +3,7 @@ import { Menu, Search, ShoppingCart, UserRound } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import SearchProducts from './search';
 import TopBar from './TopBar';
+import TextGenerateEffect from './TextGenerateEffect';
 import Brand from './Brand';
 import MainNav from './MainNav';
 import HeaderTools from './HeaderTools';
@@ -57,6 +58,8 @@ export default function Header() {
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [heroHeaderText, setHeroHeaderText] = useState('');
+    const [heroHeaderItems, setHeroHeaderItems] = useState([]);
+    const [heroHeaderIndex, setHeroHeaderIndex] = useState(0);
     
     
     const closeMenuTimerRef = useRef(null);
@@ -241,7 +244,14 @@ export default function Header() {
 
                 const payload = await response.json();
                 if (!ignore) {
-                    setHeroHeaderText(String(payload?.header_title || '').trim());
+                    const items = Array.isArray(payload?.header_title_items)
+                        ? payload.header_title_items.map((item) => String(item || '').trim()).filter(Boolean)
+                        : [];
+                    const fallback = String(payload?.header_title || '').trim();
+                    const safeItems = items.length > 0 ? items : (fallback ? [fallback] : []);
+                    setHeroHeaderItems(safeItems);
+                    setHeroHeaderIndex(0);
+                    setHeroHeaderText(safeItems[0] || fallback);
                 }
             } catch {
                 // Keep the fallback text when the hero endpoint is unavailable.
@@ -266,12 +276,37 @@ export default function Header() {
                 return;
             }
 
-            setHeroHeaderText(String(data.payload?.header_title || '').trim());
+            const items = Array.isArray(data.payload?.header_title_items)
+                ? data.payload.header_title_items.map((item) => String(item || '').trim()).filter(Boolean)
+                : [];
+            const fallback = String(data.payload?.header_title || '').trim();
+            const safeItems = items.length > 0 ? items : (fallback ? [fallback] : []);
+            setHeroHeaderItems(safeItems);
+            setHeroHeaderIndex(0);
+            setHeroHeaderText(safeItems[0] || fallback);
         }
 
         window.addEventListener('message', handleHeroPreviewMessage);
         return () => window.removeEventListener('message', handleHeroPreviewMessage);
     }, []);
+
+    useEffect(() => {
+        if (heroHeaderItems.length <= 1) {
+            return;
+        }
+
+        const intervalId = window.setInterval(() => {
+            setHeroHeaderIndex((current) => (current + 1) % heroHeaderItems.length);
+        }, 2400);
+
+        return () => window.clearInterval(intervalId);
+    }, [heroHeaderItems]);
+
+    useEffect(() => {
+        if (heroHeaderItems.length > 0) {
+            setHeroHeaderText(heroHeaderItems[heroHeaderIndex] || heroHeaderItems[0] || '');
+        }
+    }, [heroHeaderIndex, heroHeaderItems]);
 
     useEffect(() => {
         let ignore = false;
@@ -494,7 +529,11 @@ export default function Header() {
 
     return (
         <>
-        <TopBar text={headerText} />
+        <TopBar text={headerText} animate />
+
+        <div className="sr-only">
+            <TextGenerateEffect text={headerText} />
+        </div>
 
         <header className={`${timelessFontClass} site-header sticky top-0 z-[300] border-b border-zinc-200 bg-white text-zinc-950 backdrop-blur`}>
            <div className="site-header-inner mx-auto flex h-[90px] w-full max-w-[1920px] items-center justify-between px-4 sm:px-6 lg:px-10 xl:grid xl:grid-cols-[1fr_auto_1fr]">

@@ -7,11 +7,12 @@ import HeroEditorDrawer from '@/components/website/HeroEditorDrawer';
 import FeaturesEditorDrawer from '@/components/website/FeaturesEditorDrawer';
 import CollectionsEditorDrawer from '@/components/website/CollectionsEditorDrawer';
 import OurStoryEditorDrawer from '@/components/website/OurStoryEditorDrawer';
-import BestSellersEditorDrawer from '@/components/website/BestSellersEditorDrawer';
+
 import HomeBackgroundEditorDrawer from '@/components/website/HomeBackgroundEditorDrawer';
 import HomePagePreviewCard from '@/components/website/HomePagePreviewCard';
 import HomePageSectionsCard from '@/components/website/HomePageSectionsCard';
 import { homeSections } from '@/components/website/homePageBuilderData';
+
 import { useAppContext } from '@/context/AppContext';
 import {
     createFeature,
@@ -27,14 +28,12 @@ import {
     fetchHomeBackgroundSection,
     updateHomeBackgroundSection,
 } from '@/pages/Website/homeBackgroundApi';
-import {
-    fetchBestSellersSectionSettings,
-    updateBestSellersSectionSettings,
-} from '@/pages/Website/bestSellersApi';
+
 
 const defaultHeroDraft = {
     title: 'Custom apparel solutions',
     header_title: 'SUBSCRIBE AND SAVE 10% ON YOUR FIRST ORDER',
+    header_title_items: ['SUBSCRIBE AND SAVE 10% ON YOUR FIRST ORDER'],
     description:
         'Elevate your brand with premium customized apparel designed for teams, events, corporate identity, and professional wear.',
     image_url: '/uploads/heroes/images/hero1.webp',
@@ -146,6 +145,23 @@ const defaultHomeBackgroundDraft = {
     ],
 };
 
+function normalizeHeaderTitleItems(items, fallback = '') {
+    const normalized = Array.isArray(items)
+        ? items.map((item) => String(item || '').trim()).filter(Boolean)
+        : [];
+
+    if (normalized.length > 0) {
+        return [...new Set(normalized)];
+    }
+
+    const fallbackValue = String(fallback || '').trim();
+    return fallbackValue ? [fallbackValue] : ['SUBSCRIBE AND SAVE 10% ON YOUR FIRST ORDER'];
+}
+
+function resolveHeaderTitleText(items, fallback = '') {
+    return normalizeHeaderTitleItems(items, fallback)[0] || '';
+}
+
 function moveItemByKeys(items, sourceKey, targetKey, keySelector) {
     const sourceIndex = items.findIndex((item) => keySelector(item) === sourceKey);
     const targetIndex = items.findIndex((item) => keySelector(item) === targetKey);
@@ -163,16 +179,18 @@ function moveItemByKeys(items, sourceKey, targetKey, keySelector) {
 export default function HomePageBuilder() {
     const { setPageTitle } = useAppContext();
     const iframeRef = useRef(null);
-    const [sections, setSections] = useState(homeSections);
+    const [sections, setSections] = useState(() =>
+        homeSections.filter((section) => section.key !== 'best-sellers' && section.key !== 'features')
+    );
     const [isHeroDrawerOpen, setIsHeroDrawerOpen] = useState(false);
     const [isFeaturesDrawerOpen, setIsFeaturesDrawerOpen] = useState(false);
     const [isCollectionsDrawerOpen, setIsCollectionsDrawerOpen] = useState(false);
     const [isOurStoryDrawerOpen, setIsOurStoryDrawerOpen] = useState(false);
     const [isHomeBackgroundDrawerOpen, setIsHomeBackgroundDrawerOpen] = useState(false);
-    const [isBestSellersDrawerOpen, setIsBestSellersDrawerOpen] = useState(false);
+
     const [activeFeatureItemIndex, setActiveFeatureItemIndex] = useState(null);
     const [activeCollectionItemIndex, setActiveCollectionItemIndex] = useState(null);
-    const [activeBestSellerItemIndex, setActiveBestSellerItemIndex] = useState(null);
+
     const [activeHeroConfigPart, setActiveHeroConfigPart] = useState('all');
     const [selectedSectionKey, setSelectedSectionKey] = useState(null);
     const [heroDraft, setHeroDraft] = useState(defaultHeroDraft);
@@ -193,29 +211,10 @@ export default function HomePageBuilder() {
     const [isSavingCollections, setIsSavingCollections] = useState(false);
     const [isSavingOurStory, setIsSavingOurStory] = useState(false);
     const [isSavingHomeBackground, setIsSavingHomeBackground] = useState(false);
-    const [bestSellersDraft, setBestSellersDraft] = useState({
-        title: 'Best Sellers',
-        position: 3,
-    });
-    const [isSavingBestSellers, setIsSavingBestSellers] = useState(false);
 
-    function applyBestSellersConfigToSections(currentSections, config) {
-        const next = currentSections.map((section) =>
-            section.key === 'best-sellers'
-                ? { ...section, title: config.title || 'Best Sellers' }
-                : section,
-        );
 
-        const sourceIndex = next.findIndex((section) => section.key === 'best-sellers');
-        if (sourceIndex < 0) {
-            return next;
-        }
 
-        const [bestSellersSection] = next.splice(sourceIndex, 1);
-        const targetIndex = Math.max(0, Math.min(next.length, Number(config.position || 3) - 1));
-        next.splice(targetIndex, 0, bestSellersSection);
-        return next;
-    }
+
 
     useEffect(() => {
         setPageTitle('Home Page Builder');
@@ -224,26 +223,6 @@ export default function HomePageBuilder() {
     useEffect(() => {
         let ignore = false;
 
-        async function loadBestSellersDraft() {
-            try {
-                const payload = await fetchBestSellersSectionSettings();
-                if (!payload || ignore) {
-                    return;
-                }
-
-                const normalized = {
-                    title: String(payload.title || 'Best Sellers').trim() || 'Best Sellers',
-                    position: Math.max(1, Math.min(6, Number(payload.position) || 3)),
-                };
-
-                setBestSellersDraft(normalized);
-                setSections((previous) => applyBestSellersConfigToSections(previous, normalized));
-            } catch {
-                // Keep default draft when best sellers settings fail to load.
-            }
-        }
-
-        loadBestSellersDraft();
 
         async function loadActiveHero() {
             try {
@@ -257,7 +236,14 @@ export default function HomePageBuilder() {
                 setHeroDraft((previous) => ({
                     ...previous,
                     title: latestHero.title || previous.title,
-                    header_title: latestHero.header_title || previous.header_title,
+                    header_title_items: normalizeHeaderTitleItems(
+                        latestHero.header_title_items,
+                        latestHero.header_title || previous.header_title,
+                    ),
+                    header_title: resolveHeaderTitleText(
+                        latestHero.header_title_items,
+                        latestHero.header_title || previous.header_title,
+                    ),
                     description: latestHero.description || previous.description,
                     title_display_mode: latestHero.title_display_mode || previous.title_display_mode,
                     title_font_size: latestHero.title_font_size ?? previous.title_font_size,
@@ -694,29 +680,8 @@ export default function HomePageBuilder() {
                     setIsCollectionsDrawerOpen(false);
                     setIsOurStoryDrawerOpen(false);
                     setIsHomeBackgroundDrawerOpen(false);
-                    setIsBestSellersDrawerOpen(false);
                 }
-                return;
-            }
 
-            if (data.type === 'TIMLESS_PAGE_BUILDER_FEATURES_SECTION_SELECTED') {
-                const incomingIndex = data.payload?.itemIndex;
-                const parsedIndex = Number.isInteger(incomingIndex)
-                    ? incomingIndex
-                    : Number.isFinite(Number(incomingIndex))
-                      ? Number(incomingIndex)
-                      : null;
-
-                setSelectedSectionKey('features');
-                setActiveFeatureItemIndex(
-                    parsedIndex !== null && parsedIndex >= 0 ? parsedIndex : null
-                );
-                setIsFeaturesDrawerOpen(true);
-                setIsHeroDrawerOpen(false);
-                setIsCollectionsDrawerOpen(false);
-                setIsOurStoryDrawerOpen(false);
-                setIsHomeBackgroundDrawerOpen(false);
-                setIsBestSellersDrawerOpen(false);
                 return;
             }
 
@@ -737,7 +702,6 @@ export default function HomePageBuilder() {
                 setIsFeaturesDrawerOpen(false);
                 setIsOurStoryDrawerOpen(false);
                 setIsHomeBackgroundDrawerOpen(false);
-                setIsBestSellersDrawerOpen(false);
                 return;
             }
 
@@ -748,7 +712,6 @@ export default function HomePageBuilder() {
                 setIsFeaturesDrawerOpen(false);
                 setIsCollectionsDrawerOpen(false);
                 setIsHomeBackgroundDrawerOpen(false);
-                setIsBestSellersDrawerOpen(false);
                 return;
             }
 
@@ -759,28 +722,6 @@ export default function HomePageBuilder() {
                 setIsFeaturesDrawerOpen(false);
                 setIsCollectionsDrawerOpen(false);
                 setIsOurStoryDrawerOpen(false);
-                setIsBestSellersDrawerOpen(false);
-                return;
-            }
-
-            if (data.type === 'TIMLESS_PAGE_BUILDER_BEST_SELLERS_SECTION_SELECTED') {
-                const incomingIndex = data.payload?.itemIndex;
-                const parsedIndex = Number.isInteger(incomingIndex)
-                    ? incomingIndex
-                    : Number.isFinite(Number(incomingIndex))
-                      ? Number(incomingIndex)
-                      : null;
-
-                setSelectedSectionKey('best-sellers');
-                setActiveBestSellerItemIndex(
-                    parsedIndex !== null && parsedIndex >= 0 ? parsedIndex : null
-                );
-                setIsBestSellersDrawerOpen(true);
-                setIsHeroDrawerOpen(false);
-                setIsFeaturesDrawerOpen(false);
-                setIsCollectionsDrawerOpen(false);
-                setIsOurStoryDrawerOpen(false);
-                setIsHomeBackgroundDrawerOpen(false);
                 return;
             }
 
@@ -895,18 +836,6 @@ export default function HomePageBuilder() {
             setIsCollectionsDrawerOpen(false);
             setIsOurStoryDrawerOpen(false);
             setIsHomeBackgroundDrawerOpen(false);
-            setIsBestSellersDrawerOpen(false);
-            return;
-        }
-
-        if (section.key === 'features') {
-            setActiveFeatureItemIndex(null);
-            setIsFeaturesDrawerOpen(true);
-            setIsHeroDrawerOpen(false);
-            setIsCollectionsDrawerOpen(false);
-            setIsOurStoryDrawerOpen(false);
-            setIsHomeBackgroundDrawerOpen(false);
-            setIsBestSellersDrawerOpen(false);
             return;
         }
 
@@ -915,18 +844,6 @@ export default function HomePageBuilder() {
             setIsCollectionsDrawerOpen(true);
             setIsHeroDrawerOpen(false);
             setIsFeaturesDrawerOpen(false);
-            setIsOurStoryDrawerOpen(false);
-            setIsHomeBackgroundDrawerOpen(false);
-            setIsBestSellersDrawerOpen(false);
-            return;
-        }
-
-        if (section.key === 'best-sellers') {
-            setActiveBestSellerItemIndex(null);
-            setIsBestSellersDrawerOpen(true);
-            setIsHeroDrawerOpen(false);
-            setIsFeaturesDrawerOpen(false);
-            setIsCollectionsDrawerOpen(false);
             setIsOurStoryDrawerOpen(false);
             setIsHomeBackgroundDrawerOpen(false);
             return;
@@ -938,7 +855,6 @@ export default function HomePageBuilder() {
             setIsFeaturesDrawerOpen(false);
             setIsCollectionsDrawerOpen(false);
             setIsOurStoryDrawerOpen(false);
-            setIsBestSellersDrawerOpen(false);
             return;
         }
 
@@ -948,7 +864,6 @@ export default function HomePageBuilder() {
             setIsFeaturesDrawerOpen(false);
             setIsCollectionsDrawerOpen(false);
             setIsHomeBackgroundDrawerOpen(false);
-            setIsBestSellersDrawerOpen(false);
             return;
         }
 
@@ -957,54 +872,16 @@ export default function HomePageBuilder() {
         setIsCollectionsDrawerOpen(false);
         setIsOurStoryDrawerOpen(false);
         setIsHomeBackgroundDrawerOpen(false);
-        setIsBestSellersDrawerOpen(false);
     }
 
     function handleReorderSection(sourceKey, targetKey) {
         setSections((previous) => moveItemByKeys(previous, sourceKey, targetKey, (section) => section.key));
     }
 
-    async function handleSaveBestSellersToDatabase() {
-        setIsSavingBestSellers(true);
 
-        try {
-            const payload = await updateBestSellersSectionSettings({
-                title: String(bestSellersDraft.title || '').trim() || 'Best Sellers',
-                position: Math.max(1, Math.min(6, Number(bestSellersDraft.position) || 3)),
-            });
-
-            const normalized = {
-                title: String(payload?.title || 'Best Sellers').trim() || 'Best Sellers',
-                position: Math.max(1, Math.min(6, Number(payload?.position) || 3)),
-            };
-
-            setBestSellersDraft(normalized);
-            setSections((previous) => applyBestSellersConfigToSections(previous, normalized));
-
-            const target = iframeRef.current?.contentWindow;
-            if (target) {
-                target.postMessage(
-                    {
-                        type: 'TIMLESS_PAGE_BUILDER_BEST_SELLERS_SECTION_CONFIG_UPDATE',
-                        payload: normalized,
-                    },
-                    window.location.origin,
-                );
-            }
-
-            toast.success('Best Sellers settings saved to database.', {
-                style: { color: '#16a34a' },
-            });
-        } catch (error) {
-            toast.error(error?.message || 'Failed to save Best Sellers settings.', {
-                style: { color: '#dc2626' },
-            });
-        } finally {
-            setIsSavingBestSellers(false);
-        }
-    }
 
     function handleToggleSectionStatus(sectionKey) {
+
         setSections((previous) =>
             previous.map((section) =>
                 section.key === sectionKey
@@ -1440,9 +1317,10 @@ export default function HomePageBuilder() {
     async function handleSaveHeroToDatabase() {
         setIsSavingHero(true);
 
-    const payload = {
+        const payload = {
             title: heroDraft.title,
-            header_title: heroDraft.header_title,
+            header_title_items: normalizeHeaderTitleItems(heroDraft.header_title_items, heroDraft.header_title),
+            header_title: resolveHeaderTitleText(heroDraft.header_title_items, heroDraft.header_title),
             description: heroDraft.description,
             title_display_mode: heroDraft.title_display_mode,
             image_url: heroUploadFiles.image ? '' : heroDraft.image_url,
@@ -1483,7 +1361,14 @@ export default function HomePageBuilder() {
                     ...previous,
                     image_url: savedHero.image_url || previous.image_url,
                     video_url: savedHero.video_url || previous.video_url,
-                    header_title: savedHero.header_title || previous.header_title,
+                    header_title_items: normalizeHeaderTitleItems(
+                        savedHero.header_title_items,
+                        savedHero.header_title || previous.header_title,
+                    ),
+                    header_title: resolveHeaderTitleText(
+                        savedHero.header_title_items,
+                        savedHero.header_title || previous.header_title,
+                    ),
                 }));
             }
 
@@ -1727,27 +1612,7 @@ export default function HomePageBuilder() {
                 isSaving={isSavingHomeBackground}
             />
 
-            <BestSellersEditorDrawer
-                open={isBestSellersDrawerOpen}
-                onOpenChange={setIsBestSellersDrawerOpen}
-                activeItemIndex={activeBestSellerItemIndex}
-                sectionTitle={bestSellersDraft.title}
-                sectionPosition={bestSellersDraft.position}
-                onChangeTitle={(value) =>
-                    setBestSellersDraft((previous) => ({
-                        ...previous,
-                        title: value,
-                    }))
-                }
-                onChangePosition={(value) =>
-                    setBestSellersDraft((previous) => ({
-                        ...previous,
-                        position: Math.max(1, Math.min(6, Number(value) || 1)),
-                    }))
-                }
-                onSave={handleSaveBestSellersToDatabase}
-                isSaving={isSavingBestSellers}
-            />
+
         </DndProvider>
     );
 }
