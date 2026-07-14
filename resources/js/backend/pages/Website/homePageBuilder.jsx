@@ -6,7 +6,9 @@ import { toast } from 'sonner';
 import HeroEditorDrawer from '@/components/website/HeroEditorDrawer';
 import FeaturesEditorDrawer from '@/components/website/FeaturesEditorDrawer';
 import CollectionsEditorDrawer from '@/components/website/CollectionsEditorDrawer';
-import OurStoryEditorDrawer from '@/components/website/OurStoryEditorDrawer';
+
+import TrendingProductEditorDrawer from '@/components/website/TrendingProductEditorDreawer';
+
 
 import HomeBackgroundEditorDrawer from '@/components/website/HomeBackgroundEditorDrawer';
 import HomePagePreviewCard from '@/components/website/HomePagePreviewCard';
@@ -187,6 +189,8 @@ export default function HomePageBuilder() {
     const [isCollectionsDrawerOpen, setIsCollectionsDrawerOpen] = useState(false);
     const [isOurStoryDrawerOpen, setIsOurStoryDrawerOpen] = useState(false);
     const [isHomeBackgroundDrawerOpen, setIsHomeBackgroundDrawerOpen] = useState(false);
+    const [isTrendingDrawerOpen, setIsTrendingDrawerOpen] = useState(false);
+
 
     const [activeFeatureItemIndex, setActiveFeatureItemIndex] = useState(null);
     const [activeCollectionItemIndex, setActiveCollectionItemIndex] = useState(null);
@@ -864,6 +868,17 @@ export default function HomePageBuilder() {
             setIsFeaturesDrawerOpen(false);
             setIsCollectionsDrawerOpen(false);
             setIsHomeBackgroundDrawerOpen(false);
+            setIsTrendingDrawerOpen(false);
+            return;
+        }
+
+        if (section.key === 'trending') {
+            setIsTrendingDrawerOpen(true);
+            setIsHeroDrawerOpen(false);
+            setIsFeaturesDrawerOpen(false);
+            setIsCollectionsDrawerOpen(false);
+            setIsOurStoryDrawerOpen(false);
+            setIsHomeBackgroundDrawerOpen(false);
             return;
         }
 
@@ -872,7 +887,9 @@ export default function HomePageBuilder() {
         setIsCollectionsDrawerOpen(false);
         setIsOurStoryDrawerOpen(false);
         setIsHomeBackgroundDrawerOpen(false);
+        setIsTrendingDrawerOpen(false);
     }
+
 
     function handleReorderSection(sourceKey, targetKey) {
         setSections((previous) => moveItemByKeys(previous, sourceKey, targetKey, (section) => section.key));
@@ -1524,6 +1541,7 @@ export default function HomePageBuilder() {
     return (
         <DndProvider backend={HTML5Backend}>
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-[280px_minmax(0,1fr)] 2xl:grid-cols-[300px_minmax(0,1fr)]">
+
                 <HomePageSectionsCard
                     sections={sections}
                     selectedSectionKey={selectedSectionKey}
@@ -1589,16 +1607,7 @@ export default function HomePageBuilder() {
                 isSaving={isSavingCollections}
             />
 
-            <OurStoryEditorDrawer
-                open={isOurStoryDrawerOpen}
-                onOpenChange={setIsOurStoryDrawerOpen}
-                value={ourStoryDraft}
-                onChangeField={handleOurStoryFieldChange}
-                onUploadImage={handleOurStoryAssetUpload('story_image')}
-                onUploadLogo={handleOurStoryAssetUpload('story_logo')}
-                onSave={handleSaveOurStoryToDatabase}
-                isSaving={isSavingOurStory}
-            />
+
 
             <HomeBackgroundEditorDrawer
                 open={isHomeBackgroundDrawerOpen}
@@ -1612,7 +1621,15 @@ export default function HomePageBuilder() {
                 isSaving={isSavingHomeBackground}
             />
 
+            <TrendingProductEditorDrawer
+                open={isTrendingDrawerOpen}
+                onOpenChange={setIsTrendingDrawerOpen}
+                section={{ key: 'trending' }}
+                onChangeField={() => {}}
+                onSave={() => {}}
+            />
 
         </DndProvider>
     );
 }
+

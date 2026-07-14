@@ -1,19 +1,118 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
-export default function TimelessAboutSection() {
-  const productItems = [
-    { id: 1, title: 'Timeless Piece 1', price: 59 },
-    { id: 2, title: 'Timeless Piece 2', price: 69 },
-    { id: 3, title: 'Timeless Piece 3', price: 79 },
-    { id: 4, title: 'Timeless Piece 4', price: 89 },
-    { id: 5, title: 'Timeless Piece 5', price: 99 },
-  ];
+const FALLBACK_IMAGE = '/uploads/heroes/images/hero1.webp';
 
-  const extendedItems = [...productItems, ...productItems, ...productItems];
+const FALLBACK_PRODUCTS = [
+  { id: 1, title: 'Timeless Piece 1', price: 59 },
+  { id: 2, title: 'Timeless Piece 2', price: 69 },
+  { id: 3, title: 'Timeless Piece 3', price: 79 },
+  { id: 4, title: 'Timeless Piece 4', price: 89 },
+  { id: 5, title: 'Timeless Piece 5', price: 99 },
+];
+
+function toAbsoluteImageUrl(path) {
+  if (!path || typeof path !== 'string') {
+    return FALLBACK_IMAGE;
+  }
+
+  if (path.startsWith('http')) {
+    return path;
+  }
+
+  return `/${path.replace(/^\/+/, '')}`;
+}
+
+function normalizeImageKey(path) {
+  if (!path || typeof path !== 'string') {
+    return '';
+  }
+
+  return path.replace(/^https?:\/\/[^/]+/i, '').replace(/^\/+/, '').trim();
+}
+
+function resolveProductImage(product) {
+  const gallery = Array.isArray(product?.image_gallery) ? product.image_gallery : [];
+  const colorVariantImages =
+    product?.color_variant_images && typeof product.color_variant_images === 'object'
+      ? Object.values(product.color_variant_images).flatMap((items) => Array.isArray(items) ? items : [])
+      : [];
+
+  const candidates = [product?.cover_image, ...gallery, ...colorVariantImages].filter(Boolean);
+  const seen = new Set();
+
+  for (const item of candidates) {
+    const key = normalizeImageKey(item);
+    if (!key || seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    return toAbsoluteImageUrl(item);
+  }
+
+  return FALLBACK_IMAGE;
+}
+
+function resolveProductCardFields(p) {
+  const id = Number(p?.id);
+  if (!Number.isFinite(id) || id <= 0) return null;
+
+  const title = String(p?.name ?? p?.title ?? '').trim();
+  const priceValue = p?.price ?? p?.final_price ?? p?.sale_price ?? p?.regular_price;
+  const priceNumber = Number(priceValue);
+
+  return {
+    id,
+    title: title || `Product ${id}`,
+    price: Number.isFinite(priceNumber) ? priceNumber : 0,
+    image: resolveProductImage(p),
+  };
+}
+
+export default function TrendingProduct() {
+  const [products, setProducts] = useState(() => FALLBACK_PRODUCTS);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadTrending() {
+      try {
+        const response = await fetch('/api/public/products', {
+          headers: { Accept: 'application/json' },
+        });
+
+        if (!response.ok) return;
+        const payload = await response.json();
+
+        const list = Array.isArray(payload?.products)
+          ? payload.products
+          : Array.isArray(payload)
+            ? payload
+            : [];
+
+        const mapped = list.map(resolveProductCardFields).filter(Boolean);
+        if (ignore) return;
+
+        if (mapped.length > 0) {
+          setProducts(mapped);
+        }
+      } catch {
+        // Keep fallback.
+      }
+    }
+
+    loadTrending();
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  const extendedItems = useMemo(() => [...products, ...products, ...products], [products]);
   const totalItems = extendedItems.length;
 
   const [radius, setRadius] = useState(620);
   const [cardWidth, setCardWidth] = useState(250);
+
 
   useEffect(() => {
     const updateCarousel = () => {
@@ -69,16 +168,18 @@ export default function TimelessAboutSection() {
               >
                 <div className="h-[160px] md:h-[1950px] lg:h-[280px] w-full overflow-hidden rounded-[1.5rem] bg-zinc-100">
                   <img
-                    src={`/uploads/products/product-${p.id}.webp`}
+                    src={p.image || FALLBACK_IMAGE}
                     alt={p.title}
                     className="h-full w-full object-cover"
+                    onError={(event) => {
+                      event.currentTarget.onerror = null;
+                      event.currentTarget.src = FALLBACK_IMAGE;
+                    }}
                   />
                 </div>
 
                 <div className="mt-6 text-center">
-                  <p className="text-xs md:text-sm">
-                    {p.title}
-                  </p>
+                  <p className="text-xs md:text-sm">{p.title}</p>
 
                   <p className="mt-2 text-xs md:text-sm ">
                     ${p.price.toFixed(2)}
@@ -127,3 +228,4 @@ export default function TimelessAboutSection() {
     </section>
   );
 }
+

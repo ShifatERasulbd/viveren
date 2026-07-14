@@ -66,7 +66,9 @@ const sectionRegistry = {
         component: HomeBackgroundImageSection,
     },
 
-    'our-story': { height: 'h-[520px]', variant: 'catalog', component: lazy(() => import('../components/OurStorySection.jsx')) },
+
+    trending: { height: 'h-[520px]', variant: 'catalog', component: lazy(() => import('../components/TrendingProduct.jsx')) },
+   
     newsletter: { height: 'h-[220px]', variant: 'newsletter', component: NewsletterSection },
 };
 
@@ -74,9 +76,11 @@ const defaultSectionOrder = [
     'hero',
     'collections',
     'home-background-image',
-    'our-story',
+    'trending',
+   
     'newsletter',
 ];
+
 
 function normalizeSectionOrder(order) {
     const incoming = Array.isArray(order) ? order : [];
