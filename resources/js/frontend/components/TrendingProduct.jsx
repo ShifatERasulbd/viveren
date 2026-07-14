@@ -211,14 +211,14 @@ export default function TrendingProduct() {
                         return (
                             <article
                                 key={`${p.id}-${i}`}
-                                className="absolute flex flex-col rounded-[2rem] bg-white p-5 shadow-xl transition-all duration-300 hover:scale-105"
+                                className="absolute flex flex-col overflow-hidden rounded-[2rem] bg-white shadow-xl transition-all duration-300 hover:scale-105"
                                 style={{
                                     width: `${cardWidth}px`,
                                     transform: `rotateY(${rotation}deg) translateZ(${radius}px)`,
                                     backfaceVisibility: 'hidden',
                                 }}
                             >
-                                <div className="h-[160px] md:h-[1950px] lg:h-[280px] w-full overflow-hidden rounded-[1.5rem] bg-zinc-100">
+                                <div className="h-[220px] md:h-[255px] lg:h-[280px] w-full overflow-hidden bg-zinc-100">
                                     <img
                                         src={p.image || FALLBACK_IMAGE}
                                         alt={p.title}
@@ -230,9 +230,13 @@ export default function TrendingProduct() {
                                     />
                                 </div>
 
-                                <div className="mt-6 text-center">
-                                    <p className="text-xs md:text-sm">{p.title}</p>
-                                    <p className="mt-2 text-xs md:text-sm">${p.price.toFixed(2)}</p>
+                                <div className="space-y-1 px-4 pb-5 pt-4 text-center">
+                                    <h3 className="line-clamp-2 text-[0.95rem] font-medium leading-[1.15] text-zinc-900 sm:text-[1.02rem]">
+                                        {p.title}
+                                    </h3>
+                                    <p className="text-[1.2rem] font-semibold leading-none text-zinc-800 sm:text-[.95rem]">
+                                        ${Number(p.price).toFixed(2)}
+                                    </p>
                                 </div>
                             </article>
                         );
