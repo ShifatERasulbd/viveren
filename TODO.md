@@ -1,7 +1,7 @@
-TODO
+# Project TODO
 
-- Fix Laravel runtime error: missing `sessions` table.
-  - Ensure session migration is present/used.
-  - Create/repair the `sessions` table in the MySQL `vivaren` database.
-  - Clear caches and retry relevant request.
+- [ ] Update `resources/js/frontend/components/TrendingProduct.jsx` to allow manual control of the 3D “roll” (rotation) via a frontend slider.
+- [ ] Replace CSS keyframes-based animation with JS-driven rotation so the slider can scrub/offset the rotation.
+- [ ] Keep existing responsive radius/cardWidth logic.
+- [ ] Verify manual slider changes rotation immediately and animation behaves correctly.
 

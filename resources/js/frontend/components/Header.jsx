@@ -371,7 +371,8 @@ export default function Header() {
                     ? '/trending'
                     : categorySlug === 'best-sellers'
                     ? '/trending'
-                    : `/shop?category=${encodeURIComponent(category?.slug || String(category?.id || ''))}`;
+                    : `/${encodeURIComponent(category?.slug || String(category?.id || ''))}`;
+
                 return {
                     id: category?.id,
                     slug: category?.slug,
