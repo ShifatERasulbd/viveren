@@ -81,7 +81,7 @@ export default function TextGenerateEffect({
         <span className={className} aria-label={safeText}>
             {Array.from(safeText).map((char, idx) => (
                 <span key={idx} className="inline-block">
-                    {idx < displayedCount ? char : ''}
+                    {idx < displayedCount ? (char === ' ' ? '\u00A0' : char) : ''}
                 </span>
             ))}
         </span>

@@ -289,7 +289,7 @@ export default function SettingsForm({
                                         id="frontend-timeless-font"
                                         value={form.frontend_utils?.timeless_font_family || ''}
                                         onChange={(event) => onFrontendUtilsChange?.('timeless_font_family', event.target.value)}
-                                        placeholder='e.g. "Bebas Neue"'
+                                        placeholder='e.g. "Aeonik"'
                                         disabled={isSubmitting}
                                     />
                                 </div>
@@ -322,7 +322,7 @@ export default function SettingsForm({
                                         id="frontend-hero-options"
                                         value={form.frontend_utils?.hero_font_family_options_json || '[]'}
                                         onChange={(event) => onFrontendUtilsChange?.('hero_font_family_options_json', event.target.value)}
-                                        placeholder='[{"label":"Bebas Neue","value":"Bebas Neue"}]'
+                                        placeholder='[{"label":"Aeonik","value":"Aeonik"}]'
                                         rows={5}
                                         className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-xs outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring"
                                         disabled={isSubmitting}
@@ -335,7 +335,7 @@ export default function SettingsForm({
                                         id="frontend-hero-css-map"
                                         value={form.frontend_utils?.hero_font_family_css_map_json || '{}'}
                                         onChange={(event) => onFrontendUtilsChange?.('hero_font_family_css_map_json', event.target.value)}
-                                        placeholder='{"Bebas Neue":"\"Bebas Neue\""}'
+                                        placeholder='{"Aeonik":"\"Aeonik\""}'
                                         rows={6}
                                         className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-xs outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring"
                                         disabled={isSubmitting}

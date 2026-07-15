@@ -1,6 +1,7 @@
-- [ ] Add scroll-based fade-in when TrendingProduct section enters viewport and fade-out when it leaves.
-- [x] Implement using IntersectionObserver (no new dependencies) inside TrendingProduct.jsx.
+TODO
 
-- [ ] Ensure animation doesn't break existing layout/3D carousel.
-- [ ] Sanity check in browser (scroll into/out of Trending Products section).
+- Fix Laravel runtime error: missing `sessions` table.
+  - Ensure session migration is present/used.
+  - Create/repair the `sessions` table in the MySQL `vivaren` database.
+  - Clear caches and retry relevant request.
 

@@ -8,9 +8,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Str;
 
 class CollectionController extends Controller
 {
+    private const COLLECTION_UPLOAD_DIRECTORY = 'uploads/collections/images';
+
     private function hasProductIdsColumn(): bool
     {
         return Schema::hasTable('collection_items') && Schema::hasColumn('collection_items', 'product_ids');
@@ -75,6 +79,54 @@ class CollectionController extends Controller
         }
 
         return Storage::url($image);
+    }
+
+    private function persistCollectionImage(?string $image): ?string
+    {
+        $value = trim((string) ($image ?? ''));
+
+        if ($value === '') {
+            return null;
+        }
+
+        if (! str_starts_with($value, 'data:image/')) {
+            return $value;
+        }
+
+        if (! preg_match('/^data:image\/(\w+);base64,(.+)$/s', $value, $matches)) {
+            throw ValidationException::withMessages([
+                'items' => 'One or more collection images use an invalid data URL format.',
+            ]);
+        }
+
+        $extension = strtolower($matches[1]);
+        $base64Payload = preg_replace('/\s+/', '', $matches[2] ?? '');
+        $binary = base64_decode($base64Payload, true);
+
+        if ($binary === false) {
+            throw ValidationException::withMessages([
+                'items' => 'One or more collection images could not be decoded.',
+            ]);
+        }
+
+        if ($extension === 'jpeg') {
+            $extension = 'jpg';
+        }
+
+        $allowedExtensions = ['jpg', 'png', 'webp', 'gif', 'svg', 'avif'];
+        if (! in_array($extension, $allowedExtensions, true)) {
+            $extension = 'jpg';
+        }
+
+        $absoluteDirectory = public_path(self::COLLECTION_UPLOAD_DIRECTORY);
+        File::ensureDirectoryExists($absoluteDirectory);
+
+        $filename = time() . '_collection_' . Str::random(12) . '.' . $extension;
+        $relativePath = self::COLLECTION_UPLOAD_DIRECTORY . '/' . $filename;
+
+        file_put_contents(public_path($relativePath), $binary);
+
+        return $relativePath;
     }
 
     private function ensureSection(): CollectionSection
@@ -208,7 +260,7 @@ class CollectionController extends Controller
                     $payload = [
                         'name' => $item['name'],
                         'slug' => $item['slug'],
-                        'image' => $item['image'] ?? null,
+                        'image' => $this->persistCollectionImage($item['image'] ?? null),
                         'sort_order' => $index,
                     ];
 
@@ -227,7 +279,7 @@ class CollectionController extends Controller
             $payload = [
                 'name' => $item['name'],
                 'slug' => $item['slug'],
-                'image' => $item['image'] ?? null,
+                'image' => $this->persistCollectionImage($item['image'] ?? null),
                 'sort_order' => $index,
             ];
 

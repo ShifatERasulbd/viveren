@@ -149,7 +149,7 @@ export default function HomePage() {
     }, []);
 
     return (
-        <>
+        <div className="bg-[#f5efe6]">
             {sectionOrder.map((sectionKey) => {
                 const section = sectionRegistry[sectionKey];
                 if (!section) {
@@ -174,7 +174,8 @@ export default function HomePage() {
                     </div>
                 );
             })}
-        </>
+        </div>
     );
 }
+
 

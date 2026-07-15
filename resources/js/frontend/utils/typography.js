@@ -7,8 +7,8 @@ export const titleFontClass = 'frontend-title-font';
 export const textFontClass = 'frontend-text-font';
 
 const STYLE_TAG_ID = 'frontend-unified-typography-style';
-const DEFAULT_FONT_FAMILY = '"Bebas Neue"';
-const DEFAULT_TITLE_FONT_FAMILY = '"Bebas Neue"';
+const DEFAULT_FONT_FAMILY = '"Aeonik"';
+const DEFAULT_TITLE_FONT_FAMILY = '"Aeonik"';
 const DEFAULT_TEXT_FONT_FAMILY = '"Montserrat"';
 
 function ensureTypographyStyleTag() {

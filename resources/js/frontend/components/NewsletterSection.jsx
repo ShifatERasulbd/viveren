@@ -9,7 +9,7 @@ export default function NewsletterSection({ sectionData }) {
             <div className="mx-auto w-full max-w-[640px] px-6 text-center sm:px-8">
 
                 <h2 className={`${sectionTypography.sectionHeader} text-zinc-900 sm:text-[2.6rem]`}>
-                    Get Early Access.
+                   Join the house
                 </h2>
 
                 <p className={`${sectionTypography.description} mt-4 text-zinc-500`}>

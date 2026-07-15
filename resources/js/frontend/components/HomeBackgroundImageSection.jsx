@@ -162,7 +162,7 @@ export default function HomeBackgroundImageSection() {
     return (
         <FadeInOutOnView
             as="section"
-            className={`${timelessFontClass} w-full bg-white`}
+            className={`${timelessFontClass} w-full bg-[#f5efe6]`}
             rootMargin="0px 0px -10% 0px"
             threshold={0.01}
             durationMs={800}
@@ -176,7 +176,7 @@ export default function HomeBackgroundImageSection() {
                     <Link
                         key={item.id}
                         to={item.button_url || '/shop'}
-                        className="group relative block aspect-[2/1] overflow-hidden bg-zinc-100"
+                        className="group relative block aspect-[1/1] overflow-hidden bg-zinc-100"
                         onClick={(event) => {
                             if (isBuilderPreview) {
                                 event.preventDefault();

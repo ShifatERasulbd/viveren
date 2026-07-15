@@ -53,8 +53,8 @@ class HeroController extends Controller
                 'image' => '/uploads/heroes/images/hero1.webp',
                 'video' => null,
                 'display_title_mode' => 'double',
-                'header_title' => 'SUBSCRIBE AND SAVE 10% ON YOUR FIRST ORDER',
-                'header_title_items' => ['SUBSCRIBE AND SAVE 10% ON YOUR FIRST ORDER'],
+                'header_title' => '',
+                'header_title_items' => [''],
                 'button_enabled' => true,
 
                 'button_url' => '/shop',

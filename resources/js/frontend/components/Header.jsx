@@ -525,7 +525,7 @@ export default function Header() {
     }, [siteSettings]);
 
     const headerLogo = useMemo(() => resolveMediaUrl(siteSettings?.header_logo || ''), [siteSettings]);
-    const headerText = heroHeaderText || siteSettings?.header_title || 'SUBSCRIBE AND SAVE 10% ON YOUR FIRST ORDER';
+    const headerText = heroHeaderText || siteSettings?.header_title ;
 
     return (
         <>
