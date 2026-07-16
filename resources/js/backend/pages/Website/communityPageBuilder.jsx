@@ -3,10 +3,10 @@ import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { toast } from 'sonner';
 
-import CommunitySectionEditorDrawer from '@/components/website/CommunitySectionEditorDrawer';
-import CommunityPagePreviewCard from '@/components/website/CommunityPagePreviewCard';
-import CommunityPageSectionsCard from '@/components/website/CommunityPageSectionsCard';
-import { communitySections } from '@/components/website/communityPageBuilderData';
+import CommunitySectionEditorDrawer from '@/components/website/SustainabilitySectionEditorDrawer';
+import CommunityPagePreviewCard from '@/components/website/sustainability';
+import CommunityPageSectionsCard from '@/components/website/SustainabilityPageSectionsCard';
+import { communitySections } from '@/components/website/SustainabilityPageBuilderData';
 import { useAppContext } from '@/context/AppContext';
 
 function moveItemByKey(items, sourceKey, targetKey) {
@@ -34,7 +34,7 @@ export default function CommunityPageBuilder() {
     const selectedSection = sections.find((section) => section.key === selectedSectionKey) || null;
 
     useEffect(() => {
-        setPageTitle('Community Page Builder');
+        setPageTitle('Sustainability Page Builder');
     }, [setPageTitle]);
 
     useEffect(() => {
@@ -231,13 +231,13 @@ export default function CommunityPageBuilder() {
                 return response.json();
             })
             .then(() => {
-                toast.success('Community component saved successfully');
+                toast.success('Sustainability section saved successfully');
                 // Refresh the preview to show updated data
                 publishSectionsLayout();
             })
             .catch((error) => {
                 console.error('Error saving section:', error);
-                toast.error('Failed to save community component');
+                toast.error('Failed to save sustainability section');
             });
     }
 

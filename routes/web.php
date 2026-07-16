@@ -44,9 +44,14 @@ Route::get('/together-we-grow', function () {
     return view('home');
 });
 
+Route::get('/sustainability', function () {
+    return view('home');
+});
+
 Route::get('/checkout', function () {
     return view('home');
 });
+
 
 Route::get('/order-confirmation', function () {
     return view('home');

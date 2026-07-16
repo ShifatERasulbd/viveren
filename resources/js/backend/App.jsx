@@ -43,7 +43,7 @@ const EditColor = lazyWithRetry(() => import('@/pages/Color/editColor'), 'edit-c
 // Website Management
 const HomePageBuilder = lazyWithRetry(() => import('@/pages/Website/homePageBuilder'), 'website-home-page-builder');
 const AboutPageBuilder = lazyWithRetry(() => import('@/pages/Website/aboutPageBuilder'), 'website-about-page-builder');
-const CommunityPageBuilder = lazyWithRetry(() => import('@/pages/Website/communityPageBuilder'), 'website-community-page-builder');
+const SustainabilityPageBuilder = lazyWithRetry(() => import('@/pages/Website/sustainabilityPageBuilder'), 'website-sustainability-page-builder');
 
 // Category Management
 const Categories = lazyWithRetry(() => import('@/pages/Category/category'), 'categories');
@@ -110,7 +110,7 @@ export default function App() {
                             {/* Website Management */}
                             <Route path="website/home-page" element={<HomePageBuilder />} />
                             <Route path="website/about-page" element={<AboutPageBuilder />} />
-                            <Route path="website/community-page" element={<CommunityPageBuilder />} />
+                            <Route path="website/sustainability-page" element={<SustainabilityPageBuilder />} />
 
                             {/* Category Management */}
                             <Route path="category" element={<Categories />} />

@@ -413,16 +413,16 @@ export default function CommunitySectionEditorDrawer({
                 <SheetHeader>
                     <SheetTitle className="flex items-center gap-2">
                         <Settings2 className="size-4" />
-                        Community Component Drawer
+                        Sustainability Section Drawer
                     </SheetTitle>
                     <SheetDescription>
-                        Edit selected community page component details and publish directly to preview.
+                        Edit selected sustainability section details and publish directly to preview.
                     </SheetDescription>
                 </SheetHeader>
 
                 {!section ? (
                     <div className="px-4 py-6 text-sm text-muted-foreground">
-                        Select a component from Community Page Components to edit.
+                        Select a section from Sustainability Page Components to edit.
                     </div>
                 ) : (
                     <div className="space-y-5 px-4 pb-4">

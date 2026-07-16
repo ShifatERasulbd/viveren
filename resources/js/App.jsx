@@ -21,6 +21,7 @@ const ResetPasswordPage = lazy(() => import('./frontend/pages/ResetPassword.jsx'
 const CheckoutPage = lazy(() => import('./frontend/pages/Checkout.jsx'));
 const OrderConfirmationPage = lazy(() => import('./frontend/pages/OrderConfirmation.jsx'));
 const TogetherWeGrowPage = lazy(() => import('./frontend/pages/TogetherWeGrow.jsx'));
+const SustainabilityPage = lazy(() => import('./frontend/pages/Sustainability.jsx'));
 
 const BRAND_NAME = '1971Co';
 
@@ -169,6 +170,7 @@ function AppRouter() {
                         <Route path="about" element={withPageFallback(AboutPage)} />
                         <Route path="contact" element={withPageFallback(ContactPage)} />
                         <Route path="together-we-grow" element={withPageFallback(TogetherWeGrowPage)} />
+                        <Route path="sustainability" element={withPageFallback(SustainabilityPage)} />
                         <Route path="checkout" element={withPageFallback(CheckoutPage)} />
                         <Route path="order-confirmation" element={withPageFallback(OrderConfirmationPage)} />
                         <Route path="login" element={withPageFallback(AuthPage)} />

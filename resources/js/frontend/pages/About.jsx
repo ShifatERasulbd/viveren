@@ -4,7 +4,7 @@ import SectionSkeleton from '../components/SectionSkeleton.jsx';
 
 const AboutHeroSection = lazy(() => import('../components/AboutHeroSection.jsx'));
 
-const About1971Section = lazy(() => import('../components/1971AboutSection.jsx'));
+const About1971Section = lazy(() => import('../components/AboutSection.jsx'));
 const OurStory = lazy(() => import('../components/OurStory.jsx'));
 const SustainabilitySection = lazy(() => import('../components/SustainabilitySection.jsx'));
 const NewsletterSection = lazy(() => import('../components/NewsletterSection.jsx'));
