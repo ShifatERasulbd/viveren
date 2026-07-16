@@ -11,12 +11,7 @@ class AboutMissionSection extends Model
 
     protected $fillable = [
         'background_image',
-        'title',
-        'description',
-        'items',
-    ];
-
-    protected $casts = [
+            'image_title',
         'items' => 'array',
     ];
 }

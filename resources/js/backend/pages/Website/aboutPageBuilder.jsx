@@ -34,7 +34,8 @@ const defaultAboutStoryDraft = {
 
 const defaultAboutMissionDraft = {
     background_image: '/uploads/heroes/images/hero1.webp',
-    title: 'Our Mission',
+    image_title: 'Our Story',
+    title: 'Our Story',
     description:
         'Our mission is to make personalized fashion accessible, premium, and expressive. We aim to deliver apparel that combines comfort, durability, and modern design while giving customers the freedom to create styles that represent their identity.',
     items: [
@@ -177,6 +178,7 @@ export default function AboutPageBuilder() {
                 setAboutMissionDraft((previous) => ({
                     ...previous,
                     background_image: payload.background_image || previous.background_image,
+                    image_title: payload.image_title || previous.image_title,
                     title: payload.title || previous.title,
                     description: payload.description ?? previous.description,
                     items: Array.isArray(payload.items) && payload.items.length > 0
@@ -276,7 +278,7 @@ export default function AboutPageBuilder() {
 
         target.postMessage(
             {
-                type: 'TIMLESS_PAGE_BUILDER_OUR_MISSION_PREVIEW_UPDATE',
+                type: 'TIMLESS_PAGE_BUILDER_OUR_STORY_PREVIEW_UPDATE',
                 payload: aboutMissionDraft,
             },
             window.location.origin
@@ -337,8 +339,8 @@ export default function AboutPageBuilder() {
                 return;
             }
 
-            if (data.type === 'TIMLESS_PAGE_BUILDER_OUR_MISSION_SECTION_SELECTED') {
-                setSelectedSectionKey('our-mission');
+            if (data.type === 'TIMLESS_PAGE_BUILDER_OUR_STORY_SECTION_SELECTED') {
+                setSelectedSectionKey('our-story');
                 setIsAboutMissionDrawerOpen(true);
                 setIsAboutHeroDrawerOpen(false);
                 setIsAboutStoryDrawerOpen(false);
@@ -349,7 +351,7 @@ export default function AboutPageBuilder() {
                     target.postMessage(
                         {
                             type: 'TIMLESS_PAGE_BUILDER_SCROLL_TO_SECTION',
-                            payload: { sectionKey: 'our-mission' },
+                            payload: { sectionKey: 'our-story' },
                         },
                         window.location.origin
                     );
@@ -441,7 +443,7 @@ export default function AboutPageBuilder() {
             return;
         }
 
-        if (section.key === 'our-mission') {
+        if (section.key === 'our-story') {
             setIsAboutMissionDrawerOpen(true);
             setIsAboutHeroDrawerOpen(false);
             setIsAboutStoryDrawerOpen(false);
@@ -452,7 +454,7 @@ export default function AboutPageBuilder() {
                 target.postMessage(
                     {
                         type: 'TIMLESS_PAGE_BUILDER_SCROLL_TO_SECTION',
-                        payload: { sectionKey: 'our-mission' },
+                        payload: { sectionKey: 'our-story' },
                     },
                     window.location.origin
                 );
@@ -670,11 +672,11 @@ export default function AboutPageBuilder() {
             setAboutMissionDraft(normalized);
             setAboutMissionImageFile(null);
 
-            toast.success('Our mission saved to database.', {
+            toast.success('Our Story saved to database.', {
                 style: { color: '#16a34a' },
             });
         } catch (error) {
-            toast.error(error?.message || 'Failed to save our mission.', {
+            toast.error(error?.message || 'Failed to save our Story.', {
                 style: { color: '#dc2626' },
             });
         } finally {

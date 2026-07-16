@@ -152,7 +152,7 @@ export default function AboutMissionEditorDrawer({
                 <SheetHeader>
                     <SheetTitle className="flex items-center gap-2">
                         <Settings2 className="size-4" />
-                        Our Mission Editor
+                        Our Story Editor
                     </SheetTitle>
                     <SheetDescription>
                         Edit title, description, and mission items. Drag and drop items to reorder.
@@ -186,12 +186,22 @@ export default function AboutMissionEditorDrawer({
                     </div>
 
                     <div className="space-y-2">
+                        <Label htmlFor="about-mission-image-title">Image Title</Label>
+                        <Input
+                            id="about-mission-image-title"
+                            value={value.image_title || ''}
+                            onChange={(event) => onChangeField('image_title', event.target.value)}
+                            placeholder="Our Story"
+                        />
+                    </div>
+
+                    <div className="space-y-2">
                         <Label htmlFor="about-mission-title">Section title</Label>
                         <Input
                             id="about-mission-title"
                             value={value.title || ''}
                             onChange={(event) => onChangeField('title', event.target.value)}
-                            placeholder="Our Mission"
+                            placeholder="Our Story"
                         />
                     </div>
 
@@ -203,7 +213,7 @@ export default function AboutMissionEditorDrawer({
                             onChange={(event) => onChangeField('description', event.target.value)}
                             rows={5}
                             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none"
-                            placeholder="Our mission is to make personalized fashion accessible..."
+                            placeholder="Our mission is to make personalized fashion accessible, premium, and expressive..."
                         />
                     </div>
 

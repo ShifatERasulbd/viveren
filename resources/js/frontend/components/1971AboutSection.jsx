@@ -1,15 +1,14 @@
 import { useEffect, useState } from 'react';
 
-const defaultAboutStoryData = {
-    background_image: '/uploads/heroes/images/hero1.webp',
-    section_title: 'The Beginning',
-    title: 'Why 1971?',
-    description_html:
-        '<p>"1971" carries deep historical significance representing independence, pride, and cultural identity. It signals that our brand is rooted in Bangladeshi legacy, not copying Western streetwear but redefining its own path.</p><p>The "Co" brings a fresh, youthful street vibe clean, approachable, and contemporary. Together, they represent our mission: heritage meets modern street culture.</p><p>At 1971Co, we believe streetwear is more than clothing. It\'s a statement of identity and confidence. Our designs combine bold aesthetics, urban culture influences, and high-quality craftsmanship to help individuals express themselves fearlessly.</p>',
-};
-
 export default function About1971Section() {
-    const [storyData, setStoryData] = useState(defaultAboutStoryData);
+    const [storyData, setStoryData] = useState({
+        background_image: '/uploads/heroes/images/hero1.webp',
+        section_title: 'The Beginning',
+        title: 'Why 1971?',
+        description_html:
+            '<p>"1971" carries deep historical significance representing independence, pride, and cultural identity. It signals that our brand is rooted in Bangladeshi legacy, not copying Western streetwear but redefining its own path.</p><p>The "Co" brings a fresh, youthful street vibe clean, approachable, and contemporary. Together, they represent our mission: heritage meets modern street culture.</p><p>At 1971Co, we believe streetwear is more than clothing. It\'s a statement of identity and confidence. Our designs combine bold aesthetics, urban culture influences, and high-quality craftsmanship to help individuals express themselves fearlessly.</p>',
+    });
+
     const [previewOverride, setPreviewOverride] = useState(null);
     const [isBuilderPreview] = useState(() => {
         try {
@@ -59,7 +58,6 @@ export default function About1971Section() {
     }, []);
 
     const displayStoryData = previewOverride ? { ...storyData, ...previewOverride } : storyData;
-    const storyImage = displayStoryData.background_image || defaultAboutStoryData.background_image;
 
     function handleSectionClick() {
         if (!isBuilderPreview) return;
@@ -74,7 +72,7 @@ export default function About1971Section() {
     return (
         <section
             id="about-1971-story"
-            className="pt-3 pb-14 sm:pt-3 lg:pt-3"
+            className="pt-3 pb-5 sm:pt-3 lg:pt-3"
             onClick={handleSectionClick}
             role={isBuilderPreview ? 'button' : undefined}
             tabIndex={isBuilderPreview ? 0 : undefined}
@@ -83,9 +81,9 @@ export default function About1971Section() {
                 <article className="grid items-center gap-8 lg:grid-cols-2 lg:gap-16 xl:gap-20">
                     
                     {/* Image Container with Background and Overlay */}
-                    <div className="relative h-[400px] w-full overflow-hidden rounded-lg sm:h-[500px] lg:h-[650px]">
+                    <div className="relative h-[400px] w-full overflow-hidden rounded-none sm:h-[500px] lg:h-[650px]">
                         <img
-                            src={storyImage}
+                            src={displayStoryData.background_image}
                             alt="1971 story visual"
                             className="absolute inset-0 h-full w-full object-cover object-center"
                         />
@@ -95,7 +93,7 @@ export default function About1971Section() {
                         {/* Title positioned over the image */}
                         <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center">
                             <h2 className="font-serif text-[1.5rem] font-bold leading-tight text-white sm:text-[2.2rem]">
-                                {displayStoryData.title || 'Our Mission?'}
+                                {displayStoryData.title}
                             </h2>
                         </div>
                     </div>
@@ -103,14 +101,13 @@ export default function About1971Section() {
                     {/* Text Content */}
                     <div className="px-1 sm:px-2 lg:px-0">
                          <h2 className="font-serif text-[clamp(2rem,4.3vw,3.2rem)] uppercase tracking-[0.06em] text-zinc-900">
-                            {displayStoryData.section_title }
+                            {displayStoryData.section_title}
                         </h2>
-                       
 
                         <div
                             className="story-rich-text font-monstrate mt-8 space-y-6 text-[1.08rem] leading-[1.85] text-slate-700 sm:text-[1.15rem]"
                             dangerouslySetInnerHTML={{
-                                __html: displayStoryData.description_html || defaultAboutStoryData.description_html,
+                                __html: displayStoryData.description_html,
                             }}
                         />
                     </div>

@@ -11,12 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('about_mission_sections', function (Blueprint $table) {
-            $table->id();
-            $table->string('title')->default('Our Story');
-            $table->text('description')->nullable();
-            $table->json('items')->nullable();
-            $table->timestamps();
+        Schema::table('about_mission_sections', function (Blueprint $table) {
+            $table->string('image_title')->nullable()->after('background_image');
         });
     }
 
@@ -25,6 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('about_mission_sections');
+        Schema::table('about_mission_sections', function (Blueprint $table) {
+            $table->dropColumn('image_title');
+        });
     }
 };

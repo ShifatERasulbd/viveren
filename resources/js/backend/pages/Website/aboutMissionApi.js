@@ -22,7 +22,8 @@ export async function fetchPublicAboutMission() {
 function buildAboutMissionFormData(data = {}) {
     const formData = new FormData();
 
-    formData.append('title', data.title || 'Our Mission');
+    formData.append('title', data.title || 'Our Story');
+    formData.append('image_title', data.image_title || 'Our Story');
     formData.append('description', data.description || '');
     formData.append('items', JSON.stringify(normalizeMissionItems(data.items)));
 

@@ -5,7 +5,7 @@ import SectionSkeleton from '../components/SectionSkeleton.jsx';
 const AboutHeroSection = lazy(() => import('../components/AboutHeroSection.jsx'));
 
 const About1971Section = lazy(() => import('../components/1971AboutSection.jsx'));
-const OurMission = lazy(() => import('../components/OurMission.jsx'));
+const OurStory = lazy(() => import('../components/OurStory.jsx'));
 const GivingBackSection = lazy(() => import('../components/GivingBackSection.jsx'));
 const NewsletterSection = lazy(() => import('../components/NewsletterSection.jsx'));
 const InstagramSection = lazy(() => import('../components/InstagramSection.jsx'));
@@ -106,7 +106,7 @@ export default function AboutPage() {
 
             <div id="section-our-mission">
                 <LazySection heightClass="h-[540px]" variant="split" defer={!isBuilderPreview}>
-                    <OurMission />
+                    <OurStory />
                 </LazySection>
             </div>
 

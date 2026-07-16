@@ -12,8 +12,8 @@ export const aboutSections = [
         status: 'active',
     },
     {
-        key: 'our-mission',
-        title: 'Our Mission',
+        key: 'our-story',
+        title: 'Our Story',
         description: 'Brand values and mission statement',
         status: 'active',
     },

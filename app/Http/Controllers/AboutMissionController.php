@@ -16,7 +16,8 @@ class AboutMissionController extends Controller
         if (!$section) {
             $section = AboutMissionSection::query()->create([
                 'background_image' => '/uploads/heroes/images/hero1.webp',
-                'title' => 'Our Mission',
+                'image_title' => 'Our Story',
+                'title' => 'Our Story',
                 'description' => 'Our mission is to make personalized fashion accessible, premium, and expressive. We aim to deliver apparel that combines comfort, durability, and modern design while giving customers the freedom to create styles that represent their identity.',
                 'items' => [
                     ['icon' => 'BadgeCheck', 'title' => 'Premium-Quality'],
@@ -96,6 +97,7 @@ class AboutMissionController extends Controller
         return [
             'id' => $section->id,
             'background_image' => $this->resolveAssetUrl($section->background_image),
+            'image_title' => $section->image_title,
             'title' => $section->title,
             'description' => $section->description,
             'items' => $items,
@@ -126,6 +128,7 @@ class AboutMissionController extends Controller
         $validated = $request->validate([
             'background_image' => ['nullable', 'string'],
             'background_image_file' => ['nullable', 'file', 'mimes:jpeg,png,jpg,gif,webp,avif,svg', 'max:4096'],
+            'image_title' => ['nullable', 'string', 'max:255'],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'items' => ['nullable', 'array'],
@@ -157,6 +160,7 @@ class AboutMissionController extends Controller
 
         $section->update([
             'background_image' => $validated['background_image'] ?? $section->background_image,
+            'image_title' => $validated['image_title'] ?? $section->image_title,
             'title' => $validated['title'],
             'description' => $validated['description'] ?? '',
             'items' => $items,
