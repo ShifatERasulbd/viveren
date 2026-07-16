@@ -59,6 +59,8 @@ Route::get('/public/settings', [SettingsController::class, 'publicLatest']);
 Route::get('/public/best-sellers-section', [SettingsController::class, 'publicBestSellersSection']);
 Route::get('/public/stripe-config', [StripeController::class, 'publicConfig']);
 Route::get('/public/community-page-sections', [CommunityPageSectionController::class, 'publicIndex']);
+Route::get('/public/sustainability-hero', [App\Http\Controllers\SustainabilityHeroController::class, 'publicIndex']);
+
 Route::get('/public/orders/{orderNumber}', [CheckoutOrderController::class, 'publicShow']);
 Route::post('/public/shipping/quote', [CheckoutOrderController::class, 'quoteShipping']);
 Route::get('/public/locations/states', [UsLocationController::class, 'states']);

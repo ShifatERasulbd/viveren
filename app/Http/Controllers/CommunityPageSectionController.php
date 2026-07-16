@@ -260,7 +260,7 @@ class CommunityPageSectionController extends Controller
             ],
             [
                 'key' => 'features',
-                'title' => 'Impact Features',
+                'title' => 'Designed For Logivity',
                 'description' => 'Education, care, and opportunity cards.',
                 'feature_image' => '/uploads/heroes/images/hero1.webp',
                 'feature_items' => [

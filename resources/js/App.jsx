@@ -20,7 +20,7 @@ const AuthPage = lazy(() => import('./frontend/pages/Auth.jsx'));
 const ResetPasswordPage = lazy(() => import('./frontend/pages/ResetPassword.jsx'));
 const CheckoutPage = lazy(() => import('./frontend/pages/Checkout.jsx'));
 const OrderConfirmationPage = lazy(() => import('./frontend/pages/OrderConfirmation.jsx'));
-const TogetherWeGrowPage = lazy(() => import('./frontend/pages/TogetherWeGrow.jsx'));
+
 const SustainabilityPage = lazy(() => import('./frontend/pages/Sustainability.jsx'));
 
 const BRAND_NAME = '1971Co';
@@ -57,7 +57,6 @@ function resolvePageLabel(pathname) {
     if (path.split('/').filter(Boolean).length <= 2) return 'Shop';
     if (path === '/about') return 'About';
     if (path === '/contact') return 'Contact';
-    if (path === '/together-we-grow') return 'Together We Grow';
     if (path === '/checkout') return 'Checkout';
     if (path === '/order-confirmation') return 'Order Confirmation';
     if (path === '/login') return 'Login';
@@ -66,6 +65,7 @@ function resolvePageLabel(pathname) {
 
     return 'Home';
 }
+
 
 function ensureFaviconLink() {
     const existing = document.getElementById('app-favicon');
@@ -169,7 +169,7 @@ function AppRouter() {
                         <Route path="singleProduct" element={withPageFallback(SingleProductPage)} />
                         <Route path="about" element={withPageFallback(AboutPage)} />
                         <Route path="contact" element={withPageFallback(ContactPage)} />
-                        <Route path="together-we-grow" element={withPageFallback(TogetherWeGrowPage)} />
+
                         <Route path="sustainability" element={withPageFallback(SustainabilityPage)} />
                         <Route path="checkout" element={withPageFallback(CheckoutPage)} />
                         <Route path="order-confirmation" element={withPageFallback(OrderConfirmationPage)} />

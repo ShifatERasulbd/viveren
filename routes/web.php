@@ -40,9 +40,7 @@ Route::get('/contact', function () {
     return view('home');
 });
 
-Route::get('/together-we-grow', function () {
-    return view('home');
-});
+
 
 Route::get('/sustainability', function () {
     return view('home');

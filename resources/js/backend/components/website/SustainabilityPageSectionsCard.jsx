@@ -4,7 +4,7 @@ import { useDrag, useDrop } from 'react-dnd';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
-const ITEM_TYPE = 'COMMUNITY_SECTION';
+const ITEM_TYPE = 'SUSTAINABILITY_SECTION';
 
 function SectionRow({
     section,
@@ -119,7 +119,7 @@ function SectionRow({
     );
 }
 
-export default function CommunityPageSectionsCard({
+export default function SustainabilityPageSectionsCard({
     sections,
     selectedSectionKey,
     onEditSection,
@@ -132,10 +132,10 @@ export default function CommunityPageSectionsCard({
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <MonitorSmartphone className="size-4" />
-                    Community Page Components
+                    Sustainability Page Components
                 </CardTitle>
                 <CardDescription>
-                    Manage Together We Grow sections and open each component in the right-side drawer.
+                    Manage sustainability sections and open each component in the right-side drawer.
                 </CardDescription>
             </CardHeader>
 

@@ -3,11 +3,12 @@ import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { toast } from 'sonner';
 
-import CommunitySectionEditorDrawer from '@/components/website/SustainabilitySectionEditorDrawer';
-import CommunityPagePreviewCard from '@/components/website/sustainability';
-import CommunityPageSectionsCard from '@/components/website/SustainabilityPageSectionsCard';
-import { communitySections } from '@/components/website/SustainabilityPageBuilderData';
+import SustainabilitySectionEditorDrawer from '@/components/website/SustainabilitySectionEditorDrawer';
+import SustainabilityPagePreviewCard from '@/components/website/SustainabilityPagePreviewCard';
+import SustainabilityPageSectionsCard from '@/components/website/SustainabilityPageSectionsCard';
+
 import { useAppContext } from '@/context/AppContext';
+import { sustainabilitySections } from '@/components/website/sustainabilityPageBuilderData';
 
 function moveItemByKey(items, sourceKey, targetKey) {
     const sourceIndex = items.findIndex((item) => item.key === sourceKey);
@@ -23,11 +24,11 @@ function moveItemByKey(items, sourceKey, targetKey) {
     return next;
 }
 
-export default function CommunityPageBuilder() {
+export default function SustainabilityPageBuilder() {
     const { setPageTitle } = useAppContext();
     const iframeRef = useRef(null);
 
-    const [sections, setSections] = useState(communitySections);
+    const [sections, setSections] = useState(sustainabilitySections);
     const [selectedSectionKey, setSelectedSectionKey] = useState(null);
     const [isEditorOpen, setIsEditorOpen] = useState(false);
 
@@ -47,7 +48,7 @@ export default function CommunityPageBuilder() {
         })
             .then((response) => {
                 if (!response.ok) {
-                    throw new Error('Failed to load community page sections');
+                    throw new Error('Failed to load sustainability page sections');
                 }
                 return response.json();
             })
@@ -79,7 +80,7 @@ export default function CommunityPageBuilder() {
                 }));
 
                 const mappedByKey = new Map(mapped.map((section) => [section.key, section]));
-                const merged = communitySections.map((defaultSection) => ({
+                const merged = sustainabilitySections.map((defaultSection) => ({
                     ...defaultSection,
                     ...(mappedByKey.get(defaultSection.key) || {}),
                 }));
@@ -245,7 +246,7 @@ export default function CommunityPageBuilder() {
         <DndProvider backend={HTML5Backend}>
             <div className="space-y-6 p-4 sm:p-6 lg:p-8">
                 <div className="grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
-                    <CommunityPageSectionsCard
+                    <SustainabilityPageSectionsCard
                         sections={sections}
                         selectedSectionKey={selectedSectionKey}
                         onEditSection={handleEditSection}
@@ -254,11 +255,11 @@ export default function CommunityPageBuilder() {
                         onNavigatePreview={handleNavigatePreview}
                     />
 
-                    <CommunityPagePreviewCard ref={iframeRef} />
+                    <SustainabilityPagePreviewCard ref={iframeRef} />
                 </div>
             </div>
 
-            <CommunitySectionEditorDrawer
+            <SustainabilitySectionEditorDrawer
                 open={isEditorOpen}
                 onOpenChange={setIsEditorOpen}
                 section={selectedSection}

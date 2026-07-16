@@ -16,11 +16,12 @@ import {
 } from '@/components/ui/sheet';
 
 const sectionHints = {
-    hero: 'Edit the main campaign heading and hero CTA section identity.',
-    features: 'Configure the impact features panel and cards section label.',
-    'community-center': 'Configure community center heading and programs section details.',
-    gallery: 'Configure the community gallery label and showcase heading.',
-    newsletter: 'Configure the newsletter call-to-action content area.',
+    hero: 'Edit the sustainability hero banner heading and subtitle.',
+    longevity: 'Configure the Designed for Longevity section copy.',
+    'mindful-materials': 'Configure the Thoughtfully Chosen Materials section copy.',
+    'fabric-engineering': 'Configure the Fabric Engineering with Purpose section copy.',
+    'behind-the-craft': 'Configure the Behind the Craft section copy.',
+    'fabric-innovations': 'Configure the Our Materials section copy.',
 };
 
 const FEATURE_ITEM_TYPE = 'COMMUNITY_FEATURE_ITEM';
@@ -434,7 +435,7 @@ export default function CommunitySectionEditorDrawer({
                                         id="community-section-content-title"
                                         value={section.contentTitle || ''}
                                         onChange={(event) => onChangeField?.('contentTitle', event.target.value)}
-                                        placeholder="e.g., Together We Grow"
+                                        placeholder="e.g., Sustainability, Practiced Daily"
                                     />
                                 </div>
 
@@ -462,38 +463,7 @@ export default function CommunitySectionEditorDrawer({
                                     />
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="community-section-status">Status</Label>
-                                    <select
-                                        id="community-section-status"
-                                        value={section.status || 'active'}
-                                        onChange={(event) => onChangeField?.('status', event.target.value)}
-                                        className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                                    >
-                                        <option value="active">active</option>
-                                        <option value="inactive">inactive</option>
-                                    </select>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="community-section-button-text">Button Text</Label>
-                                    <Input
-                                        id="community-section-button-text"
-                                        value={section.buttonText || ''}
-                                        onChange={(event) => onChangeField?.('buttonText', event.target.value)}
-                                        placeholder="Button label (e.g., Learn More, Subscribe)"
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="community-section-button-url">Button URL</Label>
-                                    <Input
-                                        id="community-section-button-url"
-                                        value={section.buttonUrl || ''}
-                                        onChange={(event) => onChangeField?.('buttonUrl', event.target.value)}
-                                        placeholder="Button URL (e.g., /products, #gallery)"
-                                    />
-                                </div>
+                            
                             </>
                         )}
 
