@@ -13,7 +13,7 @@ function LazySection({ children, heightClass, variant = 'generic' }) {
 
 export default function ShopPage() {
     return (
-        <div className="bg-white">
+        <div className="bg-background">
            
             <LazySection heightClass="h-[760px]" variant="catalog">
                 <ShopCatalogSection />

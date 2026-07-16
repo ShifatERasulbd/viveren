@@ -21,17 +21,12 @@ export default function About1971Section() {
 
     useEffect(() => {
         let ignore = false;
-
         async function loadAboutStory() {
             try {
                 const response = await fetch('/api/public/about-story', {
                     headers: { Accept: 'application/json' },
                 });
-
-                if (!response.ok) {
-                    return;
-                }
-
+                if (!response.ok) return;
                 const payload = await response.json();
                 if (!ignore && payload) {
                     setStoryData((previous) => ({
@@ -42,56 +37,35 @@ export default function About1971Section() {
                         description_html: payload.description_html ?? previous.description_html,
                     }));
                 }
-            } catch {
-                // Keep the default story content when the public endpoint is unavailable.
-            }
+            } catch {}
         }
-
         loadAboutStory();
-
-        return () => {
-            ignore = true;
-        };
+        return () => { ignore = true; };
     }, []);
 
     useEffect(() => {
         function handleBuilderPreviewMessage(event) {
-            if (event.origin !== window.location.origin) {
-                return;
-            }
-
+            if (event.origin !== window.location.origin) return;
             const data = event.data;
-            if (!data) {
-                return;
-            }
-
-            if (data.type === 'TIMLESS_PAGE_BUILDER_1971_STORY_PREVIEW_UPDATE') {
+            if (data?.type === 'TIMLESS_PAGE_BUILDER_1971_STORY_PREVIEW_UPDATE') {
                 setPreviewOverride((previous) => ({
                     ...(previous || {}),
                     ...(data.payload || {}),
                 }));
             }
         }
-
         window.addEventListener('message', handleBuilderPreviewMessage);
-        return () => {
-            window.removeEventListener('message', handleBuilderPreviewMessage);
-        };
+        return () => window.removeEventListener('message', handleBuilderPreviewMessage);
     }, []);
 
     const displayStoryData = previewOverride ? { ...storyData, ...previewOverride } : storyData;
     const storyImage = displayStoryData.background_image || defaultAboutStoryData.background_image;
 
     function handleSectionClick() {
-        if (!isBuilderPreview) {
-            return;
-        }
-
+        if (!isBuilderPreview) return;
         if (window.parent && window.parent !== window) {
             window.parent.postMessage(
-                {
-                    type: 'TIMLESS_PAGE_BUILDER_1971_STORY_SECTION_SELECTED',
-                },
+                { type: 'TIMLESS_PAGE_BUILDER_1971_STORY_SECTION_SELECTED' },
                 window.location.origin
             );
         }
@@ -100,21 +74,38 @@ export default function About1971Section() {
     return (
         <section
             id="about-1971-story"
-            className="bg-[#f5f5f5] py-14 sm:py-16 lg:py-24"
+            className="pt-3 pb-14 sm:pt-3 lg:pt-3"
             onClick={handleSectionClick}
             role={isBuilderPreview ? 'button' : undefined}
             tabIndex={isBuilderPreview ? 0 : undefined}
         >
             <div className="mx-auto w-full max-w-[1540px] px-5 sm:px-8 lg:px-12">
                 <article className="grid items-center gap-8 lg:grid-cols-2 lg:gap-16 xl:gap-20">
-                    <div className="px-1 sm:px-2 lg:px-0">
-                        <p className="text-[0.75rem] uppercase tracking-[0.15em] text-[#8b7355]">
-                            {displayStoryData.section_title || 'The Beginning'}
-                        </p>
+                    
+                    {/* Image Container with Background and Overlay */}
+                    <div className="relative h-[400px] w-full overflow-hidden rounded-lg sm:h-[500px] lg:h-[650px]">
+                        <img
+                            src={storyImage}
+                            alt="1971 story visual"
+                            className="absolute inset-0 h-full w-full object-cover object-center"
+                        />
+                        {/* Black Overlay Layer */}
+                        <div className="absolute inset-0 bg-black/40" />
+                        
+                        {/* Title positioned over the image */}
+                        <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center">
+                            <h2 className="font-serif text-[1.5rem] font-bold leading-tight text-white sm:text-[2.2rem]">
+                                {displayStoryData.title || 'Our Mission?'}
+                            </h2>
+                        </div>
+                    </div>
 
-                        <h2 className="mt-4 font-serif text-[clamp(2.4rem,5vw,3.6rem)] leading-[1.1] tracking-[0.02em] text-zinc-900">
-                            {displayStoryData.title || 'Why 1971?'}
+                    {/* Text Content */}
+                    <div className="px-1 sm:px-2 lg:px-0">
+                         <h2 className="font-serif text-[clamp(2rem,4.3vw,3.2rem)] uppercase tracking-[0.06em] text-zinc-900">
+                            {displayStoryData.section_title }
                         </h2>
+                       
 
                         <div
                             className="story-rich-text font-monstrate mt-8 space-y-6 text-[1.08rem] leading-[1.85] text-slate-700 sm:text-[1.15rem]"
@@ -122,16 +113,6 @@ export default function About1971Section() {
                                 __html: displayStoryData.description_html || defaultAboutStoryData.description_html,
                             }}
                         />
-                    </div>
-
-                    <div className="w-full">
-                        <div className="h-[300px] w-full bg-black sm:h-[380px] lg:h-[560px]">
-                            <img
-                                src={storyImage}
-                                alt="1971 story visual"
-                                className="h-full w-full object-cover object-center"
-                            />
-                        </div>
                     </div>
                 </article>
             </div>

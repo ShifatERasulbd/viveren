@@ -137,7 +137,7 @@ export default function ShopSidebar({
                                     type="text"
                                     value={minPrice}
                                     onChange={(event) => onMinPriceChange?.(event.target.value)}
-                                    className="h-9 w-full rounded border border-zinc-300 bg-white pl-6 pr-2 text-[0.8rem] text-zinc-700"
+                                    className="h-9 w-full rounded border border-zinc-300  pl-6 pr-2 text-[0.8rem] text-zinc-700"
                                 />
                             </label>
 
@@ -149,7 +149,7 @@ export default function ShopSidebar({
                                     type="text"
                                     value={maxPrice}
                                     onChange={(event) => onMaxPriceChange?.(event.target.value)}
-                                    className="h-9 w-full rounded border border-zinc-300 bg-white pl-6 pr-2 text-[0.8rem] text-zinc-700"
+                                    className="h-9 w-full rounded border border-zinc-300  pl-6 pr-2 text-[0.8rem] text-zinc-700"
                                 />
                             </label>
                         </div>

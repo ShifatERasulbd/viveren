@@ -133,7 +133,7 @@ function withPageFallback(Component) {
 
 function FrontendLayout() {
     return (
-        <div className="min-h-screen bg-white text-zinc-950">
+        <div className="min-h-screen bg-background text-zinc-950">
             <Header />
             <main>
                 <Outlet />

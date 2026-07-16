@@ -155,7 +155,7 @@ export default function SingleProductPage() {
 
     if (isLoading) {
         return (
-            <div className="bg-white">
+            <div className="bg-background">
                 <LazySection heightClass="h-[760px]" variant="product">
                     <SectionSkeleton heightClass="h-[760px]" variant="product" />
                 </LazySection>
@@ -165,14 +165,14 @@ export default function SingleProductPage() {
 
     if (!currentProduct) {
         return (
-            <div className="bg-white px-6 py-20 text-center text-zinc-600">
+            <div className="bg-background px-6 py-20 text-center text-zinc-600">
                 Product not found.
             </div>
         );
     }
 
     return (
-        <div className="bg-white">
+        <div className="bg-background">
             <LazySection heightClass="h-[760px]" variant="product">
                 <SingleProductMainSection product={currentProduct} initialColor={initialColor} />
             </LazySection>

@@ -504,7 +504,7 @@ export default function SingleProductMainSection({ product, initialColor = '' })
     const primaryVideo = filteredVideos[0] || '';
 
     return (
-        <section className={`${featuresFontClass} bg-[#f7f7f6] px-5 py-6 sm:px-8 lg:px-12 lg:py-8`}>
+        <section className={`${featuresFontClass}  px-5 py-6 sm:px-8 lg:px-12 lg:py-8`}>
             <div className="mx-auto w-full max-w-[1800px]">
                 <p className="mb-4 text-[0.95rem] uppercase tracking-[0.08em] text-slate-600 sm:mb-6">
                     {breadcrumbs.map((crumb, index) => (

@@ -81,7 +81,7 @@ function ProductDetailsSkeleton() {
 function CatalogSkeleton() {
     return (
         <div className="mx-auto grid w-full max-w-[1709px] animate-pulse gap-8 lg:grid-cols-[360px_1fr] lg:gap-10">
-            <div className="space-y-4 rounded border border-zinc-200 bg-white p-5">
+            <div className="space-y-4 rounded border border-zinc-200  p-5">
                 <div className="h-5 w-28 rounded bg-zinc-200" />
                 <div className="h-10 rounded bg-zinc-200" />
                 <div className="h-10 rounded bg-zinc-200" />
@@ -96,7 +96,7 @@ function CatalogSkeleton() {
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                     {Array.from({ length: 8 }).map((_, index) => (
-                        <div key={`catalog-skeleton-${index}`} className="overflow-hidden border border-zinc-200 bg-white">
+                        <div key={`catalog-skeleton-${index}`} className="overflow-hidden border border-zinc-200">
                             <div className="h-[250px] bg-zinc-200 sm:h-[320px]" />
                             <div className="space-y-2 p-4">
                                 <div className="h-3.5 w-[80%] rounded bg-zinc-200" />

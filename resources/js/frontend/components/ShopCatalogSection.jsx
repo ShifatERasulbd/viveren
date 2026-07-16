@@ -751,7 +751,7 @@ function ProductCard({ product, colorLookup = {}, colorNameLookup = {}, onAddToC
     }
 
     return (
-        <article className="group mx-auto w-full max-w-[315px] overflow-hidden border border-zinc-200 bg-white">
+        <article className="group mx-auto w-full max-w-[315px] overflow-hidden border border-zinc-200">
             <Link to={productLink} className="block">
                 <div className="relative h-[400px] overflow-hidden bg-zinc-100">
                     <img
@@ -772,7 +772,7 @@ function ProductCard({ product, colorLookup = {}, colorNameLookup = {}, onAddToC
                             type="button"
                             onClick={handleWishlist}
                             aria-label="Add to wishlist"
-                            className="inline-flex size-9 items-center justify-center border border-zinc-200 bg-white text-zinc-700 transition-colors duration-200 hover:text-zinc-950"
+                            className="inline-flex size-9 items-center justify-center border border-zinc-200 text-zinc-700 transition-colors duration-200 hover:text-zinc-950"
                         >
                             <Heart className="size-4" />
                         </button>
@@ -780,7 +780,7 @@ function ProductCard({ product, colorLookup = {}, colorNameLookup = {}, onAddToC
                             type="button"
                             onClick={handleQuickView}
                             aria-label="Preview product"
-                            className="inline-flex size-9 items-center justify-center border border-zinc-200 bg-white text-zinc-700 transition-colors duration-200 hover:text-zinc-950"
+                            className="inline-flex size-9 items-center justify-center border border-zinc-200 text-zinc-700 transition-colors duration-200 hover:text-zinc-950"
                         >
                             <Eye className="size-4" />
                         </button>
@@ -798,7 +798,7 @@ function ProductCard({ product, colorLookup = {}, colorNameLookup = {}, onAddToC
                                 type="button"
                                 aria-label="Previous image"
                                 onClick={handlePrevImage}
-                                className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/85 p-1.5 text-zinc-800 opacity-0 shadow transition-opacity group-hover:opacity-100"
+                                className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full  p-1.5 text-zinc-800 opacity-0 shadow transition-opacity group-hover:opacity-100"
                             >
                                 <ChevronLeft className="size-4" />
                             </button>
@@ -806,28 +806,12 @@ function ProductCard({ product, colorLookup = {}, colorNameLookup = {}, onAddToC
                                 type="button"
                                 aria-label="Next image"
                                 onClick={handleNextImage}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/85 p-1.5 text-zinc-800 opacity-0 shadow transition-opacity group-hover:opacity-100"
+                                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full  p-1.5 text-zinc-800 opacity-0 shadow transition-opacity group-hover:opacity-100"
                             >
                                 <ChevronRight className="size-4" />
                             </button>
 
-                            {/* <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full bg-black/30 px-2 py-1">
-                                {galleryImages.map((_, index) => (
-                                    <button
-                                        key={`image-dot-${index}`}
-                                        type="button"
-                                        onClick={(event) => {
-                                            event.preventDefault();
-                                            event.stopPropagation();
-                                            setCurrentImageIndex(index);
-                                        }}
-                                        className={`size-1.5 rounded-full ${
-                                            currentImageIndex === index ? 'bg-white' : 'bg-white/50'
-                                        }`}
-                                        aria-label={`Go to image ${index + 1}`}
-                                    />
-                                ))}
-                            </div> */}
+                            
                         </>
                     ) : null}
                 </div>
@@ -904,7 +888,7 @@ function ShopProductsGrid({
                     ))}
                 </div>
             ) : (
-                <div className="flex min-h-[420px] flex-col items-center justify-center rounded-md border border-zinc-200 bg-white text-center">
+                <div className="flex min-h-[420px] flex-col items-center justify-center rounded-md border border-zinc-200  text-center">
                     <PackageSearch className="mb-4 size-24 text-zinc-300" strokeWidth={1.5} />
                     <h3 className="text-[1.1rem] font-semibold uppercase tracking-[0.08em] text-zinc-700">No product found</h3>
                     <p className="mt-2 text-sm text-zinc-500">Try changing filters or search keywords.</p>
@@ -921,7 +905,7 @@ function ShopProductsGrid({
                             className={`inline-flex h-10 min-w-10 items-center justify-center border px-3 text-[0.75rem] font-semibold uppercase tracking-[0.14em] ${
                                 page === currentPage
                                     ? 'border-zinc-900 bg-zinc-900 text-white'
-                                    : 'border-zinc-300 bg-white text-zinc-700 hover:border-zinc-500'
+                                    : 'border-zinc-300  text-zinc-700 hover:border-zinc-500'
                             }`}
                         >
                             {page}
@@ -1388,7 +1372,7 @@ export default function ShopCatalogSection() {
         return (
             <section className={`${featuresFontClass} px-5 py-12 sm:px-8 lg:px-12 lg:py-16`}>
                 <div className="mx-auto grid w-full max-w-[1709px] animate-pulse gap-8 lg:grid-cols-[360px_1fr] lg:gap-10">
-                    <div className="space-y-4 rounded border border-zinc-200 bg-white p-5">
+                    <div className="space-y-4 rounded border border-zinc-200  p-5">
                         <div className="h-5 w-28 rounded bg-zinc-200" />
                         <div className="h-10 rounded bg-zinc-200" />
                         <div className="h-10 rounded bg-zinc-200" />
@@ -1405,7 +1389,7 @@ export default function ShopCatalogSection() {
 
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                             {Array.from({ length: 8 }).map((_, index) => (
-                                <article key={`shop-card-skeleton-${index}`} className="overflow-hidden border border-zinc-200 bg-white">
+                                <article key={`shop-card-skeleton-${index}`} className="overflow-hidden border border-zinc-200">
                                     <div className="h-[250px] bg-zinc-200 sm:h-[320px]" />
                                     <div className="space-y-2 p-4">
                                         <div className="h-3.5 w-[80%] rounded bg-zinc-200" />

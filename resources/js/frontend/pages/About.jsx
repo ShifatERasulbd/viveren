@@ -91,7 +91,7 @@ export default function AboutPage() {
     }, []);
 
     return (
-        <div className="bg-white">
+            <div className="bg-background">
             <div id="section-hero">
                 <LazySection heightClass="h-[520px]" variant="hero" defer={false}>
                     <AboutHeroSection />
