@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class AboutGivingBackSection extends Model
+class AboutFabricTechnologySection extends Model
 {
     use HasFactory;
 
@@ -14,14 +14,12 @@ class AboutGivingBackSection extends Model
         'section_title',
         'title',
         'description',
-        'points',
         'button_title',
         'button_link',
         'button_enabled',
     ];
 
     protected $casts = [
-        'points' => 'array',
         'button_enabled' => 'boolean',
     ];
 }

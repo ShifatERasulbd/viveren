@@ -18,9 +18,15 @@ export const aboutSections = [
         status: 'active',
     },
     {
-        key: 'giving-back',
-        title: 'Giving Back',
+        key: 'sustainability',
+        title: 'Sustainability',
         description: 'Community support and social initiatives',
+        status: 'active',
+    },
+    {
+        key: 'fabric-technology',
+        title: 'Fabric and Technology',
+        description: 'Innovations in fabric and technology',
         status: 'active',
     },
     {

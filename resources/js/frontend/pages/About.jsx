@@ -6,8 +6,9 @@ const AboutHeroSection = lazy(() => import('../components/AboutHeroSection.jsx')
 
 const About1971Section = lazy(() => import('../components/1971AboutSection.jsx'));
 const OurStory = lazy(() => import('../components/OurStory.jsx'));
-const GivingBackSection = lazy(() => import('../components/GivingBackSection.jsx'));
+const SustainabilitySection = lazy(() => import('../components/SustainabilitySection.jsx'));
 const NewsletterSection = lazy(() => import('../components/NewsletterSection.jsx'));
+const FabricTechnologySection = lazy(() => import('../components/FabricandTechnology.jsx'));
 const InstagramSection = lazy(() => import('../components/InstagramSection.jsx'));
 
 function LazySection({ children, heightClass, variant = 'generic', defer = true }) {
@@ -104,19 +105,23 @@ export default function AboutPage() {
                 </LazySection>
             </div>
 
-            <div id="section-our-mission">
+            <div id="section-our-story">
                 <LazySection heightClass="h-[540px]" variant="split" defer={!isBuilderPreview}>
                     <OurStory />
                 </LazySection>
             </div>
 
-            <div id="section-giving-back">
+            <div id="section-sustainability">
                 <LazySection heightClass="h-[560px]" variant="split" defer={!isBuilderPreview}>
-                    <GivingBackSection />
+                    <SustainabilitySection />
                 </LazySection>
             </div>
 
-           
+            <div id="section-fabric-technology">
+                <LazySection heightClass="h-[560px]" variant="split" defer={!isBuilderPreview}>
+                    <FabricTechnologySection />
+                </LazySection>
+            </div>
            
         </div>
     );

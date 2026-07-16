@@ -213,18 +213,6 @@ export default function HeroEditorDrawer({
 
                     
 
-                
-                   
-
-                 
-
-           
-
-                  
-
-                    
-                    
-
                     {showButton ? (
                     <div className="space-y-2">
                         <Label htmlFor="hero-button-enabled">Show button</Label>

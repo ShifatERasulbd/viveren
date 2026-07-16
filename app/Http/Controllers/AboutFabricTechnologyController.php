@@ -2,29 +2,24 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\AboutGivingBackSection;
+use App\Models\AboutFabricTechnologySection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 
-class AboutGivingBackController extends Controller
+class AboutFabricTechnologyController extends Controller
 {
-    private function ensureSection(): AboutGivingBackSection
+    private function ensureSection(): AboutFabricTechnologySection
     {
-        $section = AboutGivingBackSection::query()->first();
+        $section = AboutFabricTechnologySection::query()->first();
 
         if (!$section) {
-            $section = AboutGivingBackSection::query()->create([
+            $section = AboutFabricTechnologySection::query()->create([
                 'image' => '/uploads/heroes/images/hero1.webp',
-                'section_title' => 'Sustainability',
-                'title' => 'Responsibility, Built In',
-                'description' => "Viveren believes the future of fashion is honest, human, and considered.\n\nThe clothes you wear should feel good — on your body, in your values, and in the world you move through.",
-                'points' => [
-                    'Ethical Sourcing',
-                    'Eco-Friendly Materials',
-                    'Carbon Neutral Shipping',
-                ],
-                'button_title' => 'Explore Our Sustainability Approach',
+                'section_title' => 'Fabric & Technology',
+                'title' => 'Fabric, Engineered with Purpose',
+                'description' => 'Every Viveren fabric is engineered with purpose. From structured knits to breathable, compostable blends, our materials are selected to deliver comfort, durability, and effortless wear — without compromise.',
+                'button_title' => 'Discover Our Fabrics',
                 'button_link' => '#',
                 'button_enabled' => true,
             ]);
@@ -87,21 +82,14 @@ class AboutGivingBackController extends Controller
         }
     }
 
-    private function toResponse(AboutGivingBackSection $section): array
+    private function toResponse(AboutFabricTechnologySection $section): array
     {
-        $points = collect($section->points ?? [])
-            ->map(fn ($point) => trim((string) $point))
-            ->filter(fn ($point) => $point !== '')
-            ->values()
-            ->all();
-
         return [
             'id' => $section->id,
             'image' => $this->resolveAssetUrl($section->image),
             'section_title' => $section->section_title,
             'title' => $section->title,
             'description' => $section->description,
-            'points' => $points,
             'button_title' => $section->button_title,
             'button_link' => $section->button_link,
             'button_enabled' => (bool) $section->button_enabled,
@@ -110,9 +98,7 @@ class AboutGivingBackController extends Controller
 
     public function index(): JsonResponse
     {
-        $section = $this->ensureSection();
-
-        return response()->json($this->toResponse($section));
+        return response()->json($this->toResponse($this->ensureSection()));
     }
 
     public function publicIndex(): JsonResponse
@@ -122,21 +108,12 @@ class AboutGivingBackController extends Controller
 
     public function update(Request $request): JsonResponse
     {
-        if (is_string($request->input('points'))) {
-            $decodedPoints = json_decode($request->input('points'), true);
-            if (json_last_error() === JSON_ERROR_NONE && is_array($decodedPoints)) {
-                $request->merge(['points' => $decodedPoints]);
-            }
-        }
-
         $validated = $request->validate([
             'image' => ['nullable', 'string'],
             'image_file' => ['nullable', 'file', 'mimes:jpeg,png,jpg,gif,webp,avif,svg', 'max:4096'],
             'section_title' => ['required', 'string', 'max:255'],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'points' => ['nullable', 'array'],
-            'points.*' => ['nullable', 'string', 'max:255'],
             'button_title' => ['nullable', 'string', 'max:255'],
             'button_link' => ['nullable', 'string', 'max:2048'],
             'button_enabled' => ['nullable'],
@@ -148,23 +125,16 @@ class AboutGivingBackController extends Controller
             $this->deleteAssetIfLocal($section->image);
             $validated['image'] = $this->storeAssetInPublicDir(
                 $request->file('image_file'),
-                'uploads/about/giving-back',
-                'about_giving_back_'
+                'uploads/about/fabric-technology',
+                'about_fabric_tech_'
             );
         }
-
-        $points = collect($validated['points'] ?? [])
-            ->map(fn ($point) => trim((string) $point))
-            ->filter(fn ($point) => $point !== '')
-            ->values()
-            ->all();
 
         $section->update([
             'image' => $validated['image'] ?? $section->image,
             'section_title' => $validated['section_title'],
             'title' => $validated['title'],
             'description' => $validated['description'] ?? '',
-            'points' => $points,
             'button_title' => $validated['button_title'] ?? $section->button_title,
             'button_link' => $validated['button_link'] ?? $section->button_link,
             'button_enabled' => filter_var($request->input('button_enabled', '1'), FILTER_VALIDATE_BOOLEAN),

@@ -105,7 +105,7 @@ function PointRow({ point, index, onChangePoint, onRemovePoint, onReorderPoint }
     );
 }
 
-export default function AboutGivingBackEditorDrawer({
+export default function AboutSustainabilityEditorDrawer({
     open,
     onOpenChange,
     value,
@@ -124,11 +124,9 @@ export default function AboutGivingBackEditorDrawer({
                 <SheetHeader>
                     <SheetTitle className="flex items-center gap-2">
                         <Settings2 className="size-4" />
-                        Giving Back Editor
+                        Sustainability Editor
                     </SheetTitle>
-                    <SheetDescription>
-                        Edit image, section title, title, description, and repeater points.
-                    </SheetDescription>
+                   
                 </SheetHeader>
 
                 <div className="space-y-5 px-4 pb-4">
@@ -151,7 +149,7 @@ export default function AboutGivingBackEditorDrawer({
                         {value.image ? (
                             <img
                                 src={value.image}
-                                alt="Giving back image preview"
+                                alt="Sustainability section image preview"
                                 className="h-44 w-full rounded-md border border-border object-cover"
                             />
                         ) : null}
@@ -163,7 +161,7 @@ export default function AboutGivingBackEditorDrawer({
                             id="about-giving-back-section-title"
                             value={value.section_title || ''}
                             onChange={(event) => onChangeField('section_title', event.target.value)}
-                            placeholder="Giving Back"
+                            placeholder="Sustainability"
                         />
                     </div>
 
@@ -189,33 +187,51 @@ export default function AboutGivingBackEditorDrawer({
                         />
                     </div>
 
-                    <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                            <Label>Repeater points</Label>
-                            <Button type="button" variant="outline" size="sm" onClick={onAddPoint}>
-                                <Plus className="mr-1 size-4" />
-                                Add Point
-                            </Button>
-                        </div>
-
-                        <div className="space-y-3">
-                            {(value.points || []).map((point, index) => (
-                                <PointRow
-                                    key={`${point || 'point'}-${index}`}
-                                    point={point}
-                                    index={index}
-                                    onChangePoint={onChangePoint}
-                                    onRemovePoint={onRemovePoint}
-                                    onReorderPoint={onReorderPoint}
-                                />
-                            ))}
-                        </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="button_title">Button Name</Label>
+                        <Input
+                            id="button_title"
+                            value={value.button_title || ''}
+                            onChange={(event) => onChangeField('button_title', event.target.value)}
+                            placeholder="Learn More"
+                        />
                     </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="button_link">Button Link</Label>
+                        <Input
+                            id="button_link"
+                            value={value.button_link || ''}
+                            onChange={(event) => onChangeField('button_link', event.target.value)}
+                            placeholder="https://example.com"
+                        />
+                    </div>
+
+                  
+                    <div className="space-y-2">
+                        <Label htmlFor="hero-button-enabled">Show button</Label>
+                        <label
+                            htmlFor="hero-button-enabled"
+                            className="inline-flex cursor-pointer items-center gap-2"
+                        >
+                            <input
+                                id="hero-button-enabled"
+                                type="checkbox"
+                                checked={Boolean(value.button_enabled ?? true)}
+                                onChange={(event) => onChangeField('button_enabled', event.target.checked)}
+                                className="size-4 rounded border-input"
+                            />
+                            <span className="text-sm text-muted-foreground">
+                                {Boolean(value.button_enabled ?? true) ? 'Enabled' : 'Disabled'}
+                            </span>
+                        </label>
+                    </div>
+                    
+
                 </div>
 
                 <SheetFooter>
                     <Button onClick={() => onSave?.()} disabled={isSaving}>
-                        {isSaving ? 'Saving Giving Back...' : 'Save To Database'}
+                        {isSaving ? 'Saving...' : 'Save To Database'}
                     </Button>
                     <Button variant="outline" onClick={() => onOpenChange(false)}>
                         Done

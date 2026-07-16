@@ -113,7 +113,7 @@ export default function OurStory() {
 
                             {/* Persistent Title */}
                             <h3 className="pointer-events-none relative px-6 text-center font-serif text-3xl uppercase tracking-widest text-white">
-                                {displayData.title}
+                                {displayData.image_title}
                             </h3>
                         </div>
                     </div>

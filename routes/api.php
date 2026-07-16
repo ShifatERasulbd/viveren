@@ -11,6 +11,7 @@ use App\Http\Controllers\AboutHeroController;
 use App\Http\Controllers\AboutGivingBackController;
 use App\Http\Controllers\AboutMissionController;
 use App\Http\Controllers\AboutStoryController;
+use App\Http\Controllers\AboutFabricTechnologyController;
 use App\Http\Controllers\CommunityPageSectionController;
 use App\Http\Controllers\FeatureController;
 use App\Http\Controllers\GrandChildController;
@@ -39,6 +40,7 @@ Route::get('/public/about-hero', [AboutHeroController::class, 'publicIndex']);
 Route::get('/public/about-story', [AboutStoryController::class, 'publicIndex']);
 Route::get('/public/about-mission', [AboutMissionController::class, 'publicIndex']);
 Route::get('/public/about-giving-back', [AboutGivingBackController::class, 'publicIndex']);
+Route::get('/public/about-fabric-technology', [AboutFabricTechnologyController::class, 'publicIndex']);
 Route::get('/public/colors', [ColorController::class, 'index']);
 Route::get('/public/collections', [CollectionController::class, 'publicIndex']);
 Route::get('/public/hero', [HeroController::class, 'publicIndex']);
@@ -106,6 +108,8 @@ Route::middleware('auth:sanctum')->group(function () {
 	Route::post('/about-mission', [AboutMissionController::class, 'update']);
 	Route::get('/about-giving-back', [AboutGivingBackController::class, 'index']);
 	Route::post('/about-giving-back', [AboutGivingBackController::class, 'update']);
+	Route::get('/about-fabric-technology', [AboutFabricTechnologyController::class, 'index']);
+	Route::post('/about-fabric-technology', [AboutFabricTechnologyController::class, 'update']);
 	// Community Page Sections
 	Route::get('/community-page-sections', [CommunityPageSectionController::class, 'index']);
 	Route::post('/community-page-sections', [CommunityPageSectionController::class, 'store']);
