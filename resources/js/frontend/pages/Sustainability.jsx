@@ -5,7 +5,6 @@ import SectionSkeleton from '../components/SectionSkeleton.jsx';
 const SustainabilityHeroSection = lazy(() => import('../components/SustainabilityHeroSection.jsx'));
 const LongevitySection = lazy(() => import('../components/DesignedForLongivity.jsx'));
 const MindfulMaterials = lazy(() => import('../components/ThoughtfullyChoosenMeterials.jsx'));
-const FabricEngineeringwithPurpose = lazy(() => import('../components/FabricEngineeringwithPurpose.jsx'));
 const BehindTheCraft = lazy(() => import('../components/BehindTheCraft.jsx'));
 const FabricInnovations = lazy(() => import('../components/OurMaterials.jsx'));
 function LazySection({ children, heightClass, variant = 'generic', defer = true }) {
@@ -83,11 +82,7 @@ export default function SustainabilityPage() {
                     <MindfulMaterials />
                 </LazySection>
             </div>
-            <div id="section-fabric-engineering">
-                <LazySection heightClass="h-[600px]" variant="generic" defer={false}>
-                    <FabricEngineeringwithPurpose />
-                </LazySection>
-            </div>
+            
             <div id="section-behind-the-craft">
                 <LazySection heightClass="h-[600px]" variant="generic" defer={false}>
                     <BehindTheCraft />

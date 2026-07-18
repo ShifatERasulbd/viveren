@@ -61,6 +61,12 @@ export default function SustainabilityPageBuilder() {
                     buttonText: section.buttonText ?? section.button_text ?? '',
                     buttonUrl: section.buttonUrl ?? section.button_url ?? '',
                     featureImage: section.featureImage ?? section.feature_image ?? '',
+                    featureImage2: section.featureImage2 ?? section.feature_image_2 ?? '',
+                                        ourMaterialsItems: Array.isArray(section.ourMaterialsItems)
+                                                ? section.ourMaterialsItems
+                                                : Array.isArray(section.our_materials_items)
+                                                    ? section.our_materials_items
+                                                    : [],
                     featureItems: Array.isArray(section.featureItems)
                         ? section.featureItems
                         : Array.isArray(section.feature_items)

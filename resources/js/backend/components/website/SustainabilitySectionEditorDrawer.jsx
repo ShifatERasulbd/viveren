@@ -193,6 +193,80 @@ function GalleryItemRow({ index, items, onRemove, onReorder, children }) {
     );
 }
 
+function OurMaterialsRow({ item, index, items, onChange, onRemove, onUploadImage }) {
+    return (
+        <div className="rounded-md border border-border bg-muted/30 p-3">
+            <div className="mb-3 flex items-center justify-between">
+                <div className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <GripVertical className="size-4" />
+                    Material {index + 1}
+                </div>
+
+                <button
+                    type="button"
+                    onClick={onRemove}
+                    disabled={items.length <= 1}
+                    className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-red-600 disabled:opacity-40"
+                >
+                    <Trash2 className="size-3.5" />
+                    Remove
+                </button>
+            </div>
+
+            <div className="space-y-3">
+                <div className="space-y-1.5">
+                    <Label htmlFor={`our-materials-item-content-header-${item.id || index}`}>Content Header</Label>
+                    <Input
+                        id={`our-materials-item-content-header-${item.id || index}`}
+                        value={item.contentHeader || ''}
+                        onChange={(event) => onChange('contentHeader', event.target.value)}
+                        placeholder="e.g., FlexTwill"
+                    />
+                </div>
+
+                <div className="space-y-1.5">
+                    <Label htmlFor={`our-materials-item-content-title-${item.id || index}`}>Content Title</Label>
+                    <Input
+                        id={`our-materials-item-content-title-${item.id || index}`}
+                        value={item.contentTitle || ''}
+                        onChange={(event) => onChange('contentTitle', event.target.value)}
+                        placeholder="e.g., Structured. Supple. Everyday-Ready."
+                    />
+                </div>
+
+                <div className="space-y-1.5">
+                    <Label htmlFor={`our-materials-item-details-${item.id || index}`}>Details</Label>
+                    <textarea
+                        id={`our-materials-item-details-${item.id || index}`}
+                        value={item.details || ''}
+                        onChange={(event) => onChange('details', event.target.value)}
+                        rows={4}
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none"
+                        placeholder="Material details and benefits"
+                    />
+                </div>
+
+                <div className="space-y-1.5">
+                    <Label htmlFor={`our-materials-item-image-${item.id || index}`}>Image</Label>
+                    <Input
+                        id={`our-materials-item-image-${item.id || index}`}
+                        type="file"
+                        accept="image/*"
+                        onChange={onUploadImage}
+                    />
+                    {item.image ? (
+                        <img
+                            src={item.image}
+                            alt="Our materials item preview"
+                            className="h-28 w-full rounded-md border border-border object-cover"
+                        />
+                    ) : null}
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function CommunitySectionEditorDrawer({
     open,
     onOpenChange,
@@ -267,6 +341,9 @@ export default function CommunitySectionEditorDrawer({
 
     const handleTextSectionImageUpload = (event) =>
         handleSectionImageUpload(event, 'featureImage', 'Section image uploaded');
+
+    const handleTextSectionImage2Upload = (event) =>
+        handleSectionImageUpload(event, 'featureImage2', 'Section image 2 uploaded');
 
     const handleCommunityImageUpload = (event) =>
         handleSectionImageUpload(event, 'communityImage', 'Community center image uploaded');
@@ -419,6 +496,78 @@ export default function CommunitySectionEditorDrawer({
         }
     };
 
+    const handleOurMaterialsItemChange = (index, field, value) => {
+        const current = Array.isArray(section?.ourMaterialsItems) ? section.ourMaterialsItems : [];
+        const next = current.map((item, itemIndex) =>
+            itemIndex === index
+                ? {
+                      ...item,
+                      [field]: value,
+                  }
+                : item,
+        );
+
+        onChangeField?.('ourMaterialsItems', next);
+    };
+
+    const handleAddOurMaterialsItem = () => {
+        const current = Array.isArray(section?.ourMaterialsItems) ? section.ourMaterialsItems : [];
+        const next = [
+            ...current,
+            {
+                id: `our-materials-item-${Date.now()}`,
+                contentHeader: '',
+                contentTitle: '',
+                details: '',
+                image: '',
+            },
+        ];
+
+        onChangeField?.('ourMaterialsItems', next);
+    };
+
+    const handleRemoveOurMaterialsItem = (index) => {
+        const current = Array.isArray(section?.ourMaterialsItems) ? section.ourMaterialsItems : [];
+        const next = current.filter((_, itemIndex) => itemIndex !== index);
+        onChangeField?.('ourMaterialsItems', next.length > 0 ? next : current);
+    };
+
+    const handleOurMaterialsItemImageUpload = async (index, event) => {
+        const file = event.target.files?.[0];
+        if (!file) {
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('image', file);
+
+        try {
+            setIsUploadingImage(true);
+
+            const response = await fetch('/api/community-page-sections/upload-feature-image', {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: formData,
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to upload our materials image');
+            }
+
+            const payload = await response.json();
+            handleOurMaterialsItemChange(index, 'image', payload.url || payload.path || '');
+            toast.success('Our materials image uploaded');
+        } catch {
+            toast.error('Failed to upload our materials image');
+        } finally {
+            setIsUploadingImage(false);
+            event.target.value = '';
+        }
+    };
+
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent side="right" className="h-screen w-full overflow-y-auto sm:max-w-[420px] lg:max-w-[460px]">
@@ -438,7 +587,71 @@ export default function CommunitySectionEditorDrawer({
                     </div>
                 ) : (
                     <div className="space-y-5 px-4 pb-4">
-                        {section.key !== 'features' && section.key !== 'community-center' && section.key !== 'gallery' && (
+                        {section.key === 'fabric-innovations' ? (
+                            <>
+                                <div className="space-y-2">
+                                    <Label htmlFor="our-materials-section-title">Section Title</Label>
+                                    <Input
+                                        id="our-materials-section-title"
+                                        value={section.contentTitle || ''}
+                                        onChange={(event) => onChangeField?.('contentTitle', event.target.value)}
+                                        placeholder="e.g., Material Innovation"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="our-materials-section-header">Section Header</Label>
+                                    <Input
+                                        id="our-materials-section-header"
+                                        value={section.heading || ''}
+                                        onChange={(event) => onChangeField?.('heading', event.target.value)}
+                                        placeholder="e.g., Our Materials"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="our-materials-section-description">Section Description</Label>
+                                    <textarea
+                                        id="our-materials-section-description"
+                                        value={section.sectionDescription || ''}
+                                        onChange={(event) => onChangeField?.('sectionDescription', event.target.value)}
+                                        rows={4}
+                                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none"
+                                        placeholder="Optional intro for the section"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <Label>Materials Repeater</Label>
+                                        <Button type="button" size="sm" variant="outline" onClick={handleAddOurMaterialsItem}>
+                                            <Plus className="mr-1 size-3.5" />
+                                            Add Material
+                                        </Button>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        {Array.isArray(section.ourMaterialsItems) && section.ourMaterialsItems.length > 0 ? (
+                                            section.ourMaterialsItems.map((item, index) => (
+                                                <OurMaterialsRow
+                                                    key={item.id || `our-materials-item-${index}`}
+                                                    item={item}
+                                                    index={index}
+                                                    items={section.ourMaterialsItems}
+                                                    onChange={(field, value) => handleOurMaterialsItemChange(index, field, value)}
+                                                    onRemove={() => handleRemoveOurMaterialsItem(index)}
+                                                    onUploadImage={(event) => handleOurMaterialsItemImageUpload(index, event)}
+                                                />
+                                            ))
+                                        ) : (
+                                            <div className="rounded-md border border-dashed border-border bg-muted/20 p-4 text-sm text-muted-foreground">
+                                                Add at least one material card for the Our Materials section.
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </>
+                        ) : section.key !== 'features' && section.key !== 'community-center' && section.key !== 'gallery' && (
                             <>
                                 {textImageSectionKeys.has(section.key) ? (
                                     <div className="space-y-2">
@@ -461,6 +674,31 @@ export default function CommunitySectionEditorDrawer({
                                             {isUploadingImage
                                                 ? 'Uploading image...'
                                                 : 'Upload image shown beside this content section.'}
+                                        </p>
+                                    </div>
+                                ) : null}
+
+                                {section.key === 'behind-the-craft' ? (
+                                    <div className="space-y-2">
+                                        <Label htmlFor="sustainability-content-image-2">Featured Image 2</Label>
+                                        <Input
+                                            id="sustainability-content-image-2"
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleTextSectionImage2Upload}
+                                            disabled={isUploadingImage}
+                                        />
+                                        {section.featureImage2 ? (
+                                            <img
+                                                src={section.featureImage2}
+                                                alt="Sustainability section preview 2"
+                                                className="h-28 w-full rounded-md border border-border object-cover"
+                                            />
+                                        ) : null}
+                                        <p className="text-xs text-muted-foreground">
+                                            {isUploadingImage
+                                                ? 'Uploading image...'
+                                                : 'Upload second image for the Behind the Craft gallery.'}
                                         </p>
                                     </div>
                                 ) : null}

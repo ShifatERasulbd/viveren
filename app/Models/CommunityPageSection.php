@@ -16,6 +16,8 @@ class CommunityPageSection extends Model
         'button_text',
         'button_url',
         'feature_image',
+        'feature_image_2',
+        'our_materials_items',
         'feature_items',
         'community_image',
         'community_items',
@@ -24,6 +26,7 @@ class CommunityPageSection extends Model
     ];
 
     protected $casts = [
+        'our_materials_items' => 'array',
         'feature_items' => 'array',
         'community_items' => 'array',
         'gallery_items' => 'array',

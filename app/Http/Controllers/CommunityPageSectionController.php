@@ -59,7 +59,9 @@ class CommunityPageSectionController extends Controller
         $data['buttonText'] = $section->button_text;
         $data['buttonUrl'] = $section->button_url;
         $data['featureImage'] = $this->resolvePublicPath($section->feature_image);
+        $data['featureImage2'] = $this->resolvePublicPath($section->feature_image_2);
         $data['featureItems'] = is_array($section->feature_items) ? $section->feature_items : [];
+        $data['ourMaterialsItems'] = is_array($section->our_materials_items) ? $section->our_materials_items : [];
         $data['communityImage'] = $this->resolvePublicPath($section->community_image);
         $data['communityItems'] = is_array($section->community_items) ? $section->community_items : [];
         $data['galleryItems'] = is_array($section->gallery_items) ? $section->gallery_items : [];
@@ -112,11 +114,18 @@ class CommunityPageSectionController extends Controller
             'buttonText' => 'nullable|string',
             'buttonUrl' => 'nullable|string',
             'featureImage' => 'nullable|string|max:65535',
+            'featureImage2' => 'nullable|string|max:65535',
             'featureItems' => 'nullable|array',
             'featureItems.*.id' => 'nullable|string|max:100',
             'featureItems.*.icon' => 'nullable|string|max:100',
             'featureItems.*.title' => 'required_with:featureItems|string|max:255',
             'featureItems.*.description' => 'required_with:featureItems|string|max:1200',
+            'ourMaterialsItems' => 'nullable|array',
+            'ourMaterialsItems.*.id' => 'nullable|string|max:100',
+            'ourMaterialsItems.*.contentHeader' => 'nullable|string|max:255',
+            'ourMaterialsItems.*.contentTitle' => 'required_with:ourMaterialsItems|string|max:255',
+            'ourMaterialsItems.*.details' => 'nullable|string|max:2000',
+            'ourMaterialsItems.*.image' => 'nullable|string|max:65535',
             'communityImage' => 'nullable|string|max:65535',
             'communityItems' => 'nullable|array',
             'communityItems.*.id' => 'nullable|string|max:100',
@@ -170,8 +179,16 @@ class CommunityPageSectionController extends Controller
             $updates['feature_image'] = $validated['featureImage'] ?? null;
         }
 
+        if (in_array('feature_image_2', $columns, true)) {
+            $updates['feature_image_2'] = $validated['featureImage2'] ?? null;
+        }
+
         if (in_array('feature_items', $columns, true)) {
             $updates['feature_items'] = $validated['featureItems'] ?? [];
+        }
+
+        if (in_array('our_materials_items', $columns, true)) {
+            $updates['our_materials_items'] = $validated['ourMaterialsItems'] ?? [];
         }
 
         if (in_array('community_image', $columns, true)) {
