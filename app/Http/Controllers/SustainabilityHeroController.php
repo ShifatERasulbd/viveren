@@ -65,7 +65,7 @@ class SustainabilityHeroController extends Controller
 
     private function ensureDefaultHero(): SustainabilityHeroSection
     {
-        $hero = SustainabilityHeroSection::query()->orderBy('id')->first();
+        $hero = SustainabilityHeroSection::first();
 
         if (!$hero) {
             $hero = SustainabilityHeroSection::query()->create([

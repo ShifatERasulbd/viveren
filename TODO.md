@@ -1,7 +1,14 @@
-# Project TODO
+# TODO
 
-- [ ] Update `resources/js/frontend/components/TrendingProduct.jsx` to allow manual control of the 3D “roll” (rotation) via a frontend slider.
-- [ ] Replace CSS keyframes-based animation with JS-driven rotation so the slider can scrub/offset the rotation.
-- [ ] Keep existing responsive radius/cardWidth logic.
-- [ ] Verify manual slider changes rotation immediately and animation behaves correctly.
+- [x] Fix `SustainabilityLongivityController` response serialization bug (`toResponse` currently references `$this->id` etc.)
+
+- [x] Complete full CRUD in `SustainabilityLongivityController` (index/store/show/update/destroy)
+
+- [x] Standardize image upload/delete behavior for the longivity section
+
+- [x] Register public + admin routes for longivity in `routes/api.php`
+
+- [x] Verify routes exist via `php artisan route:list`
+
+- [ ] Smoke test API endpoints (GET/POST/PUT/DELETE) and ensure frontend receives correct JSON
 

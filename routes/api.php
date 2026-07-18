@@ -60,8 +60,10 @@ Route::get('/public/best-sellers-section', [SettingsController::class, 'publicBe
 Route::get('/public/stripe-config', [StripeController::class, 'publicConfig']);
 Route::get('/public/community-page-sections', [CommunityPageSectionController::class, 'publicIndex']);
 Route::get('/public/sustainability-hero', [App\Http\Controllers\SustainabilityHeroController::class, 'publicIndex']);
+Route::get('/public/sustainability-longivity', [App\Http\Controllers\SustainabilityLongivityController::class, 'index']);
 
 Route::get('/public/orders/{orderNumber}', [CheckoutOrderController::class, 'publicShow']);
+
 Route::post('/public/shipping/quote', [CheckoutOrderController::class, 'quoteShipping']);
 Route::get('/public/locations/states', [UsLocationController::class, 'states']);
 Route::get('/public/locations/cities', [UsLocationController::class, 'citiesByState']);
@@ -97,6 +99,7 @@ Route::middleware('auth:sanctum')->group(function () {
 	Route::middleware('user-type:admin')->group(function () {
 
 	Route::apiResource('/sizes', SizeController::class);
+
 	Route::apiResource('/colors', ColorController::class);
 	Route::get('/heroes', [HeroController::class, 'index']);
 	Route::post('/heroes', [HeroController::class, 'store']);
@@ -112,7 +115,16 @@ Route::middleware('auth:sanctum')->group(function () {
 	Route::post('/about-giving-back', [AboutGivingBackController::class, 'update']);
 	Route::get('/about-fabric-technology', [AboutFabricTechnologyController::class, 'index']);
 	Route::post('/about-fabric-technology', [AboutFabricTechnologyController::class, 'update']);
+
+	// Sustainability Longivity
+	Route::get('/sustainability-longivity', [App\Http\Controllers\SustainabilityLongivityController::class, 'index']);
+	Route::post('/sustainability-longivity', [App\Http\Controllers\SustainabilityLongivityController::class, 'store']);
+	Route::get('/sustainability-longivity/{sustainabilityLongivity}', [App\Http\Controllers\SustainabilityLongivityController::class, 'show']);
+	Route::put('/sustainability-longivity/{sustainabilityLongivity}', [App\Http\Controllers\SustainabilityLongivityController::class, 'update']);
+	Route::delete('/sustainability-longivity/{sustainabilityLongivity}', [App\Http\Controllers\SustainabilityLongivityController::class, 'destroy']);
+
 	// Community Page Sections
+
 	Route::get('/community-page-sections', [CommunityPageSectionController::class, 'index']);
 	Route::post('/community-page-sections', [CommunityPageSectionController::class, 'store']);
 	Route::post('/community-page-sections/upload-feature-image', [CommunityPageSectionController::class, 'uploadFeatureImage']);

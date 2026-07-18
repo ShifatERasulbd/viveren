@@ -24,6 +24,14 @@ const sectionHints = {
     'fabric-innovations': 'Configure the Our Materials section copy.',
 };
 
+const textImageSectionKeys = new Set([
+    'longevity',
+    'mindful-materials',
+    'fabric-engineering',
+    'behind-the-craft',
+    'fabric-innovations',
+]);
+
 const FEATURE_ITEM_TYPE = 'COMMUNITY_FEATURE_ITEM';
 
 function moveFeatureItem(items, sourceIndex, targetIndex) {
@@ -257,6 +265,9 @@ export default function CommunitySectionEditorDrawer({
     const handleFeatureImageUpload = (event) =>
         handleSectionImageUpload(event, 'featureImage', 'Impact features image uploaded');
 
+    const handleTextSectionImageUpload = (event) =>
+        handleSectionImageUpload(event, 'featureImage', 'Section image uploaded');
+
     const handleCommunityImageUpload = (event) =>
         handleSectionImageUpload(event, 'communityImage', 'Community center image uploaded');
 
@@ -429,6 +440,31 @@ export default function CommunitySectionEditorDrawer({
                     <div className="space-y-5 px-4 pb-4">
                         {section.key !== 'features' && section.key !== 'community-center' && section.key !== 'gallery' && (
                             <>
+                                {textImageSectionKeys.has(section.key) ? (
+                                    <div className="space-y-2">
+                                        <Label htmlFor="sustainability-content-image">Section Image</Label>
+                                        <Input
+                                            id="sustainability-content-image"
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleTextSectionImageUpload}
+                                            disabled={isUploadingImage}
+                                        />
+                                        {section.featureImage ? (
+                                            <img
+                                                src={section.featureImage}
+                                                alt="Sustainability section preview"
+                                                className="h-28 w-full rounded-md border border-border object-cover"
+                                            />
+                                        ) : null}
+                                        <p className="text-xs text-muted-foreground">
+                                            {isUploadingImage
+                                                ? 'Uploading image...'
+                                                : 'Upload image shown beside this content section.'}
+                                        </p>
+                                    </div>
+                                ) : null}
+
                                 <div className="space-y-2">
                                     <Label htmlFor="community-section-content-title">Content Title</Label>
                                     <Input
