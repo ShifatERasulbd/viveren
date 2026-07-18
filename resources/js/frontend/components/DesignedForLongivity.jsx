@@ -61,7 +61,7 @@ export default function DesignedForLongevity() {
     const source = previewOverride || sectionData;
 
     return {
-      content_title: source?.contentTitle ?? source?.content_title ?? 'Sustainability, Practiced Daily',
+      content_title: source?.contentTitle ?? source?.content_title ?? '',
       heading: source?.heading ?? 'Designed for Longevity',
       description: source?.sectionDescription ?? source?.section_description ?? source?.description ?? '',
       image: source?.featureImage ?? source?.feature_image ?? source?.image ?? null,
