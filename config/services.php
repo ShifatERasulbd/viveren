@@ -65,7 +65,7 @@ return [
         'client_id' => env('UPS_CLIENT_ID'),
         'client_secret' => env('UPS_CLIENT_SECRET'),
         'shipper_number' => env('UPS_SHIPPER_NUMBER'),
-        'shipper_name' => env('UPS_SHIPPER_NAME', '1971Co'),
+        'shipper_name' => env('UPS_SHIPPER_NAME', 'viveren'),
         'origin_address_1' => env('UPS_ORIGIN_ADDRESS_1', '123 Warehouse Rd'),
         'origin_city' => env('UPS_ORIGIN_CITY', 'New York'),
         'origin_state' => env('UPS_ORIGIN_STATE', 'NY'),

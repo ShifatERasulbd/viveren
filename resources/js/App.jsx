@@ -23,7 +23,7 @@ const OrderConfirmationPage = lazy(() => import('./frontend/pages/OrderConfirmat
 
 const SustainabilityPage = lazy(() => import('./frontend/pages/Sustainability.jsx'));
 
-const BRAND_NAME = '1971Co';
+const BRAND_NAME = window.APP_NAME || 'Viveren';
 
 function normalizeAssetPath(value) {
     if (typeof value !== 'string') {
@@ -47,6 +47,13 @@ function resolvePageLabel(pathname) {
 
     if (path === '/') return 'Home';
     if (path === '/shop') return 'Shop';
+    if (path === '/about') return 'About';
+    if (path === '/sustainability') return 'Sustainability';
+    if (path === '/contact') return 'Contact';
+    if (path === '/checkout') return 'Checkout';
+    if (path === '/order-confirmation') return 'Order Confirmation';
+    if (path === '/login') return 'Login';
+    if (path === '/register') return 'Register';
     if (path.startsWith('/search/')) return 'Search';
     if (path.startsWith('/collection/')) return 'Collection';
     if (path === '/new-arrivals') return 'Collection';
@@ -54,14 +61,8 @@ function resolvePageLabel(pathname) {
     if (path === '/best-sellers') return 'Best Sellers';
     if (path.startsWith('/product-details/')) return 'Product Details';
     if (path === '/singleproduct') return 'Product Details';
-    if (path.split('/').filter(Boolean).length <= 2) return 'Shop';
-    if (path === '/about') return 'About';
-    if (path === '/contact') return 'Contact';
-    if (path === '/checkout') return 'Checkout';
-    if (path === '/order-confirmation') return 'Order Confirmation';
-    if (path === '/login') return 'Login';
-    if (path === '/register') return 'Register';
     if (path.startsWith('/reset-password')) return 'Reset Password';
+    if (path.split('/').filter(Boolean).length <= 2) return 'Shop';
 
     return 'Home';
 }

@@ -7,6 +7,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CollectionController;
 use App\Http\Controllers\ColorController;
 use App\Http\Controllers\CheckoutOrderController;
+use App\Http\Controllers\CompliancePageController;
 use App\Http\Controllers\AboutHeroController;
 use App\Http\Controllers\AboutGivingBackController;
 use App\Http\Controllers\AboutMissionController;
@@ -51,6 +52,7 @@ Route::get('/public/home-background-section', [HomeBackgroundSectionController::
 Route::get('/public/trending-section', [TrendingSectionController::class, 'publicIndex']);
 Route::get('/public/our-story', [OurStorySectionController::class, 'publicIndex']);
 Route::get('/public/products', [ProductController::class, 'publicIndex']);
+Route::get('/public/new-arrivals', [ProductController::class, 'newArrivals']);
 Route::get('/public/shop-products', [ProductController::class, 'publicShopIndex']);
 Route::get('/public/sizes', [SizeController::class, 'index']);
 Route::get('/public/categories', [CategoryController::class, 'index']);
@@ -63,6 +65,7 @@ Route::get('/public/community-page-sections', [CommunityPageSectionController::c
 Route::get('/public/sustainability-hero', [App\Http\Controllers\SustainabilityHeroController::class, 'publicIndex']);
 Route::get('/public/sustainability-longivity', [App\Http\Controllers\SustainabilityLongivityController::class, 'index']);
 Route::get('/public/sustainability-thought-ful', [App\Http\Controllers\SustainabilityThoughtFullController::class, 'index']);
+Route::get('/public/compliance', [App\Http\Controllers\CompliancePageController::class, 'publicIndex']);
 
 Route::get('/public/orders/{orderNumber}', [CheckoutOrderController::class, 'publicShow']);
 
@@ -174,6 +177,9 @@ Route::middleware('auth:sanctum')->group(function () {
 	Route::get('/public-api-keys', [PublicApiKeyController::class, 'index']);
 	Route::post('/public-api-keys', [PublicApiKeyController::class, 'store']);
 	Route::delete('/public-api-keys/{publicApiKey}', [PublicApiKeyController::class, 'destroy']);
+
+	// Compliance Management
+	Route::apiResource('/compliance', \App\Http\Controllers\CompliancePageController::class);
 	});
 	
 });

@@ -93,6 +93,49 @@ class ProductController extends Controller
         return response()->json($products);
     }
 
+    public function newArrivals(): JsonResponse
+    {
+        $columns = [
+            'id',
+            'name',
+            'description',
+            'fit',
+            'fabric_and_care',
+            'product_features',
+            'product_composition',
+            'long_description',
+            'additional_information',
+            'price',
+            'cover_image',
+            'size_chart_image',
+            'size_chart_images',
+            'image_gallery',
+            'color',
+            'color_variant_images',
+            'color_variant_videos',
+            'color_variant_size_charts',
+            'size',
+            'variant_rows',
+            'available_products',
+            'category_id',
+            'subcategory_id',
+            'grand_child_id',
+            'show_on_best_sellers',
+            'position',
+        ];
+
+        if (Schema::hasColumn('products', 'slug')) {
+            $columns[] = 'slug';
+        }
+
+        $products = Product::select($columns)
+            ->orderByDesc('id')
+            ->take(24)
+            ->get();
+
+        return response()->json($products);
+    }
+
     public function publicShopIndex(): JsonResponse
     {
         $columns = [
@@ -149,7 +192,7 @@ class ProductController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'slug' => 'nullable|string|max:255|unique:products,slug',
+            'slug' => 'nullable|string|max:255',
             'sku' => 'required|string|max:255',
             'color' => 'nullable|string|max:255',
             'size' => 'nullable|string|max:255',

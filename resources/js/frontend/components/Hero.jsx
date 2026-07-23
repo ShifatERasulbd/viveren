@@ -1,25 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
 import { timelessFontClass } from '../utils/typography';
 import {
   resolveHeroFontFamily,
   resolveHeroFontSize,
 } from '../../utils/heroTypography';
 import { sectionTypography } from '../utils/sectionTypography';
-import TextGenerateEffect from './TextGenerateEffect';
-
-function resolveMediaUrl(value = '') {
-  const raw = String(value || '').trim();
-
-  if (!raw) {
-    return '';
-  }
-
-  if (raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('/')) {
-    return raw;
-  }
-
-  return `/${raw.replace(/^\/+/, '')}`;
-}
 
 function splitHeroTitle(value, mode = 'double') {
   const title = String(value || '').trim();
@@ -35,19 +21,6 @@ function splitHeroTitle(value, mode = 'double') {
   }
   const middle = Math.ceil(words.length / 2);
   return [words.slice(0, middle).join(' '), words.slice(middle).join(' ')];
-}
-
-function normalizeHeaderTitleItems(items, fallback = '') {
-  const normalized = Array.isArray(items)
-    ? items.map((item) => String(item || '').trim()).filter(Boolean)
-    : [];
-
-  if (normalized.length > 0) {
-    return normalized;
-  }
-
-  const fallbackValue = String(fallback || '').trim();
-  return fallbackValue ? [fallbackValue] : [];
 }
 
 export default function Hero() {
@@ -112,7 +85,6 @@ export default function Hero() {
       }
     }
     loadHero();
-    console.log(loadHero());
     return () => {
       ignore = true;
     };
@@ -145,98 +117,21 @@ export default function Hero() {
 
   const activeHero = heroSlides.length > 0 ? heroSlides[currentSlide] : heroData;
   const displayHeroData = previewOverride ? { ...activeHero, ...previewOverride } : activeHero;
-  const slidesCount = heroSlides.length > 0 ? heroSlides.length : 1;
 
   const titleLines = useMemo(
     () => splitHeroTitle(displayHeroData?.title, displayHeroData?.title_display_mode || 'double'),
     [displayHeroData?.title, displayHeroData?.title_display_mode]
   );
-  const headerTitleItems = useMemo(
-    () => normalizeHeaderTitleItems(displayHeroData?.header_title_items, displayHeroData?.header_title),
-    [displayHeroData?.header_title_items, displayHeroData?.header_title]
-  );
-  const [headerTitleIndex, setHeaderTitleIndex] = useState(0);
   
-  const fullDescription = String(displayHeroData?.description || '');
   const heroImage = useMemo(
     () => displayHeroData?.image_url || '',
     [displayHeroData?.image_url]
   );
 
-  const maxTitleCharIndex = useMemo(
-    () => titleLines.reduce((max, line, idx) => Math.max(max, idx * 12 + Math.max(Array.from(line || '').length - 1, 0)), 0),
-    [titleLines]
-  );
-
-  const [titleAnimationCycle, setTitleAnimationCycle] = useState(0);
-  const [typedDescription, setTypedDescription] = useState('');
-  const [isDescriptionDeleting, setIsDescriptionDeleting] = useState(false);
-
-  useEffect(() => {
-    if (isLoading || titleLines.length === 0) return;
-    const cycleDurationMs = maxTitleCharIndex * 110 + 700 + 3000;
-    const intervalId = window.setInterval(() => setTitleAnimationCycle((c) => c + 1), cycleDurationMs);
-    return () => window.clearInterval(intervalId);
-  }, [isLoading, titleLines, maxTitleCharIndex]);
-
-  useEffect(() => {
-    setHeaderTitleIndex(0);
-
-    if (headerTitleItems.length <= 1) {
-      return;
-    }
-
-    const intervalId = window.setInterval(() => {
-      setHeaderTitleIndex((current) => (current + 1) % headerTitleItems.length);
-    }, 2400);
-
-    return () => window.clearInterval(intervalId);
-  }, [headerTitleItems]);
-
-  useEffect(() => {
-    if (headerTitleItems.length === 0) {
-      return;
-    }
-
-    setHeaderTitleIndex((current) => {
-      if (current >= headerTitleItems.length) {
-        return 0;
-      }
-
-      return current;
-    });
-  }, [headerTitleItems]);
-
-  useEffect(() => {
-    setTypedDescription('');
-    setIsDescriptionDeleting(false);
-  }, [fullDescription]);
-
-  useEffect(() => {
-    if (isLoading || !fullDescription) return;
-    const isDone = typedDescription.length >= fullDescription.length;
-    const isZero = typedDescription.length === 0;
-    const delay = isDescriptionDeleting ? (isZero ? 420 : 36) : (isDone ? 1500 : 62);
-
-    const timeoutId = window.setTimeout(() => {
-      if (isDescriptionDeleting) {
-        if (isZero) setIsDescriptionDeleting(false);
-        else setTypedDescription(fullDescription.slice(0, typedDescription.length - 1));
-      } else {
-        if (isDone) setIsDescriptionDeleting(true);
-        else setTypedDescription(fullDescription.slice(0, typedDescription.length + 1));
-      }
-    }, delay);
-    return () => window.clearTimeout(timeoutId);
-  }, [isLoading, fullDescription, typedDescription, isDescriptionDeleting]);
-
   // Calculations
   const titleSize = resolveHeroFontSize(displayHeroData?.title_font_size, 86);
-  const descriptionSize = resolveHeroFontSize(displayHeroData?.description_font_size, 24);
   const titleFamily = resolveHeroFontFamily(displayHeroData?.title_font_family, 'montserrat');
-  const descriptionFamily = resolveHeroFontFamily(displayHeroData?.description_font_family, 'montserrat');
   const displayTitleSize = Math.max(50, Math.round(titleSize * 0.58));
-  const displayDescriptionSize = Math.max(16, Math.round(descriptionSize * 0.72));
   const mobileOffsetFactor = isMobileViewport ? 0.45 : 1;
 
   function beginPartDrag(part, event) {
@@ -263,25 +158,21 @@ export default function Hero() {
   }, [isBuilderPreview]);
 
   const renderBackground = useMemo(() => {
-    if (isLoading) return <div className="absolute inset-0 -z-30 h-full w-full bg-neutral-900 animate-pulse" />;
+    if (isLoading) return <div className="absolute inset-0 -z-30 h-full w-full bg-neutral-900" />;
     return <img src={heroImage} alt="Hero background" className="hero-media absolute inset-0 -z-30 h-full w-full object-cover object-center" />;
   }, [heroImage, isLoading]);
 
   return (
-    <section className={`${timelessFontClass} hero-section relative isolate min-h-[calc(100vh-90px)] overflow-hidden text-zinc-900`}>
-      <style>{`
-        .hero-scale-in-char { display: inline-block; opacity: 0; transform: scale(0); animation: scaleInText 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-        @keyframes scaleInText { 0% { opacity: 0; transform: scale(0); } 100% { opacity: 1; transform: scale(1); } }
-        .hero-typewriter-caret { display: inline-block; margin-left: 0.06em; animation: typewriterCaretBlink 1s step-end infinite; }
-        @keyframes typewriterCaretBlink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
-      `}</style>
+    <section 
+      className={`${timelessFontClass} hero-section relative isolate min-h-[calc(100vh-90px)] overflow-hidden text-zinc-900`}
+    >
       {renderBackground}
       <div className="hero-shell mx-auto flex min-h-[calc(100vh-90px)] w-full max-w-[1920px] items-end justify-start px-5 py-10 sm:px-8 lg:px-12">
-        <div className="hero-content relative flex w-full max-w-[760px] flex-col items-start space-y-3 text-left" style={{ transform: `translate(${(Number(displayHeroData?.text_offset_x) || 0) * mobileOffsetFactor}%, ${(Number(displayHeroData?.text_offset_y) || 0) * mobileOffsetFactor}%)` }}>
-          {isLoading ? <div className="animate-pulse space-y-3"><div className="h-12 w-4/5 rounded bg-white/20" /></div> : (
+        <div className="hero-content relative flex w-full max-w-[760px] flex-col items-start space-y-3 text-left overflow-hidden" style={{ transform: `translate(${(Number(displayHeroData?.text_offset_x) || 0) * mobileOffsetFactor}%, ${(Number(displayHeroData?.text_offset_y) || 0) * mobileOffsetFactor}%)` }}>
+          {isLoading ? <div className="space-y-3"><div className="h-12 w-4/5 rounded bg-white/20" /></div> : (
             <>
               <h1 
-                className="text-white" // Added this class for pure white
+                className="text-white w-full break-words"
                 onMouseDown={(e) => beginPartDrag('title', e)} 
                 style={{ 
                   fontFamily: titleFamily, 
@@ -289,21 +180,11 @@ export default function Hero() {
                 }}
               >
                 {titleLines.map((line, i) => (
-                  <span key={`${titleAnimationCycle}-${i}`} className="block">
-                    {Array.from(line).map((char, ci) => (
-                      <span 
-                        key={`${titleAnimationCycle}-${i}-${ci}`} 
-                        className="hero-scale-in-char" 
-                        style={{ animationDelay: `${(i * 12 + ci) * 0.08}s` }}
-                      >
-                        {char === ' ' ? '\u00A0' : char}
-                      </span>
-                    ))}
+                  <span key={i} className="block">
+                    {line}
                   </span>
                 ))}
               </h1>
-              
-            
 
               {Boolean(displayHeroData?.button_enabled ?? true) && (
                 <a href={displayHeroData?.button_url || '/new-arrivals'} className={sectionTypography.heroPrimaryButton}>

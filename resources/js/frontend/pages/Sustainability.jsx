@@ -62,7 +62,6 @@ export default function SustainabilityPage() {
     });
 
     useEffect(() => {
-        document.title = 'Sustainability | 1971Co';
     }, []);
 
     return (

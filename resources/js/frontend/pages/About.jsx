@@ -5,7 +5,6 @@ import SectionSkeleton from '../components/SectionSkeleton.jsx';
 const AboutHeroSection = lazy(() => import('../components/AboutHeroSection.jsx'));
 
 const About1971Section = lazy(() => import('../components/AboutSection.jsx'));
-const OurStory = lazy(() => import('../components/OurStory.jsx'));
 const SustainabilitySection = lazy(() => import('../components/SustainabilitySection.jsx'));
 const NewsletterSection = lazy(() => import('../components/NewsletterSection.jsx'));
 const FabricTechnologySection = lazy(() => import('../components/FabricandTechnology.jsx'));
@@ -64,7 +63,6 @@ export default function AboutPage() {
         }
     });
     useEffect(() => {
-        document.title = 'About | 1971Co';
 
         function handleBuilderMessage(event) {
             if (event.origin !== window.location.origin) {
@@ -102,12 +100,6 @@ export default function AboutPage() {
             <div id="section-1971-about">
                 <LazySection heightClass="h-[520px]" variant="split" defer={!isBuilderPreview}>
                     <About1971Section />
-                </LazySection>
-            </div>
-
-            <div id="section-our-story">
-                <LazySection heightClass="h-[540px]" variant="split" defer={!isBuilderPreview}>
-                    <OurStory />
                 </LazySection>
             </div>
 

@@ -10,7 +10,7 @@ import { sectionTypography } from '../utils/sectionTypography';
 
 const fallbackImage = '/uploads/heroes/images/hero1.webp';
 
-function normalizeProductColors(value) {
+function normalizeProductColors(value, colorNameById = {}) {
     if (Array.isArray(value)) {
         return value
             .map((item) => {
@@ -32,7 +32,8 @@ function normalizeProductColors(value) {
 
                 return String(item).trim().replace(/^[\[\]"']+|[\[\]"']+$/g, '');
             })
-            .filter(Boolean);
+            .filter(Boolean)
+            .map((c) => colorNameById[c] || c);
     }
 
     if (typeof value === 'string' && value.trim()) {
@@ -41,7 +42,7 @@ function normalizeProductColors(value) {
         if (trimmedValue.startsWith('[') && trimmedValue.endsWith(']')) {
             try {
                 const parsed = JSON.parse(trimmedValue);
-                return normalizeProductColors(parsed);
+                return normalizeProductColors(parsed, colorNameById);
             } catch {
                 // Fall through to comma-delimited parsing.
             }
@@ -50,7 +51,8 @@ function normalizeProductColors(value) {
         return trimmedValue
             .split(',')
             .map((item) => item.trim().replace(/^[\[\]"']+|[\[\]"']+$/g, ''))
-            .filter(Boolean);
+            .filter(Boolean)
+            .map((c) => colorNameById[c] || c);
     }
 
     return [];
@@ -201,9 +203,9 @@ function resolveVariantImagesByColor(variantMap, colorValue) {
     return Array.isArray(matchedEntry?.[1]) ? matchedEntry[1].filter(Boolean) : [];
 }
 
-function RelatedProductCard({ product, onAddToCart, colorLookup = {} }) {
+function RelatedProductCard({ product, onAddToCart, colorLookup = {}, colorNameById = {} }) {
     const navigate = useNavigate();
-    const colors = normalizeProductColors(product?.color);
+    const colors = normalizeProductColors(product?.color, colorNameById);
     const colorVariantImages =
         product?.color_variant_images && typeof product.color_variant_images === 'object'
             ? product.color_variant_images
@@ -373,6 +375,7 @@ export default function RelatedProductsSection({ products = [] }) {
     const { addToCart, openCartDrawer } = useCart();
     const [variantModalState, setVariantModalState] = useState(null);
     const [colorLookup, setColorLookup] = useState({});
+    const [colorNameById, setColorNameById] = useState({});
 
     useEffect(() => {
         let ignore = false;
@@ -397,9 +400,18 @@ export default function RelatedProductsSection({ products = [] }) {
                 }
 
                 const normalized = colorList.flatMap((item) => normalizeColorLookupEntries(item));
+                const idNameMap = {};
+                colorList.forEach((c) => {
+                    const id = String(c?.id ?? '').trim();
+                    const name = String(c?.name ?? '').trim();
+                    if (id && name) {
+                        idNameMap[id] = name;
+                    }
+                });
 
                 if (!ignore) {
                     setColorLookup(Object.fromEntries(normalized));
+                    setColorNameById(idNameMap);
                 }
             } catch {
                 // Keep default fallback colors when color map fetch fails.
@@ -477,6 +489,7 @@ export default function RelatedProductsSection({ products = [] }) {
                                 product={product}
                                 onAddToCart={handleAddToCart}
                                 colorLookup={colorLookup}
+                                colorNameById={colorNameById}
                             />
                         ))}
                     </div>

@@ -6,6 +6,7 @@ import {
     LogOut,
     Settings,
     ShoppingBag,
+    FileText,
 } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -57,6 +58,10 @@ const orderItems = [
 const SettingsItems = [
     { title: 'Settings', icon: Settings, path: '/admin/settings' },
     { title: 'Public API Keys', icon: Settings, path: '/admin/public-api-keys' },
+];
+
+const complianceItems = [
+    { title: 'Compliance', icon: FileText, path: '/admin/compliance' },
 ];
 
 
@@ -111,7 +116,7 @@ export function AppSidebar(props) {
             <SidebarHeader className="border-b border-sidebar-border px-3 py-3">
                 <div className="flex items-center gap-2 px-1">
                     <span className="inline-flex size-4 rounded-full border border-sidebar-foreground/60" />
-                    <span className="text-sm font-semibold">1971co</span>
+                    <span className="text-sm font-semibold">Viveren</span>
                 </div>
             </SidebarHeader>
 
@@ -247,6 +252,30 @@ export function AppSidebar(props) {
                         <SidebarGroupContent>
                             <SidebarMenu>
                                 {SettingsItems.map((item) => (
+                                    <SidebarMenuItem key={item.title}>
+                                        <SidebarMenuButton
+                                            asChild
+                                            tooltip={item.title}
+                                            isActive={isMenuItemActive(item.path)}
+                                        >
+                                            <Link to={item.path}>
+                                                <item.icon className="size-4 shrink-0 text-sidebar-foreground" />
+                                                <span>{item.title}</span>
+                                            </Link>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                ))}
+                            </SidebarMenu>
+                        </SidebarGroupContent>
+                    </SidebarGroup>
+                )}
+
+                  {!isCustomer && complianceItems.length > 0 && (
+                    <SidebarGroup>
+                        <SidebarGroupLabel>Compliance</SidebarGroupLabel>
+                        <SidebarGroupContent>
+                            <SidebarMenu>
+                                {complianceItems.map((item) => (
                                     <SidebarMenuItem key={item.title}>
                                         <SidebarMenuButton
                                             asChild

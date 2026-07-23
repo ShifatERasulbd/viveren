@@ -61,35 +61,70 @@ export default function CollectionsSection() {
     const collections = Array.isArray(dbData?.items) ? dbData.items : [];
 
     return (
-        <motion.section
-            className={`${timelessFontClass} pt-2 pb-8 overflow-hidden w-full`}
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-        >
-            <div className="w-full">
-                <Swiper
-                    modules={[Navigation, Autoplay]}
-                    navigation
-                    loop={true}
-                    speed={800}
-                    autoplay={{ delay: 3000, disableOnInteraction: false }}
-                    spaceBetween={0} 
-                    slidesPerView={1.5}
-                    breakpoints={{ 640: { slidesPerView: 3 }, 1024: { slidesPerView: 4 } }}
-                    className="px-0"
+        <section className={`${timelessFontClass} pt-2 pb-8 overflow-hidden w-full`}>
+            <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-0">
+                
+                {/* Left Half Animation */}
+                <motion.div
+                    initial={{ opacity: 0, x: -80 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -80 }}
+                    viewport={{ once: false, amount: 0.2 }}
+                    transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                    className="w-full overflow-hidden"
                 >
-                    {collections.map((col, index) => (
-                        <SwiperSlide key={col.id || index}>
-                            <CollectionCard {...col} isBuilderPreview={isBuilderPreview} index={index} />
-                        </SwiperSlide>
-                    ))}
-                </Swiper>
+                    <Swiper
+                        modules={[Navigation, Autoplay]}
+                        navigation
+                        loop={true}
+                        speed={800}
+                        autoplay={{ delay: 3000, disableOnInteraction: false }}
+                        spaceBetween={0} 
+                        slidesPerView={1.5}
+                        breakpoints={{ 640: { slidesPerView: 2 }, 1024: { slidesPerView: 2 } }}
+                        className="px-0"
+                    >
+                        {collections.slice(0, Math.ceil(collections.length / 2)).map((col, index) => (
+                            <SwiperSlide key={col.id || index}>
+                                <CollectionCard {...col} isBuilderPreview={isBuilderPreview} index={index} />
+                            </SwiperSlide>
+                        ))}
+                    </Swiper>
+                </motion.div>
+
+                {/* Right Half Animation */}
+                <motion.div
+                    initial={{ opacity: 0, x: 80 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 80 }}
+                    viewport={{ once: false, amount: 0.2 }}
+                    transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                    className="w-full overflow-hidden"
+                >
+                    <Swiper
+                        modules={[Navigation, Autoplay]}
+                        navigation
+                        loop={true}
+                        speed={800}
+                        autoplay={{ delay: 3000, disableOnInteraction: false }}
+                        spaceBetween={0} 
+                        slidesPerView={1.5}
+                        breakpoints={{ 640: { slidesPerView: 2 }, 1024: { slidesPerView: 2 } }}
+                        className="px-0"
+                    >
+                        {collections.slice(Math.ceil(collections.length / 2)).map((col, index) => (
+                            <SwiperSlide key={col.id || index}>
+                                <CollectionCard {...col} isBuilderPreview={isBuilderPreview} index={index} />
+                            </SwiperSlide>
+                        ))}
+                    </Swiper>
+                </motion.div>
+
             </div>
             
             <style>{`
                 .swiper-button-next, .swiper-button-prev { color: #000 !important; }
             `}</style>
-        </motion.section>
+        </section>
     );
 }

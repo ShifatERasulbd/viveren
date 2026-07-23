@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { getSettingsPayload, onSettingsUpdated } from '../../utils/siteSettings';
 import { timelessFontClass } from '../utils/typography';
 import { sectionTypography } from '../utils/sectionTypography';
+import ComplianceModal from './ComplianceModal.jsx';
 
 const shopLinks = [
     { label: 'Shop All', href: '/shop' },
@@ -11,18 +12,6 @@ const shopLinks = [
     { label: 'Essentials', href: '/shop?collection=essentials' },
     { label: 'Tops', href: '/shop?collection=tops' },
     { label: 'Bottoms', href: '/shop?collection=bottoms' },
-];
-
-const supportLinks = [
-    { label: 'Shipping', href: '#shipping' },
-    { label: 'Returns', href: '#returns' },
-    { label: 'Contact', href: '/contact' },
-];
-
-const companyLinks = [
-    { label: 'About', href: '/about' },
-    { label: 'Privacy', href: '#privacy' },
-    { label: 'Terms', href: '#terms' },
 ];
 
 const socialLinks = [
@@ -101,9 +90,17 @@ function FooterCol({ heading, links }) {
                 {heading}
             </h3>
             <ul className="space-y-2.5">
-                {links.map(({ label, href }) => (
+                {links.map(({ label, href, onClick }) => (
                     <li key={label}>
-                        {href.startsWith('/') ? (
+                        {onClick ? (
+                            <button
+                                type="button"
+                                onClick={onClick}
+                                className={`font-monstrate ${sectionTypography.footerLink} text-zinc-400 transition-colors hover:text-white text-left`}
+                            >
+                                {label}
+                            </button>
+                        ) : href?.startsWith('/') ? (
                             <Link
                                 to={href}
                                 className={`font-monstrate ${sectionTypography.footerLink} text-zinc-400 transition-colors hover:text-white`}
@@ -125,8 +122,53 @@ function FooterCol({ heading, links }) {
     );
 }
 
+const MODAL_TYPES = {
+    TERMS: 'terms',
+    PRIVACY: 'privacy',
+    SHIPPING_RETURNS: 'shipping_returns',
+};
+
+const MODAL_META = {
+    [MODAL_TYPES.TERMS]: { title: 'Terms & Conditions', field: 'terms_and_conditions' },
+    [MODAL_TYPES.PRIVACY]: { title: 'Privacy Policy', field: 'privacy_policy' },
+    [MODAL_TYPES.SHIPPING_RETURNS]: { title: 'Shipping & Returns', field: 'shipping_and_return' },
+};
+
 export default function Footer() {
     const [siteSettings, setSiteSettings] = useState(() => getSettingsPayload());
+    const [complianceData, setComplianceData] = useState(null);
+    const [activeModal, setActiveModal] = useState(null);
+
+    // Fetch compliance data
+    useEffect(() => {
+        let ignore = false;
+
+        async function fetchCompliance() {
+            try {
+                const response = await fetch('/api/public/compliance', {
+                    headers: { Accept: 'application/json' },
+                });
+
+                if (!response.ok) {
+                    return;
+                }
+
+                const payload = await response.json();
+
+                if (!ignore && payload) {
+                    setComplianceData(payload);
+                }
+            } catch {
+                // Silently fail — modal will show "No content available"
+            }
+        }
+
+        fetchCompliance();
+
+        return () => {
+            ignore = true;
+        };
+    }, []);
 
     useEffect(() => {
         const unsubscribe = onSettingsUpdated((payload) => {
@@ -137,6 +179,43 @@ export default function Footer() {
 
         return unsubscribe;
     }, []);
+
+    const openModal = useCallback((type) => {
+        setActiveModal(type);
+    }, []);
+
+    const closeModal = useCallback(() => {
+        setActiveModal(null);
+    }, []);
+
+    const activeModalMeta = activeModal ? MODAL_META[activeModal] : null;
+    const modalContent = activeModalMeta && complianceData
+        ? complianceData[activeModalMeta.field] || ''
+        : '';
+
+    const supportLinks = [
+        {
+            label: 'Shipping',
+            onClick: () => openModal(MODAL_TYPES.SHIPPING_RETURNS),
+        },
+        {
+            label: 'Returns',
+            onClick: () => openModal(MODAL_TYPES.SHIPPING_RETURNS),
+        },
+        { label: 'Contact', href: '/contact' },
+    ];
+
+    const companyLinks = [
+        { label: 'About', href: '/about' },
+        {
+            label: 'Privacy',
+            onClick: () => openModal(MODAL_TYPES.PRIVACY),
+        },
+        {
+            label: 'Terms',
+            onClick: () => openModal(MODAL_TYPES.TERMS),
+        },
+    ];
 
     const footerLogo = useMemo(
         () => resolveAssetUrl(siteSettings?.footer_logo || ''),
@@ -263,6 +342,14 @@ export default function Footer() {
                     <span>© 2026 1971Co. All rights reserved.</span>
                 </div>
             </div>
+
+            {/* Compliance Modal */}
+            <ComplianceModal
+                isOpen={!!activeModal}
+                onClose={closeModal}
+                title={activeModalMeta?.title || ''}
+                content={modalContent}
+            />
         </footer>
     );
 }

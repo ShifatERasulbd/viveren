@@ -1,10 +1,8 @@
 import { Link } from 'react-router-dom';
-import { useEffect, useMemo, useState } from 'react';
-
-import FadeInOutOnView from './FadeInOutOnView.jsx';
+import { useEffect, useMemo, useState, useRef, startTransition } from 'react';
+import { motion, useInView } from 'framer-motion';
 
 import { timelessFontClass } from '../utils/typography';
-
 
 const HOME_BACKGROUND_PREVIEW_UPDATE_EVENT = 'TIMLESS_PAGE_BUILDER_HOME_BACKGROUND_PREVIEW_UPDATE';
 const HOME_BACKGROUND_PREVIEW_REQUEST_EVENT = 'TIMLESS_PAGE_BUILDER_REQUEST_HOME_BACKGROUND_PREVIEW';
@@ -14,8 +12,7 @@ const FALLBACK_ITEMS = [
         id: 1,
         image: '/uploads/heroes/images/hero1.webp',
         title: 'Built For Everyday Confidence',
-        description:
-            'Elevated essentials with clean cuts, durable fabrics, and a refined casualwear silhouette.',
+        description: 'Elevated essentials with clean cuts, durable fabrics, and a refined casualwear silhouette.',
         button_text: 'Explore The Drop',
         button_url: '/shop',
         show_button: true,
@@ -69,6 +66,9 @@ export default function HomeBackgroundImageSection() {
         }
     });
 
+    const sectionRef = useRef(null);
+    const isInView = useInView(sectionRef, { once: false, amount: 0.2 });
+
     useEffect(() => {
         let ignore = false;
 
@@ -78,13 +78,13 @@ export default function HomeBackgroundImageSection() {
                     headers: { Accept: 'application/json' },
                 });
 
-                if (!response.ok) {
-                    return;
-                }
+                if (!response.ok) return;
 
                 const payload = await response.json();
                 if (!ignore && payload && typeof payload === 'object') {
-                    setDbData(payload);
+                    startTransition(() => {
+                        setDbData(payload);
+                    });
                 }
             } catch {
                 // Keep fallback data.
@@ -98,35 +98,26 @@ export default function HomeBackgroundImageSection() {
     }, []);
 
     useEffect(() => {
-        if (!isBuilderPreview) {
-            return;
-        }
+        if (!isBuilderPreview) return;
 
         function handleBuilderPreviewMessage(event) {
-            if (event.origin !== window.location.origin) {
-                return;
-            }
+            if (event.origin !== window.location.origin) return;
 
             const data = event.data;
-            if (!data || data.type !== HOME_BACKGROUND_PREVIEW_UPDATE_EVENT) {
-                return;
-            }
+            if (!data || data.type !== HOME_BACKGROUND_PREVIEW_UPDATE_EVENT) return;
 
-            setPreviewOverride((previous) => ({
-                ...(previous || {}),
-                ...(data.payload || {}),
-            }));
+            startTransition(() => {
+                setPreviewOverride((previous) => ({
+                    ...(previous || {}),
+                    ...(data.payload || {}),
+                }));
+            });
         }
 
         window.addEventListener('message', handleBuilderPreviewMessage);
 
         if (window.parent && window.parent !== window) {
-            window.parent.postMessage(
-                {
-                    type: HOME_BACKGROUND_PREVIEW_REQUEST_EVENT,
-                },
-                window.location.origin,
-            );
+            window.parent.postMessage({ type: HOME_BACKGROUND_PREVIEW_REQUEST_EVENT }, window.location.origin);
         }
 
         return () => {
@@ -142,73 +133,68 @@ export default function HomeBackgroundImageSection() {
     const items = useMemo(() => normalizeItems(displayData?.items), [displayData?.items]);
 
     function handleSectionSelect(event) {
-        if (!isBuilderPreview) {
-            return;
-        }
+        if (!isBuilderPreview) return;
 
         event.preventDefault();
         event.stopPropagation();
 
         if (window.parent && window.parent !== window) {
-            window.parent.postMessage(
-                {
-                    type: 'TIMLESS_PAGE_BUILDER_HOME_BACKGROUND_SECTION_SELECTED',
-                },
-                window.location.origin,
-            );
+            window.parent.postMessage({ type: 'TIMLESS_PAGE_BUILDER_HOME_BACKGROUND_SECTION_SELECTED' }, window.location.origin);
         }
     }
 
     return (
-        <FadeInOutOnView
-            as="section"
-            className={`${timelessFontClass} w-full bg-[#f5efe6]`}
-            rootMargin="0px 0px -10% 0px"
-            threshold={0.01}
-            durationMs={800}
-            yPx={30}
-            
+        <section
+            ref={sectionRef}
+            className={`${timelessFontClass} w-full bg-[#f5efe6] overflow-hidden`}
             onClick={handleSectionSelect}
         >
-
             <div className="grid grid-cols-1 md:grid-cols-2">
-                {items.map((item) => (
-                    <Link
-                        key={item.id}
-                        to={item.button_url || '/shop'}
-                        className="group relative block aspect-[1/1] overflow-hidden bg-zinc-100"
-                        onClick={(event) => {
-                            if (isBuilderPreview) {
-                                event.preventDefault();
-                            }
-                        }}
-                    >
-                        <img
-                            src={resolveImageUrl(item.image)}
-                            alt={item.title || 'Home background item'}
-                            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                            loading="lazy"
-                        />
+                {items.map((item, index) => {
+                    const delay = (index % 2) * 0.2;
 
-                        <div className="absolute inset-0 flex flex-col justify-end bg-black/20 p-8 md:p-12">
-                            <div className="w-fit max-w-[90%] bg-black/30 p-6 backdrop-blur-sm">
-                                <h3 className="text-xl font-bold uppercase tracking-widest text-white md:text-2xl">
-                                    {item.title || 'Untitled Slide'}
-                                </h3>
+                    return (
+                        <motion.div
+                            key={item.id}
+                            initial={{ opacity: 0, scale: 0.5 }}
+                            animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.5 }}
+                            transition={{ duration: 0.8, delay, ease: [0.22, 1, 0.36, 1] }}
+                        >
+                            <Link
+                                to={item.button_url || '/shop'}
+                                className="group relative block aspect-[1/1] overflow-hidden bg-zinc-100"
+                                onClick={(event) => {
+                                    if (isBuilderPreview) {
+                                        event.preventDefault();
+                                    }
+                                }}
+                            >
+                                <img
+                                    src={resolveImageUrl(item.image)}
+                                    alt={item.title || 'Home background item'}
+                                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                    loading={index === 0 ? 'eager' : 'lazy'}
+                                    fetchPriority={index === 0 ? 'high' : 'auto'}
+                                />
 
-                              
+                                <div className="absolute inset-0 flex flex-col justify-end bg-black/20 p-8 md:p-12">
+                                    <div className="w-fit max-w-[90%] bg-black/30 p-6 backdrop-blur-sm">
+                                        <h3 className="text-xl font-bold uppercase tracking-widest text-white md:text-2xl">
+                                            {item.title || 'Untitled Slide'}
+                                        </h3>
 
-                                {item.show_button ? (
-                                    <span className="mt-3 block text-sm font-semibold uppercase tracking-[0.2em] text-white/90 underline decoration-1 underline-offset-4">
-                                        {item.button_text || 'SHOP NOW'}
-                                    </span>
-                                ) : null}
-                            </div>
-                        </div>
-                    </Link>
-                ))}
+                                        {item.show_button ? (
+                                            <span className="mt-3 block text-sm font-semibold uppercase tracking-[0.2em] text-white/90 underline decoration-1 underline-offset-4">
+                                                {item.button_text || 'SHOP NOW'}
+                                            </span>
+                                        ) : null}
+                                    </div>
+                                </div>
+                            </Link>
+                        </motion.div>
+                    );
+                })}
             </div>
-        </FadeInOutOnView>
+        </section>
     );
 }
-

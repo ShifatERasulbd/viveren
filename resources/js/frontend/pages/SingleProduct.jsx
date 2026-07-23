@@ -44,15 +44,25 @@ function parseColorTokens(value) {
     return [];
 }
 
-function productMatchesColor(product, colorParam) {
+function productMatchesColor(product, colorParam, colorNameById = {}) {
     const wanted = String(colorParam || '').trim().toLowerCase();
     if (!wanted) {
         return false;
     }
 
-    return parseColorTokens(product?.color).some(
-        (token) => String(token || '').trim().toLowerCase() === wanted,
-    );
+    return parseColorTokens(product?.color).some((token) => {
+        const rawToken = String(token || '').trim().toLowerCase();
+        // Direct match
+        if (rawToken === wanted) {
+            return true;
+        }
+        // If product color is an ID, resolve to name and compare
+        const resolvedName = colorNameById[rawToken];
+        if (resolvedName && resolvedName.toLowerCase() === wanted) {
+            return true;
+        }
+        return false;
+    });
 }
 
 export default function SingleProductPage() {
@@ -60,6 +70,41 @@ export default function SingleProductPage() {
     const [searchParams] = useSearchParams();
     const [products, setProducts] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [colorNameById, setColorNameById] = useState({});
+
+    useEffect(() => {
+        let ignore = false;
+
+        async function bootstrap() {
+            try {
+                // Fetch colors to build ID-to-name lookup
+                try {
+                    const colorsRes = await fetch('/api/public/colors', { headers: { Accept: 'application/json' } });
+                    if (colorsRes.ok) {
+                        const colorsPayload = await colorsRes.json();
+                        const colorList = Array.isArray(colorsPayload)
+                            ? colorsPayload
+                            : (Array.isArray(colorsPayload?.data) ? colorsPayload.data : []);
+                        const idNameMap = {};
+                        colorList.forEach((c) => {
+                            const id = String(c?.id ?? '').trim();
+                            const name = String(c?.name ?? '').trim();
+                            if (id && name) {
+                                idNameMap[id] = name;
+                            }
+                        });
+                        if (!ignore) {
+                            setColorNameById(idNameMap);
+                        }
+                    }
+                } catch {}
+            } catch {}
+        }
+
+        bootstrap();
+
+        return () => { ignore = true; };
+    }, []);
 
     useEffect(() => {
         let ignore = false;
@@ -110,7 +155,7 @@ export default function SingleProductPage() {
 
         if (slugParam) {
             const bySlugCandidates = products.filter((item) => String(item?.slug || '') === String(slugParam));
-            const bySlug = bySlugCandidates.find((item) => productMatchesColor(item, colorParam)) || bySlugCandidates[0];
+            const bySlug = bySlugCandidates.find((item) => productMatchesColor(item, colorParam, colorNameById)) || bySlugCandidates[0];
             if (bySlug) {
                 return bySlug;
             }
@@ -121,7 +166,7 @@ export default function SingleProductPage() {
             const byNameCandidates = products.filter(
                 (item) => String(item?.name || '').trim().toLowerCase() === normalizedName,
             );
-            const byName = byNameCandidates.find((item) => productMatchesColor(item, colorParam)) || byNameCandidates[0];
+            const byName = byNameCandidates.find((item) => productMatchesColor(item, colorParam, colorNameById)) || byNameCandidates[0];
 
             if (byName) {
                 return byName;
@@ -129,7 +174,7 @@ export default function SingleProductPage() {
         }
 
         return products[0] || null;
-    }, [products, routeSlug, routeColor, searchParams]);
+    }, [products, routeSlug, routeColor, searchParams, colorNameById]);
 
     const initialColor = useMemo(() => {
         const colorParam = String(routeColor || searchParams.get('color') || '').trim().replace(/-/g, ' ');

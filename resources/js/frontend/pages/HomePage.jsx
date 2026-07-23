@@ -1,57 +1,73 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
-
 import SectionSkeleton from '../components/SectionSkeleton.jsx';
 
 const Hero = lazy(() => import('../components/Hero.jsx'));
 const CollectionsSection = lazy(() => import('../components/CollectionsSection.jsx'));
 const FeaturesSection = lazy(() => import('../components/FeaturesSection.jsx'));
-const HomeBackgroundImageSection = lazy(
-    () => import('../components/HomeBackgroundImageSection.jsx'),
-);
+const HomeBackgroundImageSection = lazy(() => import('../components/HomeBackgroundImageSection.jsx'));
+const TrendingProduct = lazy(() => import('../components/TrendingProduct.jsx'));
 const NewsletterSection = lazy(() => import('../components/NewsletterSection.jsx'));
 
+/**
+ * Progressive 3-phase lazy loading section:
+ *   'hidden'   → lightweight empty placeholder (just bg + height, no skeleton)
+ *   'skeleton' → renders SectionSkeleton when near viewport (~800px out)
+ *   'visible'  → renders actual component via <Suspense> when close (~240px out)
+ */
 function LazySection({ children, heightClass, variant = 'generic', defer = true }) {
     const containerRef = useRef(null);
-    const [isVisible, setIsVisible] = useState(() => !defer);
+    const [phase, setPhase] = useState(() => (defer ? 'hidden' : 'visible'));
 
     useEffect(() => {
-        if (!defer) {
-            setIsVisible(true);
-            return;
-        }
-
-        if (isVisible) {
-            return;
-        }
-
+        if (!defer) return;
         const node = containerRef.current;
-        if (!node) {
-            return;
-        }
+        if (!node) return;
 
-        const observer = new IntersectionObserver(
-            (entries) => {
-                const [entry] = entries;
+        // Phase 1: hidden → skeleton (far away, ~800px rootMargin)
+        const skeletonObserver = new IntersectionObserver(
+            ([entry]) => {
                 if (entry?.isIntersecting) {
-                    setIsVisible(true);
-                    observer.disconnect();
+                    setPhase((prev) => (prev === 'hidden' ? 'skeleton' : prev));
+                    skeletonObserver.disconnect();
                 }
             },
-            { rootMargin: '240px 0px' },
+            { rootMargin: '800px 0px' }
         );
 
-        observer.observe(node);
-        return () => observer.disconnect();
-    }, [defer, isVisible]);
+        // Phase 2: skeleton → visible (close, ~240px rootMargin)
+        const visibleObserver = new IntersectionObserver(
+            ([entry]) => {
+                if (entry?.isIntersecting) {
+                    setPhase('visible');
+                    visibleObserver.disconnect();
+                }
+            },
+            { rootMargin: '240px 0px' }
+        );
+
+        skeletonObserver.observe(node);
+        visibleObserver.observe(node);
+
+        return () => {
+            skeletonObserver.disconnect();
+            visibleObserver.disconnect();
+        };
+    }, [defer]);
 
     return (
         <div ref={containerRef}>
-            {isVisible ? (
+            {phase === 'visible' ? (
                 <Suspense fallback={<SectionSkeleton heightClass={heightClass} variant={variant} />}>
                     {children}
                 </Suspense>
-            ) : (
+            ) : phase === 'skeleton' ? (
                 <SectionSkeleton heightClass={heightClass} variant={variant} />
+            ) : (
+                /* 'hidden' — lightweight placeholder, no skeleton markup */
+                <div
+                    className={`w-full bg-[#f5f5f3] ${heightClass}`}
+                    aria-hidden="true"
+                />
             )}
         </div>
     );
@@ -65,10 +81,7 @@ const sectionRegistry = {
         variant: 'hero',
         component: HomeBackgroundImageSection,
     },
-
-
-    trending: { height: 'h-[520px]', variant: 'catalog', component: lazy(() => import('../components/TrendingProduct.jsx')) },
-   
+    trending: { height: 'h-[520px]', variant: 'catalog', component: TrendingProduct },
     newsletter: { height: 'h-[220px]', variant: 'newsletter', component: NewsletterSection },
 };
 
@@ -77,10 +90,8 @@ const defaultSectionOrder = [
     'collections',
     'home-background-image',
     'trending',
-   
     'newsletter',
 ];
-
 
 function normalizeSectionOrder(order) {
     const incoming = Array.isArray(order) ? order : [];
@@ -107,20 +118,14 @@ export default function HomePage() {
 
     useEffect(() => {
         function handleBuilderLayoutMessage(event) {
-            if (event.origin !== window.location.origin) {
-                return;
-            }
+            if (event.origin !== window.location.origin) return;
 
             const data = event.data;
-            if (!data) {
-                return;
-            }
+            if (!data) return;
 
             if (data.type === 'TIMLESS_PAGE_BUILDER_SCROLL_TO_SECTION') {
                 const sectionKey = data.payload?.sectionKey;
-                if (!sectionKey) {
-                    return;
-                }
+                if (!sectionKey) return;
 
                 const target = document.getElementById(`section-${sectionKey}`);
                 if (target) {
@@ -129,18 +134,14 @@ export default function HomePage() {
                 return;
             }
 
-            if (data.type !== 'TIMLESS_PAGE_BUILDER_HOME_LAYOUT_UPDATE') {
-                return;
-            }
+            if (data.type === 'TIMLESS_PAGE_BUILDER_HOME_LAYOUT_UPDATE') {
+                const incomingOrder = Array.isArray(data.payload?.order) ? data.payload.order : null;
+                if (!incomingOrder || incomingOrder.length === 0) return;
 
-            const incomingOrder = Array.isArray(data.payload?.order) ? data.payload.order : null;
-            if (!incomingOrder || incomingOrder.length === 0) {
-                return;
-            }
-
-            const safeOrder = normalizeSectionOrder(incomingOrder);
-            if (safeOrder.length > 0) {
-                setSectionOrder(safeOrder);
+                const safeOrder = normalizeSectionOrder(incomingOrder);
+                if (safeOrder.length > 0) {
+                    setSectionOrder(safeOrder);
+                }
             }
         }
 
@@ -152,9 +153,7 @@ export default function HomePage() {
         <div className="bg-[#f5efe6]">
             {sectionOrder.map((sectionKey) => {
                 const section = sectionRegistry[sectionKey];
-                if (!section) {
-                    return null;
-                }
+                if (!section) return null;
 
                 const Component = section.component;
                 return (
@@ -177,5 +176,3 @@ export default function HomePage() {
         </div>
     );
 }
-
-

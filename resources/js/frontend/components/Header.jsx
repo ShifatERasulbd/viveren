@@ -391,7 +391,7 @@ export default function Header() {
         return [
             ...categoryItems,
             { label: 'About', href: '/about' },
-            { label: 'Together We Grow', href: '/together-we-grow' },
+            { label: 'Contact', href: '/contact' },
         ];
     }, [visibleCategories]);
 

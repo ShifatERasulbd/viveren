@@ -124,7 +124,7 @@ const defaultOurStoryDraft = {
     section_title: 'Our Story',
     title: 'Heritage, Refined.',
     description:
-        '1971Co blends cultural identity with modern streetwear discipline - built to feel confident without shouting. Our pieces are designed for those who value restraint over noise, quality over quantity.',
+        'Viveren blends cultural identity with modern streetwear discipline - built to feel confident without shouting. Our pieces are designed for those who value restraint over noise, quality over quantity.',
     background_color: '#c8b89a',
     show_image: true,
     show_text: true,
