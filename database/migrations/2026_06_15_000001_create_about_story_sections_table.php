@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('background_image')->nullable();
             $table->string('section_title')->default('The Beginning');
-            $table->string('title')->default('Why 1971?');
+            $table->string('title')->default('Our Mission');
             $table->longText('description_html')->nullable();
             $table->timestamps();
         });

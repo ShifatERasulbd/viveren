@@ -240,7 +240,7 @@ export default function Footer() {
             .filter((item) => item.label && item.href);
     }, [siteSettings]);
 
-    const contactEmail = String(siteSettings?.email || '').trim() || 'support@1971co.com';
+    const contactEmail = String(siteSettings?.email || '').trim() || 'hello@viveren.com';
 
     return (
         <footer className={`${timelessFontClass} font-monstrate bg-[#1a1a1a] text-white`}>
@@ -339,7 +339,7 @@ export default function Footer() {
             {/* Bottom bar */}
             <div className="border-t border-zinc-700">
                 <div className={`mx-auto flex w-full max-w-[1700px] flex-col items-center justify-between gap-3 px-6 py-5 ${sectionTypography.footerLegal} text-zinc-500 sm:flex-row sm:px-10 lg:px-16`}>
-                    <span>© 2026 1971Co. All rights reserved.</span>
+                    <span>© 2026 Viveren. All rights reserved.</span>
                 </div>
             </div>
 

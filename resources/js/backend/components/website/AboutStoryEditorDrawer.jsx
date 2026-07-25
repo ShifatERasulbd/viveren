@@ -80,7 +80,7 @@ export default function AboutStoryEditorDrawer({
                             id="about-story-title"
                             value={value.title || ''}
                             onChange={(event) => onChangeField('title', event.target.value)}
-                            placeholder="Why 1971?"
+                            placeholder="Viveren's Mission"
                         />
                     </div>
 

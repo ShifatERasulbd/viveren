@@ -6,9 +6,9 @@ export const aboutSections = [
         status: 'active',
     },
     {
-        key: '1971-about',
-        title: '1971 Story',
-        description: 'Brand origin and why 1971 name was chosen',
+        key: 'Viveren-Story',
+        title: 'Viveren Story',
+        description: 'Brand origin and  name was chosen',
         status: 'active',
     },
     {

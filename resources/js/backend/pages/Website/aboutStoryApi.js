@@ -4,7 +4,7 @@ function buildAboutStoryFormData(data = {}) {
     const formData = new FormData();
 
     formData.append('section_title', data.section_title || 'The Beginning');
-    formData.append('title', data.title || 'Why 1971?');
+    formData.append('title', data.title);
     formData.append('description_html', data.description_html || '');
 
     if (data.background_image instanceof File) {
