@@ -6,7 +6,6 @@ import { toast } from 'sonner';
 import { useAppContext } from '@/context/AppContext';
 import AboutHeroEditorDrawer from '@/components/website/AboutHeroEditorDrawer';
 import AboutStoryEditorDrawer from '@/components/website/AboutStoryEditorDrawer';
-import AboutMissionEditorDrawer from '@/components/website/AboutMissionEditorDrawer';
 import AboutSustainabilityEditorDrawer from '@/components/website/AboutSustainabilityEditorDrawer';
 import AboutFabricTechnologyEditorDrawer from '@/components/website/AboutFabricandTechnology';
 import AboutPagePreviewCard from '@/components/website/AboutPagePreviewCard';
@@ -502,7 +501,7 @@ export default function AboutPageBuilder() {
             return;
         }
 
-        if (section.key === '1971-about') {
+        if (section.key === '1971-about' || section.key === 'Viveren-Story') {
             setIsAboutStoryDrawerOpen(true);
             setIsAboutHeroDrawerOpen(false);
             setIsAboutMissionDrawerOpen(false);
@@ -513,7 +512,7 @@ export default function AboutPageBuilder() {
                 target.postMessage(
                     {
                         type: 'TIMLESS_PAGE_BUILDER_SCROLL_TO_SECTION',
-                        payload: { sectionKey: '1971-about' },
+                        payload: { sectionKey: section.key },
                     },
                     window.location.origin
                 );
@@ -674,7 +673,7 @@ export default function AboutPageBuilder() {
             setAboutStoryDraft(normalized);
             setAboutStoryImageFile(null);
 
-            toast.success('1971 story saved to database.', {
+            toast.success('Viveren Mission saved to database.', {
                 style: { color: '#16a34a' },
             });
         } catch (error) {
@@ -920,20 +919,7 @@ export default function AboutPageBuilder() {
                 isSaving={isSavingAboutStory}
             />
 
-            <AboutMissionEditorDrawer
-                open={isAboutMissionDrawerOpen}
-                onOpenChange={setIsAboutMissionDrawerOpen}
-                value={aboutMissionDraft}
-                onChangeField={handleAboutMissionChangeField}
-                onUploadImage={handleAboutMissionImageUpload}
-                onChangeItem={handleAboutMissionItemChange}
-                onAddItem={handleAddMissionItem}
-                onRemoveItem={handleRemoveMissionItem}
-                onReorderItem={handleReorderMissionItem}
-                onSave={handleSaveAboutMission}
-                isSaving={isSavingAboutMission}
-            />
-
+        
             <AboutSustainabilityEditorDrawer
                 open={isGivingBackDrawerOpen}
                 onOpenChange={setIsGivingBackDrawerOpen}

@@ -11,12 +11,7 @@ export const aboutSections = [
         description: 'Brand origin and  name was chosen',
         status: 'active',
     },
-    {
-        key: 'our-story',
-        title: 'Our Story',
-        description: 'Brand values and mission statement',
-        status: 'active',
-    },
+   
     {
         key: 'sustainability',
         title: 'Sustainability',
@@ -29,16 +24,5 @@ export const aboutSections = [
         description: 'Innovations in fabric and technology',
         status: 'active',
     },
-    {
-        key: 'newsletter',
-        title: 'Newsletter',
-        description: 'Email subscription section',
-        status: 'active',
-    },
-    {
-        key: 'instagram',
-        title: 'Instagram',
-        description: 'Social media feed showcase',
-        status: 'active',
-    },
+   
 ];
