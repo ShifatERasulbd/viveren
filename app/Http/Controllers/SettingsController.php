@@ -69,9 +69,11 @@ class SettingsController extends Controller
             'header_logo_existing' => 'nullable|string|max:2048',
             'footer_logo_existing' => 'nullable|string|max:2048',
             'shop_menu_image_existing' => 'nullable|string|max:2048',
+            'shop_menu_image_2_existing' => 'nullable|string|max:2048',
             'header_logo_file' => 'nullable|image|mimes:jpeg,jpg,png,webp,svg,avif|max:4096',
             'footer_logo_file' => 'nullable|image|mimes:jpeg,jpg,png,webp,svg,avif|max:4096',
             'shop_menu_image_file' => 'nullable|image|mimes:jpeg,jpg,png,webp,avif|max:4096',
+            'shop_menu_image_2_file' => 'nullable|image|mimes:jpeg,jpg,png,webp,avif|max:4096',
             'social_media' => 'nullable|array',
             'social_media.*.name' => 'nullable|string|max:255',
             'social_media.*.link' => 'nullable|string|max:2048',
@@ -114,9 +116,11 @@ class SettingsController extends Controller
             'header_logo_existing' => 'nullable|string|max:2048',
             'footer_logo_existing' => 'nullable|string|max:2048',
             'shop_menu_image_existing' => 'nullable|string|max:2048',
+            'shop_menu_image_2_existing' => 'nullable|string|max:2048',
             'header_logo_file' => 'nullable|image|mimes:jpeg,jpg,png,webp,svg,avif|max:4096',
             'footer_logo_file' => 'nullable|image|mimes:jpeg,jpg,png,webp,svg,avif|max:4096',
             'shop_menu_image_file' => 'nullable|image|mimes:jpeg,jpg,png,webp,avif|max:4096',
+            'shop_menu_image_2_file' => 'nullable|image|mimes:jpeg,jpg,png,webp,avif|max:4096',
             'social_media' => 'nullable|array',
             'social_media.*.name' => 'nullable|string|max:255',
             'social_media.*.link' => 'nullable|string|max:2048',
@@ -153,6 +157,7 @@ class SettingsController extends Controller
             $this->deleteUploadedFile($payload['header_logo'] ?? null);
             $this->deleteUploadedFile($payload['footer_logo'] ?? null);
             $this->deleteUploadedFile($payload['shop_menu_image'] ?? null);
+            $this->deleteUploadedFile($payload['shop_menu_image_2'] ?? null);
 
             $socialMedia = is_array($payload['social_media'] ?? null) ? $payload['social_media'] : [];
             foreach ($socialMedia as $item) {
@@ -192,6 +197,13 @@ class SettingsController extends Controller
             $this->deleteUploadedFile($existingPayload['shop_menu_image'] ?? null);
         }
 
+        $shopMenuImage2 = $validated['shop_menu_image_2_existing']
+            ?? ($existingPayload['shop_menu_image_2'] ?? '');
+        if ($request->hasFile('shop_menu_image_2_file')) {
+            $shopMenuImage2 = $this->storeUploadedFileToPublic($request->file('shop_menu_image_2_file'), 'uploads/category');
+            $this->deleteUploadedFile($existingPayload['shop_menu_image_2'] ?? null);
+        }
+
         $socialMedia = is_array($validated['social_media'] ?? null) ? $validated['social_media'] : [];
         $existingSocial = is_array($existingPayload['social_media'] ?? null) ? $existingPayload['social_media'] : [];
 
@@ -217,6 +229,7 @@ class SettingsController extends Controller
             'header_logo' => $headerLogo,
             'footer_logo' => $footerLogo,
             'shop_menu_image' => $shopMenuImage,
+            'shop_menu_image_2' => $shopMenuImage2,
             'email' => (string) ($validated['email'] ?? ($existingPayload['email'] ?? '')),
             'location' => (string) ($validated['location'] ?? ($existingPayload['location'] ?? '')),
             'currency' => (string) ($validated['currency'] ?? ($existingPayload['currency'] ?? '')),

@@ -10,6 +10,7 @@ export default function MainNav({
     closeShopMenuImmediately,
     shopChildColumns,
     shopMegaMenuImage,
+    shopMegaMenuImage2,
     shopMegaMenuCaption,
     shopMegaMenuHref,
 }) {
@@ -61,9 +62,9 @@ export default function MainNav({
                                 role="menu"
                             >
                                 <div className="border border-zinc-200 bg-white px-4 py-7 shadow-[0_18px_60px_rgba(0,0,0,0.08)] sm:px-6 lg:px-10">
-                                    <div className="mx-auto flex w-full max-w-[1920px] items-start gap-10 xl:gap-14">
-                                        <div className="min-w-0 flex-1 overflow-x-auto">
-                                            <div className="grid min-w-[860px] grid-flow-col auto-cols-[minmax(180px,200px)] gap-12 lg:gap-16">
+                                    <div className="mx-auto flex w-full max-w-[1920px] items-start gap-6 xl:gap-8">
+                                        <div className="min-w-0 basis-[44%] overflow-x-hidden">
+                                            <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-8 lg:gap-10">
                                                 {shopChildColumns.length > 0 ? (
                                                     shopChildColumns.map((column) => (
                                                         <div key={column.title} className="px-2 py-2">
@@ -91,10 +92,20 @@ export default function MainNav({
                                         </div>
 
                                         {shopMegaMenuImage ? (
-                                            <div className="flex w-[420px] flex-none justify-center xl:w-[480px]">
-                                                <figure className="w-full max-w-[480px] text-center">
+                                            <div className="flex min-w-0 basis-[28%] justify-center">
+                                                <figure className="w-full max-w-[420px] text-center">
                                                     <Link to={shopMegaMenuHref} className="block overflow-hidden border border-zinc-200 bg-zinc-100 p-3" onClick={closeShopMenuImmediately}>
-                                                        <img src={shopMegaMenuImage} alt={shopMegaMenuCaption} className="h-[300px] w-full object-contain object-center xl:h-[340px]" />
+                                                        <img src={shopMegaMenuImage} alt={shopMegaMenuCaption} className="h-[260px] w-full object-contain object-center xl:h-[300px]" />
+                                                    </Link>
+                                                </figure>
+                                            </div>
+                                        ) : null}
+
+                                         {shopMegaMenuImage2 ? (
+                                            <div className="flex min-w-0 basis-[28%] justify-center">
+                                                <figure className="w-full max-w-[420px] text-center">
+                                                    <Link to={shopMegaMenuHref} className="block overflow-hidden border border-zinc-200 bg-zinc-100 p-3" onClick={closeShopMenuImmediately}>
+                                                        <img src={shopMegaMenuImage2} alt={shopMegaMenuCaption} className="h-[260px] w-full object-contain object-center xl:h-[300px]" />
                                                     </Link>
                                                 </figure>
                                             </div>

@@ -31,11 +31,13 @@ export default function SettingsForm({
     headerLogoPreview = '',
     footerLogoPreview = '',
     shopMenuImagePreview = '',
+    shopMenuImage2Preview = '',
     socialIconPreviews = {},
     onChange,
     onHeaderLogoChange,
     onFooterLogoChange,
     onShopMenuImageChange,
+    onShopMenuImage2Change,
     onSocialChange,
     onSocialIconChange,
     onAddSocial,
@@ -118,7 +120,7 @@ export default function SettingsForm({
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="shop-menu-image">Shop Mega Menu Image</Label>
+                                <Label htmlFor="shop-menu-image">Shop Mega Menu Image 1</Label>
                                 <Input
                                     id="shop-menu-image"
                                     type="file"
@@ -129,11 +131,30 @@ export default function SettingsForm({
                                 {(shopMenuImagePreview || form.shop_menu_image) && (
                                     <img
                                         src={shopMenuImagePreview || form.shop_menu_image}
-                                        alt="Shop mega menu image"
+                                        alt="Shop mega menu image 1"
                                         className="h-24 w-full rounded border bg-muted object-cover"
                                     />
                                 )}
                                 {errors.shop_menu_image && <p className="text-xs text-destructive">{errors.shop_menu_image[0]}</p>}
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="shop-menu-image-2">Shop Mega Menu Image 2</Label>
+                                <Input
+                                    id="shop-menu-image-2"
+                                    type="file"
+                                    accept="image/png,image/jpeg,image/jpg,image/webp,image/avif"
+                                    onChange={onShopMenuImage2Change}
+                                    disabled={isSubmitting}
+                                />
+                                {(shopMenuImage2Preview || form.shop_menu_image_2) && (
+                                    <img
+                                        src={shopMenuImage2Preview || form.shop_menu_image_2}
+                                        alt="Shop mega menu image 2"
+                                        className="h-24 w-full rounded border bg-muted object-cover"
+                                    />
+                                )}
+                                {errors.shop_menu_image_2 && <p className="text-xs text-destructive">{errors.shop_menu_image_2[0]}</p>}
                             </div>
                         </div>
                     )}

@@ -61,7 +61,6 @@ export default function Header() {
     const [heroHeaderItems, setHeroHeaderItems] = useState([]);
     const [heroHeaderIndex, setHeroHeaderIndex] = useState(0);
     
-    
     const closeMenuTimerRef = useRef(null);
     const searchInputRef = useRef(null);
 
@@ -122,7 +121,6 @@ export default function Header() {
     }
 
     function handleOpenCart() {
-        // Close menus and open cart drawer
         closeShopMenuImmediately();
         closeMobileMenu();
         closeSearch();
@@ -130,16 +128,12 @@ export default function Header() {
         try {
             openCartDrawer();
         } catch (e) {
-            // fallback if openCartDrawer is not available
             console.warn('openCartDrawer not available', e);
         }
     }
 
     function toggleMobileItem(itemKey) {
-        if (!itemKey) {
-            return;
-        }
-
+        if (!itemKey) return;
         setExpandedMobileItems((previous) => ({
             ...previous,
             [itemKey]: !previous[itemKey],
@@ -147,12 +141,8 @@ export default function Header() {
     }
 
     function toggleMobileSubItem(itemKey, subItemKey) {
-        if (!itemKey || !subItemKey) {
-            return;
-        }
-
+        if (!itemKey || !subItemKey) return;
         const nestedKey = `${itemKey}:${subItemKey}`;
-
         setExpandedMobileSubItems((previous) => ({
             ...previous,
             [nestedKey]: !previous[nestedKey],
@@ -188,9 +178,7 @@ export default function Header() {
             document.body.style.removeProperty('overflow');
             return;
         }
-
         document.body.style.overflow = 'hidden';
-
         return () => {
             document.body.style.removeProperty('overflow');
         };
@@ -204,44 +192,29 @@ export default function Header() {
     }, [isMobileMenuOpen]);
 
     useEffect(() => {
-        if (!isSearchOpen) {
-            return;
-        }
-
+        if (!isSearchOpen) return;
         const timerId = window.setTimeout(() => {
             searchInputRef.current?.focus();
         }, 20);
-
-        return () => {
-            window.clearTimeout(timerId);
-        };
+        return () => window.clearTimeout(timerId);
     }, [isSearchOpen]);
 
     useEffect(() => {
-        // Subscribe to settings updates so header logo and text update when available
         const unsubscribe = onSettingsUpdated((payload) => {
             setSiteSettings(payload || {});
         });
-
-        // Initialize from any already-bootstrapped payload
         setSiteSettings(getSettingsPayload() || {});
-
         return unsubscribe;
     }, []);
 
     useEffect(() => {
         let ignore = false;
-
         async function loadHeroHeader() {
             try {
                 const response = await fetch('/api/public/hero', {
                     headers: { Accept: 'application/json' },
                 });
-
-                if (!response.ok) {
-                    return;
-                }
-
+                if (!response.ok) return;
                 const payload = await response.json();
                 if (!ignore) {
                     const items = Array.isArray(payload?.header_title_items)
@@ -253,28 +226,17 @@ export default function Header() {
                     setHeroHeaderIndex(0);
                     setHeroHeaderText(safeItems[0] || fallback);
                 }
-            } catch {
-                // Keep the fallback text when the hero endpoint is unavailable.
-            }
+            } catch {}
         }
-
         loadHeroHeader();
-
-        return () => {
-            ignore = true;
-        };
+        return () => { ignore = true; };
     }, []);
 
     useEffect(() => {
         function handleHeroPreviewMessage(event) {
-            if (event.origin !== window.location.origin) {
-                return;
-            }
-
+            if (event.origin !== window.location.origin) return;
             const data = event.data;
-            if (data?.type !== 'TIMLESS_PAGE_BUILDER_HERO_PREVIEW_UPDATE') {
-                return;
-            }
+            if (data?.type !== 'TIMLESS_PAGE_BUILDER_HERO_PREVIEW_UPDATE') return;
 
             const items = Array.isArray(data.payload?.header_title_items)
                 ? data.payload.header_title_items.map((item) => String(item || '').trim()).filter(Boolean)
@@ -285,20 +247,15 @@ export default function Header() {
             setHeroHeaderIndex(0);
             setHeroHeaderText(safeItems[0] || fallback);
         }
-
         window.addEventListener('message', handleHeroPreviewMessage);
         return () => window.removeEventListener('message', handleHeroPreviewMessage);
     }, []);
 
     useEffect(() => {
-        if (heroHeaderItems.length <= 1) {
-            return;
-        }
-
+        if (heroHeaderItems.length <= 1) return;
         const intervalId = window.setInterval(() => {
             setHeroHeaderIndex((current) => (current + 1) % heroHeaderItems.length);
         }, 2400);
-
         return () => window.clearInterval(intervalId);
     }, [heroHeaderItems]);
 
@@ -310,10 +267,8 @@ export default function Header() {
 
     useEffect(() => {
         let ignore = false;
-
         async function loadNavigation() {
             setIsNavigationLoading(true);
-
             try {
                 const [categoriesRes, subCategoriesRes, grandChildsRes] = await Promise.all([
                     fetch('/api/public/categories', { headers: { Accept: 'application/json' } }),
@@ -333,28 +288,18 @@ export default function Header() {
                 setSubCategories(Array.isArray(subCategoriesPayload) ? subCategoriesPayload : (Array.isArray(subCategoriesPayload?.data) ? subCategoriesPayload.data : []));
                 setGrandChilds(Array.isArray(grandChildsPayload) ? grandChildsPayload : (Array.isArray(grandChildsPayload?.data) ? grandChildsPayload.data : []));
             } catch (e) {
-                // ignore fetch errors and keep defaults
+                // ignore
             } finally {
                 if (!ignore) setIsNavigationLoading(false);
             }
         }
-
         loadNavigation();
-
-        return () => {
-            ignore = true;
-        };
+        return () => { ignore = true; };
     }, []);
 
     const visibleCategories = useMemo(() => {
-        if (!Array.isArray(categories) || categories.length === 0) {
-            return [];
-        }
-
-        const homepageCategories = categories.filter((category) =>
-            Boolean(category?.show_homepage ?? true)
-        );
-
+        if (!Array.isArray(categories) || categories.length === 0) return [];
+        const homepageCategories = categories.filter((category) => Boolean(category?.show_homepage ?? true));
         return homepageCategories.length > 0 ? homepageCategories : categories;
     }, [categories]);
 
@@ -378,9 +323,7 @@ export default function Header() {
                     slug: category?.slug,
                     label: categoryLabel,
                     href: categoryHref,
-                    isShop:
-                        String(categoryLabel).trim().toLowerCase() === 'shop' ||
-                        String(category?.slug || '').trim().toLowerCase() === 'shop',
+                    isShop: String(categoryLabel).trim().toLowerCase() === 'shop' || String(category?.slug || '').trim().toLowerCase() === 'shop',
                 };
             })
             : [
@@ -396,30 +339,20 @@ export default function Header() {
     }, [visibleCategories]);
 
     const shopNavItem = useMemo(
-        () =>
-            navigationItems.find((item) =>
-                String(item?.label || '').trim().toLowerCase() === 'shop' ||
-                String(item?.slug || '').trim().toLowerCase() === 'shop'
-            ) || null,
+        () => navigationItems.find((item) =>
+            String(item?.label || '').trim().toLowerCase() === 'shop' ||
+            String(item?.slug || '').trim().toLowerCase() === 'shop'
+        ) || null,
         [navigationItems]
     );
 
-    const shopMegaMenuImage = useMemo(
-        () => resolveMediaUrl(siteSettings?.shop_menu_image || ''),
-        [siteSettings],
-    );
-
+    const shopMegaMenuImage = useMemo(() => resolveMediaUrl(siteSettings?.shop_menu_image || ''), [siteSettings]);
+    const shopMegaMenuImage2 = useMemo(() => resolveMediaUrl(siteSettings?.shop_menu_image_2 || ''), [siteSettings]);
     const shopMegaMenuCaption = 'Shop New Arrivals';
-
-   
-
     const shopMegaMenuHref = shopNavItem?.href || '/shop';
 
     const shopChildColumns = useMemo(() => {
-        if (!shopNavItem) {
-            return [];
-        }
-
+        if (!shopNavItem) return [];
         const shopSubCategories = subCategories.filter(
             (subCategory) => Number(subCategory?.category_id) === Number(shopNavItem?.id)
         );
@@ -427,7 +360,6 @@ export default function Header() {
         const grandChildsBySubCategory = grandChilds.reduce((grouped, grandChild) => {
             const subCategoryId = Number(grandChild?.sub_category_id ?? grandChild?.child_id);
             if (!subCategoryId) return grouped;
-
             const existing = grouped.get(subCategoryId) || [];
             existing.push(grandChild);
             grouped.set(subCategoryId, existing);
@@ -438,15 +370,14 @@ export default function Header() {
             const subCategorySlug = String(subCategory?.slug || '').trim() || String(subCategory?.id || '');
             const childHref = `/${encodeURIComponent(subCategorySlug)}`;
 
-            const children =
-                grandChildsBySubCategory
-                    .get(Number(subCategory?.id))
-                    ?.map((grandChild) => ({
-                        label: String(grandChild?.name || '').trim() || 'Item',
-                        href: `/${encodeURIComponent(subCategorySlug)}/${encodeURIComponent(
-                            String(grandChild?.slug || '').trim() || String(grandChild?.id || '')
-                        )}`,
-                    })) || [];
+            const children = grandChildsBySubCategory
+                .get(Number(subCategory?.id))
+                ?.map((grandChild) => ({
+                    label: String(grandChild?.name || '').trim() || 'Item',
+                    href: `/${encodeURIComponent(subCategorySlug)}/${encodeURIComponent(
+                        String(grandChild?.slug || '').trim() || String(grandChild?.id || '')
+                    )}`,
+                })) || [];
 
             return {
                 title: subCategory?.name,
@@ -457,17 +388,12 @@ export default function Header() {
     }, [shopNavItem, subCategories, grandChilds]);
 
     const mobileSubCategoriesByItem = useMemo(() => {
-        if (!Array.isArray(subCategories) || subCategories.length === 0) {
-            return new Map();
-        }
+        if (!Array.isArray(subCategories) || subCategories.length === 0) return new Map();
 
         const grandChildsBySubCategory = Array.isArray(grandChilds)
             ? grandChilds.reduce((grouped, grandChild) => {
                 const subCategoryId = Number(grandChild?.sub_category_id ?? grandChild?.child_id);
-                if (!subCategoryId) {
-                    return grouped;
-                }
-
+                if (!subCategoryId) return grouped;
                 const existing = grouped.get(subCategoryId) || [];
                 existing.push(grandChild);
                 grouped.set(subCategoryId, existing);
@@ -476,20 +402,15 @@ export default function Header() {
             : new Map();
 
         const grouped = new Map();
-
         navigationItems.forEach((item) => {
             const itemId = Number(item?.id);
             const itemSlug = String(item?.slug || '').trim();
             const itemKey = itemSlug || (itemId ? String(itemId) : '');
-
-            if (!itemKey) {
-                return;
-            }
+            if (!itemKey) return;
 
             const childItems = subCategories
                 .filter((subCategory) => Number(subCategory?.category_id) === itemId)
                 .map((subCategory) => {
-                    const categoryKey = itemSlug || String(itemId);
                     const subCategoryKey = String(subCategory?.slug || '').trim() || String(subCategory?.id || '');
                     const grandChildItems = (grandChildsBySubCategory.get(Number(subCategory?.id)) || []).map((grandChild) => ({
                         id: grandChild?.id,
@@ -526,66 +447,65 @@ export default function Header() {
     }, [siteSettings]);
 
     const headerLogo = useMemo(() => resolveMediaUrl(siteSettings?.header_logo || ''), [siteSettings]);
-    const headerText = heroHeaderText || siteSettings?.header_title ;
+    const headerText = heroHeaderText || siteSettings?.header_title;
 
     return (
         <>
-        <TopBar text={headerText} animate />
+            <TopBar text={headerText} animate />
 
-        <div className="sr-only">
-            <TextGenerateEffect text={headerText} />
-        </div>
-
-        <header className={`${timelessFontClass} site-header sticky top-0 z-[300] border-b border-zinc-200 bg-white text-zinc-950 backdrop-blur`}>
-           <div className="site-header-inner mx-auto flex h-[90px] w-full max-w-[1920px] items-center justify-between px-4 sm:px-6 lg:px-10 xl:grid xl:grid-cols-[1fr_auto_1fr]">
-                <div className="flex items-center justify-start xl:col-start-1 xl:hidden">
-                    <button
-                        type="button"
-                        className="inline-flex size-11 items-center justify-center rounded-full text-zinc-950 transition-colors hover:bg-white/70"
-                        aria-label="Open menu"
-                        aria-expanded={isMobileMenuOpen}
-                        aria-controls="mobile-menu-drawer"
-                        onClick={openMobileMenu}
-                    >
-                        <Menu className="size-5" strokeWidth={1.75} />
-                    </button>
-                </div>
-                
-
-                <Brand headerLogo={headerLogo} onClick={handleLogoClick} siteName={siteSettings?.site_name} />
-
-                <MainNav
-                    navigationItems={navigationItems}
-                    isNavigationLoading={isNavigationLoading}
-                    isShopMegaMenuOpen={isShopMegaMenuOpen}
-                    openShopMenu={openShopMenu}
-                    closeShopMenuWithDelay={closeShopMenuWithDelay}
-                    closeShopMenuImmediately={closeShopMenuImmediately}
-                    shopChildColumns={shopChildColumns}
-                    shopMegaMenuImage={shopMegaMenuImage}
-                    shopMegaMenuCaption={shopMegaMenuCaption}
-                    shopMegaMenuHref={shopMegaMenuHref}
-                />
-
-                <HeaderTools utilityIcons={utilityIcons} itemCount={itemCount} openSearch={openSearch} handleOpenCart={handleOpenCart} />
+            <div className="sr-only">
+                <TextGenerateEffect text={headerText} />
             </div>
 
-        </header>
+            <header className={`${timelessFontClass} site-header sticky top-0 z-[300] border-b border-zinc-200 bg-white text-zinc-950 backdrop-blur`}>
+                <div className="site-header-inner mx-auto flex h-[90px] w-full max-w-[1920px] items-center justify-between px-4 sm:px-6 lg:px-10 xl:grid xl:grid-cols-[1fr_auto_1fr]">
+                    <div className="flex items-center justify-start xl:col-start-1 xl:hidden">
+                        <button
+                            type="button"
+                            className="inline-flex size-11 items-center justify-center rounded-full text-zinc-950 transition-colors hover:bg-white/70"
+                            aria-label="Open menu"
+                            aria-expanded={isMobileMenuOpen}
+                            aria-controls="mobile-menu-drawer"
+                            onClick={openMobileMenu}
+                        >
+                            <Menu className="size-5" strokeWidth={1.75} />
+                        </button>
+                    </div>
 
-        <MobileMenu
-            isMobileMenuOpen={isMobileMenuOpen}
-            closeMobileMenu={closeMobileMenu}
-            headerLogo={headerLogo}
-            navigationItems={navigationItems}
-            mobileSubCategoriesByItem={mobileSubCategoriesByItem}
-            expandedMobileItems={expandedMobileItems}
-            expandedMobileSubItems={expandedMobileSubItems}
-            toggleMobileItem={toggleMobileItem}
-            toggleMobileSubItem={toggleMobileSubItem}
-            handleOpenCart={handleOpenCart}
-            supportPhone={supportPhone}
-            itemCount={itemCount}
-        />
+                    <Brand headerLogo={headerLogo} onClick={handleLogoClick} siteName={siteSettings?.site_name} />
+
+                    <MainNav
+                        navigationItems={navigationItems}
+                        isNavigationLoading={isNavigationLoading}
+                        isShopMegaMenuOpen={isShopMegaMenuOpen}
+                        openShopMenu={openShopMenu}
+                        closeShopMenuWithDelay={closeShopMenuWithDelay}
+                        closeShopMenuImmediately={closeShopMenuImmediately}
+                        shopChildColumns={shopChildColumns}
+                        shopMegaMenuImage={shopMegaMenuImage}
+                        shopMegaMenuImage2={shopMegaMenuImage2}
+                        shopMegaMenuCaption={shopMegaMenuCaption}
+                        shopMegaMenuHref={shopMegaMenuHref}
+                    />
+
+                    <HeaderTools utilityIcons={utilityIcons} itemCount={itemCount} openSearch={openSearch} handleOpenCart={handleOpenCart} />
+                </div>
+            </header>
+
+            <MobileMenu
+                isMobileMenuOpen={isMobileMenuOpen}
+                closeMobileMenu={closeMobileMenu}
+                headerLogo={headerLogo}
+                navigationItems={navigationItems}
+                mobileSubCategoriesByItem={mobileSubCategoriesByItem}
+                expandedMobileItems={expandedMobileItems}
+                expandedMobileSubItems={expandedMobileSubItems}
+                toggleMobileItem={toggleMobileItem}
+                toggleMobileSubItem={toggleMobileSubItem}
+                handleOpenCart={handleOpenCart}
+                supportPhone={supportPhone}
+                itemCount={itemCount}
+            />
 
             <div
                 className={`fixed inset-0 z-[1400] bg-black/40 transition-opacity duration-200 ${
@@ -595,14 +515,14 @@ export default function Header() {
                 aria-hidden="true"
             />
 
-          <SearchProducts
-              isSearchOpen={isSearchOpen}
-              closeSearch={closeSearch}
-              handleSearchSubmit={handleSearchSubmit}
-              searchInputRef={searchInputRef}
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-          />
+            <SearchProducts
+                isSearchOpen={isSearchOpen}
+                closeSearch={closeSearch}
+                handleSearchSubmit={handleSearchSubmit}
+                searchInputRef={searchInputRef}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+            />
         </>
     );
 }
