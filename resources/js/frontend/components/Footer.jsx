@@ -11,7 +11,6 @@ const shopLinks = [
     { label: 'New Arrivals', href: '/new-arrivals' },
     { label: 'Women', href: '/women' },
     { label: 'Men', href: '/men' },
-  
 ];
 
 const socialLinks = [
@@ -141,16 +140,16 @@ export default function Footer() {
     const activeModalMeta = activeModal ? MODAL_META[activeModal] : null;
     const modalContent = activeModalMeta && complianceData ? complianceData[activeModalMeta.field] || '' : '';
 
-    const supportLinks = useMemo(() => [
+    const helpLinks = useMemo(() => [
+        { label: 'Contact Us', href: '/contact' },
         { label: 'Shipping', modalKey: 'shipping_returns' },
         { label: 'Returns', modalKey: 'shipping_returns' },
-        { label: 'Contact', href: '/contact' },
+        { label: 'Size Guide', modalKey: 'size_guide' },
     ], []);
 
-    const companyLinks = useMemo(() => [
-        { label: 'About', href: '/about' },
-        { label: 'Privacy', modalKey: 'privacy' },
-        { label: 'Terms', modalKey: 'terms' },
+    const houseLinks = useMemo(() => [
+        { label: 'Mission', href: '#!' },
+        { label: 'Sustainability', modalKey: '/sustainability' },
     ], []);
 
     const footerLogo = useMemo(() => resolveAssetUrl(siteSettings?.footer_logo || ''), [siteSettings]);
@@ -166,13 +165,12 @@ export default function Footer() {
             .filter((item) => item.label && item.href);
     }, [siteSettings]);
 
-    const contactEmail = String(siteSettings?.email || '').trim() || 'hello@viveren.com';
     const activeSocials = socialFromSettings.length > 0 ? socialFromSettings : socialLinks;
 
     return (
         <footer className={`${timelessFontClass} font-monstrate bg-[#1a1a1a] text-white`}>
             <div className="mx-auto w-full max-w-[1700px] px-6 pb-14 pt-14 sm:px-10 lg:px-16">
-                <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1.6fr_1fr_1fr_1fr_1.5fr]">
+                <div className="grid grid-cols-1 gap-10 lg:grid-cols-4">
                     
                     {/* Brand column */}
                     <div className="space-y-4">
@@ -191,7 +189,6 @@ export default function Footer() {
                             )}
                         </Link>
 
-                       
                         <div className="flex items-center gap-3 pt-1">
                             {activeSocials.map((s) => {
                                 const isImageUrl = typeof s.icon === 'string' && s.icon.trim() !== '';
@@ -224,47 +221,24 @@ export default function Footer() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-x-8 gap-y-10 lg:contents">
-                        <FooterCol heading="Shop" links={shopLinks} />
-                        <FooterCol heading="Support" links={supportLinks} onOpenModal={openModal} />
-                        <FooterCol heading="Company" links={companyLinks} onOpenModal={openModal} />
-
-                        {/* Newsletter column */}
-                        <div>
-                            <h3 className={`font-monstrate ${sectionTypography.footerHeading} text-white`}>
-                                Stay Connected
-                            </h3>
-                            <p className={`font-monstrate mb-5 ${sectionTypography.footerLink} text-zinc-400`}>
-                                {contactEmail}
-                            </p>
-                            
-                            <form
-                                onSubmit={(e) => e.preventDefault()}
-                                className="flex items-stretch border-b border-zinc-600 focus-within:border-white transition-colors"
-                            >
-                                <label htmlFor="footer-email" className="sr-only">Email address</label>
-                                <input
-                                    id="footer-email"
-                                    type="email"
-                                    placeholder="Email address"
-                                    required
-                                    className={`font-monstrate flex-1 bg-transparent py-2 ${sectionTypography.footerLink} text-white outline-none placeholder:text-zinc-500`}
-                                />
-                                <button
-                                    type="submit"
-                                    className="font-monstrate py-2 pl-3 text-[0.75rem] font-semibold uppercase tracking-[0.14em] text-white transition-opacity hover:opacity-60"
-                                >
-                                    Join
-                                </button>
-                            </form>
-                        </div>
-                    </div>
+                    <FooterCol heading="Shop" links={shopLinks} />
+                    <FooterCol heading="Help" links={helpLinks} onOpenModal={openModal} />
+                    <FooterCol heading="House" links={houseLinks} onOpenModal={openModal} />
                 </div>
             </div>
 
             <div className="border-t border-zinc-700">
                 <div className={`mx-auto flex w-full max-w-[1700px] flex-col items-center justify-between gap-3 px-6 py-5 ${sectionTypography.footerLegal} text-zinc-500 sm:flex-row sm:px-10 lg:px-16`}>
                     <span>© 2026 Viveren. All rights reserved.</span>
+                    <div className="flex items-center gap-6">
+                        <button type="button" onClick={() => openModal('privacy')} className="transition-colors hover:text-white">
+                            Privacy
+                        </button>
+                        <button type="button" onClick={() => openModal('terms')} className="transition-colors hover:text-white">
+                            Terms
+                        </button>
+                       
+                    </div>
                 </div>
             </div>
 
