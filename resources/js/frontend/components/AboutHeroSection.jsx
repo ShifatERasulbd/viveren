@@ -9,16 +9,20 @@ const defaultAboutHeroData = {
         'At Vivaren, we believe the clothes you wear every day should never feel ordinary. Inspired by the Latin word vivere to live, we create elevated essentials that combine timeless design, premium craftsmanship, and lasting comfort.',
 };
 
+// Helper to detect iframe preview state once outside the render cycle
+const checkIsBuilderPreview = () => {
+    try {
+        return window.self !== window.top;
+    } catch {
+        return false;
+    }
+};
+
+const isBuilderPreview = checkIsBuilderPreview();
+
 export default function AboutHeroSection() {
     const [heroData, setHeroData] = useState(defaultAboutHeroData);
     const [previewOverride, setPreviewOverride] = useState(null);
-    const [isBuilderPreview] = useState(() => {
-        try {
-            return window.self !== window.top;
-        } catch {
-            return false;
-        }
-    });
 
     useEffect(() => {
         let ignore = false;
@@ -41,10 +45,14 @@ export default function AboutHeroSection() {
             } catch {}
         }
         loadAboutHero();
-        return () => { ignore = true; };
+        return () => {
+            ignore = true;
+        };
     }, []);
 
     useEffect(() => {
+        if (!isBuilderPreview) return;
+
         function handleBuilderPreviewMessage(event) {
             if (event.origin !== window.location.origin) return;
             const data = event.data;
@@ -55,6 +63,7 @@ export default function AboutHeroSection() {
                 }));
             }
         }
+
         window.addEventListener('message', handleBuilderPreviewMessage);
         return () => window.removeEventListener('message', handleBuilderPreviewMessage);
     }, []);
@@ -87,7 +96,6 @@ export default function AboutHeroSection() {
             role={isBuilderPreview ? 'button' : undefined}
             tabIndex={isBuilderPreview ? 0 : undefined}
         >
-            {/* Removed the max-w-[1280px] from the wrapper to allow wider layout */}
             <div className="mx-auto w-full"> 
                 <AboutHeader 
                     sectionTitle={sectionTitle} 
@@ -95,15 +103,13 @@ export default function AboutHeroSection() {
                     description={description} 
                 />
 
-                {/* 
-                   Increased the max-width of this container or removed it to make the image wider.
-                   Added max-w-[1540px] to allow it to expand beyond 1280px.
-                */}
                 <div className="mx-auto mt-6 max-w-[1640px] overflow-hidden border border-[#ddd4c8] bg-[#e9dfd2]/20 sm:mt-8">
                     <img
                         src={backgroundImage}
                         alt="About hero background"
                         className="h-[280px] w-full object-cover object-center sm:h-[420px] lg:h-[560px]"
+                        fetchPriority="high"
+                        loading="eager"
                     />
                 </div>
             </div>

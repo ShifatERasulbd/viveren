@@ -95,7 +95,7 @@ export default function Settings() {
                         settings={settings}
                         isLoading={isLoading}
                         deletingId={deletingId}
-                        onAdd={() => navigate('/admin/settings/add')}
+                        onAdd={settings.length === 0 ? () => navigate('/admin/settings/add') : null}
                         onEdit={(id) => navigate(`/admin/settings/${id}/edit`)}
                         onRequestDelete={setSettingToDelete}
                     />

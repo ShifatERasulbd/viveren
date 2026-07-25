@@ -1,20 +1,19 @@
 import { useEffect, useState } from 'react';
 
-export default function FabricTechnologySection() {
-    const [fabricData, setFabricData] = useState({
-        image: '/uploads/heroes/images/hero1.webp',
-        section_title: 'Fabric & Technology',
-        title: 'Fabric, Engineered with Purpose',
-        description: 'Every Viveren fabric is engineered with purpose. From structured knits to breathable, compostable blends, our materials are selected to deliver comfort, durability, and effortless wear — without compromise.',
-        button_title: 'Discover Our Fabrics',
-        button_link: '#',
-        button_enabled: true,
-    });
+// Evaluate iframe builder status once outside component lifecycle
+const checkIsBuilderPreview = () => {
+    try {
+        return window.self !== window.top;
+    } catch {
+        return false;
+    }
+};
 
+const isBuilderPreview = checkIsBuilderPreview();
+
+export default function FabricTechnologySection() {
+    const [fabricData, setFabricData] = useState(null);
     const [previewOverride, setPreviewOverride] = useState(null);
-    const [isBuilderPreview] = useState(() => {
-        try { return window.self !== window.top; } catch { return false; }
-    });
 
     useEffect(() => {
         let ignore = false;
@@ -26,24 +25,19 @@ export default function FabricTechnologySection() {
                 if (!response.ok) return;
                 const payload = await response.json();
                 if (!ignore && payload) {
-                    setFabricData((prev) => ({
-                        ...prev,
-                        image: payload.image || prev.image,
-                        section_title: payload.section_title || prev.section_title,
-                        title: payload.title || prev.title,
-                        description: payload.description ?? prev.description,
-                        button_title: payload.button_title ?? prev.button_title,
-                        button_link: payload.button_link ?? prev.button_link,
-                        button_enabled: payload.button_enabled ?? prev.button_enabled,
-                    }));
+                    setFabricData(payload);
                 }
             } catch {}
         }
         load();
-        return () => { ignore = true; };
+        return () => {
+            ignore = true;
+        };
     }, []);
 
     useEffect(() => {
+        if (!isBuilderPreview) return;
+
         function handleMessage(event) {
             if (event.origin !== window.location.origin) return;
             const data = event.data;
@@ -55,7 +49,17 @@ export default function FabricTechnologySection() {
         return () => window.removeEventListener('message', handleMessage);
     }, []);
 
-    const displayData = previewOverride ? { ...fabricData, ...previewOverride } : fabricData;
+    const displayData = {
+        image: '/uploads/heroes/images/hero1.webp',
+        section_title: 'Fabric & Technology',
+        title: 'Fabric, Engineered with Purpose',
+        description: 'Every Viveren fabric is engineered with purpose. From structured knits to breathable, compostable blends, our materials are selected to deliver comfort, durability, and effortless wear — without compromise.',
+        button_title: 'Discover Our Fabrics',
+        button_link: '#',
+        button_enabled: true,
+        ...(fabricData || {}),
+        ...(previewOverride || {}),
+    };
 
     function handleSectionClick() {
         if (!isBuilderPreview) return;
@@ -81,6 +85,8 @@ export default function FabricTechnologySection() {
                             src={displayData.image}
                             alt="Fabric texture"
                             className="h-[400px] w-full object-cover shadow-sm sm:h-[500px]"
+                            loading="lazy"
+                            decoding="async"
                         />
                     </div>
 

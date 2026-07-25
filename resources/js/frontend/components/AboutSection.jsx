@@ -1,5 +1,16 @@
 import { useEffect, useState } from 'react';
 
+// Evaluate iframe builder status once outside component lifecycle
+const checkIsBuilderPreview = () => {
+    try {
+        return window.self !== window.top;
+    } catch {
+        return false;
+    }
+};
+
+const isBuilderPreview = checkIsBuilderPreview();
+
 export default function About1971Section() {
     const [storyData, setStoryData] = useState({
         background_image: '/uploads/heroes/images/hero1.webp',
@@ -10,13 +21,6 @@ export default function About1971Section() {
     });
 
     const [previewOverride, setPreviewOverride] = useState(null);
-    const [isBuilderPreview] = useState(() => {
-        try {
-            return window.self !== window.top;
-        } catch {
-            return false;
-        }
-    });
 
     useEffect(() => {
         let ignore = false;
@@ -39,10 +43,14 @@ export default function About1971Section() {
             } catch {}
         }
         loadAboutStory();
-        return () => { ignore = true; };
+        return () => {
+            ignore = true;
+        };
     }, []);
 
     useEffect(() => {
+        if (!isBuilderPreview) return;
+
         function handleBuilderPreviewMessage(event) {
             if (event.origin !== window.location.origin) return;
             const data = event.data;
@@ -53,6 +61,7 @@ export default function About1971Section() {
                 }));
             }
         }
+
         window.addEventListener('message', handleBuilderPreviewMessage);
         return () => window.removeEventListener('message', handleBuilderPreviewMessage);
     }, []);
@@ -86,6 +95,8 @@ export default function About1971Section() {
                             src={displayStoryData.background_image}
                             alt="1971 story visual"
                             className="absolute inset-0 h-full w-full object-cover object-center"
+                            loading="lazy"
+                            decoding="async"
                         />
                         {/* Black Overlay Layer */}
                         <div className="absolute inset-0 bg-black/40" />

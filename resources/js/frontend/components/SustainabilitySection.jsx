@@ -1,21 +1,19 @@
 import { useEffect, useState } from 'react';
 
-export default function SustainabilitySection() {
-    const [givingBackData, setGivingBackData] = useState({
-        image: '/uploads/heroes/images/hero1.webp',
-        section_title: 'Sustainability',
-        title: 'Responsibility, Built In',
-        description:
-            "Viveren believes the future of fashion is honest, human, and considered.\n\nThe clothes you wear should feel good — on your body, in your values, and in the world you move through.",
-        button_title: 'Explore Our Sustainability Approach',
-        button_link: '#',
-        button_enabled: true,
-    });
+// Evaluate iframe builder status once outside component lifecycle
+const checkIsBuilderPreview = () => {
+    try {
+        return window.self !== window.top;
+    } catch {
+        return false;
+    }
+};
 
+const isBuilderPreview = checkIsBuilderPreview();
+
+export default function SustainabilitySection() {
+    const [givingBackData, setGivingBackData] = useState(null);
     const [previewOverride, setPreviewOverride] = useState(null);
-    const [isBuilderPreview] = useState(() => {
-        try { return window.self !== window.top; } catch { return false; }
-    });
 
     useEffect(() => {
         let ignore = false;
@@ -27,24 +25,19 @@ export default function SustainabilitySection() {
                 if (!response.ok) return;
                 const payload = await response.json();
                 if (!ignore && payload) {
-                    setGivingBackData((prev) => ({
-                        ...prev,
-                        image: payload.image || prev.image,
-                        section_title: payload.section_title || prev.section_title,
-                        title: payload.title || prev.title,
-                        description: payload.description ?? prev.description,
-                        button_title: payload.button_title ?? prev.button_title,
-                        button_link: payload.button_link ?? prev.button_link,
-                        button_enabled: payload.button_enabled ?? prev.button_enabled,
-                    }));
+                    setGivingBackData(payload);
                 }
             } catch {}
         }
         loadGivingBack();
-        return () => { ignore = true; };
+        return () => {
+            ignore = true;
+        };
     }, []);
 
     useEffect(() => {
+        if (!isBuilderPreview) return;
+
         function handleBuilderPreviewMessage(event) {
             if (event.origin !== window.location.origin) return;
             const data = event.data;
@@ -55,13 +48,24 @@ export default function SustainabilitySection() {
                 }));
             }
         }
+
         window.addEventListener('message', handleBuilderPreviewMessage);
         return () => window.removeEventListener('message', handleBuilderPreviewMessage);
     }, []);
 
-    const displayData = previewOverride ? { ...givingBackData, ...previewOverride } : givingBackData;
+    const displayData = {
+        image: '/uploads/heroes/images/hero1.webp',
+        section_title: 'Sustainability',
+        title: 'Responsibility, Built In',
+        description:
+            "Viveren believes the future of fashion is honest, human, and considered.\n\nThe clothes you wear should feel good — on your body, in your values, and in the world you move through.",
+        button_title: 'Explore Our Sustainability Approach',
+        button_link: '#',
+        button_enabled: true,
+        ...(givingBackData || {}),
+        ...(previewOverride || {}),
+    };
 
-    // RESTORED FUNCTION
     function handleSectionClick() {
         if (!isBuilderPreview) return;
         if (window.parent && window.parent !== window) {
@@ -81,7 +85,7 @@ export default function SustainabilitySection() {
             tabIndex={isBuilderPreview ? 0 : undefined}
         >
             {/* Dark overlay for text readability */}
-            <div className="absolute inset-0" />
+            <div className="absolute inset-0 bg-black/40" />
 
             <div className="relative mx-auto w-full max-w-[1540px] px-5 sm:px-8 lg:px-12">
                 <div className="max-w-2xl">

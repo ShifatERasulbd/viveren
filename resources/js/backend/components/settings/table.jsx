@@ -54,10 +54,12 @@ export default function SettingsTable({
                         className="w-full pl-9"
                     />
                 </div>
-                <Button className="gap-2 w-full md:w-auto" onClick={onAdd}>
-                    <Plus />
-                    Add Setting
-                </Button>
+                {onAdd && (
+                    <Button className="gap-2 w-full md:w-auto" onClick={onAdd}>
+                        <Plus />
+                        Add Setting
+                    </Button>
+                )}
             </div>
 
             <Card className="w-full overflow-hidden border border-border/80 shadow-sm">

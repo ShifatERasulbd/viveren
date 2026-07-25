@@ -7,14 +7,28 @@ import { sectionTypography } from '../utils/sectionTypography';
 import ComplianceModal from './ComplianceModal.jsx';
 
 const shopLinks = [
-    { label: 'Shop All', href: '/shop' },
+    { label: 'Best Sellers', href: '/collections/best-selling-products' },
     { label: 'New Arrivals', href: '/new-arrivals' },
-    { label: 'Essentials', href: '/shop?collection=essentials' },
-    { label: 'Tops', href: '/shop?collection=tops' },
-    { label: 'Bottoms', href: '/shop?collection=bottoms' },
+    { label: 'Women', href: '/women' },
+    { label: 'Men', href: '/men' },
+  
 ];
 
 const socialLinks = [
+    {
+        label: 'Facebook',
+        href: '#facebook',
+        icon: (
+            <path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12c0-5.523-4.477-10-10-10z" fill="currentColor" />
+        ),
+    },
+    {
+        label: 'X',
+        href: '#x',
+        icon: (
+            <path d="M17.5 4h2.5l-5.5 6.3L21 20h-5.1l-3.5-4.6L8.1 20H5.6l5.9-6.7L4 4h5.2l3.2 4.2L17.5 4Zm-.9 14.4h1.4L7.5 5.4H6L16.6 18.4Z" fill="currentColor" />
+        ),
+    },
     {
         label: 'Instagram',
         href: '#instagram',
@@ -27,91 +41,55 @@ const socialLinks = [
         ),
     },
     {
-        label: 'YouTube',
-        href: '#youtube',
+        label: 'LinkedIn',
+        href: '#linkedin',
         icon: (
-            <>
-                <rect x="4" y="6" width="16" height="12" rx="3" stroke="currentColor" strokeWidth="1.6" fill="none" />
-                <path d="M10 9.5l5 2.5-5 2.5V9.5Z" fill="currentColor" />
-            </>
-        ),
-    },
-    {
-        label: 'TikTok',
-        href: '#tiktok',
-        icon: (
-            <path d="M16 3h-3v11.5a2.5 2.5 0 1 1-2.5-2.5c.23 0 .45.03.67.08V8.98A6.5 6.5 0 1 0 16 15V8.5a8.48 8.48 0 0 0 4 1V6.5A4.5 4.5 0 0 1 16 3Z" fill="currentColor" />
-        ),
-    },
-    {
-        label: 'X',
-        href: '#x',
-        icon: (
-            <path d="M17.5 4h2.5l-5.5 6.3L21 20h-5.1l-3.5-4.6L8.1 20H5.6l5.9-6.7L4 4h5.2l3.2 4.2L17.5 4Zm-.9 14.4h1.4L7.5 5.4H6L16.6 18.4Z" fill="currentColor" />
+            <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z" fill="currentColor" />
         ),
     },
 ];
 
-function SocialButton({ href, label, children }) {
-    return (
-        <a
-            href={href}
-            aria-label={label}
-            className="inline-flex size-8 items-center justify-center border border-zinc-600 text-zinc-400 transition-colors hover:border-white hover:text-white"
-        >
-            <svg viewBox="0 0 24 24" className="size-4" aria-hidden="true">
-                {children}
-            </svg>
-        </a>
-    );
-}
+const MODAL_META = {
+    terms: { title: 'Terms & Conditions', field: 'terms_and_conditions' },
+    privacy: { title: 'Privacy Policy', field: 'privacy_policy' },
+    shipping_returns: { title: 'Shipping & Returns', field: 'shipping_and_return' },
+};
 
 function resolveAssetUrl(path) {
-    if (typeof path !== 'string') {
-        return '';
-    }
-
+    if (typeof path !== 'string') return '';
     const raw = path.trim();
-    if (!raw) {
-        return '';
-    }
-
+    if (!raw) return '';
     if (raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('/')) {
         return raw;
     }
-
     return `/${raw.replace(/^\/+/, '')}`;
 }
 
-function FooterCol({ heading, links }) {
+function FooterCol({ heading, links, onOpenModal }) {
+    const linkBaseClass = `font-monstrate ${sectionTypography.footerLink} text-zinc-400 transition-colors hover:text-white`;
+
     return (
         <nav aria-label={heading}>
             <h3 className={`font-monstrate ${sectionTypography.footerHeading} text-white`}>
                 {heading}
             </h3>
             <ul className="space-y-2.5">
-                {links.map(({ label, href, onClick }) => (
+                {links.map(({ label, href, modalKey }) => (
                     <li key={label}>
-                        {onClick ? (
+                        {modalKey ? (
                             <button
                                 type="button"
-                                onClick={onClick}
-                                className={`font-monstrate ${sectionTypography.footerLink} text-zinc-400 transition-colors hover:text-white text-left`}
+                                onClick={() => onOpenModal(modalKey)}
+                                className={`${linkBaseClass} text-left`}
                             >
                                 {label}
                             </button>
                         ) : href?.startsWith('/') ? (
-                            <Link
-                                to={href}
-                                className={`font-monstrate ${sectionTypography.footerLink} text-zinc-400 transition-colors hover:text-white`}
-                            >
+                            <Link to={href} className={linkBaseClass}>
                                 {label}
                             </Link>
                         ) : (
-                            <a
-                                href={href}
-                                className={`font-monstrate ${sectionTypography.footerLink} text-zinc-400 transition-colors hover:text-white`}
-                            >
+                            <a href={href} className={linkBaseClass}>
                                 {label}
                             </a>
                         )}
@@ -122,24 +100,11 @@ function FooterCol({ heading, links }) {
     );
 }
 
-const MODAL_TYPES = {
-    TERMS: 'terms',
-    PRIVACY: 'privacy',
-    SHIPPING_RETURNS: 'shipping_returns',
-};
-
-const MODAL_META = {
-    [MODAL_TYPES.TERMS]: { title: 'Terms & Conditions', field: 'terms_and_conditions' },
-    [MODAL_TYPES.PRIVACY]: { title: 'Privacy Policy', field: 'privacy_policy' },
-    [MODAL_TYPES.SHIPPING_RETURNS]: { title: 'Shipping & Returns', field: 'shipping_and_return' },
-};
-
 export default function Footer() {
     const [siteSettings, setSiteSettings] = useState(() => getSettingsPayload());
     const [complianceData, setComplianceData] = useState(null);
     const [activeModal, setActiveModal] = useState(null);
 
-    // Fetch compliance data
     useEffect(() => {
         let ignore = false;
 
@@ -148,23 +113,15 @@ export default function Footer() {
                 const response = await fetch('/api/public/compliance', {
                     headers: { Accept: 'application/json' },
                 });
-
-                if (!response.ok) {
-                    return;
-                }
-
+                if (!response.ok) return;
                 const payload = await response.json();
-
                 if (!ignore && payload) {
                     setComplianceData(payload);
                 }
-            } catch {
-                // Silently fail — modal will show "No content available"
-            }
+            } catch {}
         }
 
         fetchCompliance();
-
         return () => {
             ignore = true;
         };
@@ -174,125 +131,103 @@ export default function Footer() {
         const unsubscribe = onSettingsUpdated((payload) => {
             setSiteSettings(payload || {});
         });
-
         setSiteSettings(getSettingsPayload() || {});
-
         return unsubscribe;
     }, []);
 
-    const openModal = useCallback((type) => {
-        setActiveModal(type);
-    }, []);
-
-    const closeModal = useCallback(() => {
-        setActiveModal(null);
-    }, []);
+    const openModal = useCallback((type) => setActiveModal(type), []);
+    const closeModal = useCallback(() => setActiveModal(null), []);
 
     const activeModalMeta = activeModal ? MODAL_META[activeModal] : null;
-    const modalContent = activeModalMeta && complianceData
-        ? complianceData[activeModalMeta.field] || ''
-        : '';
+    const modalContent = activeModalMeta && complianceData ? complianceData[activeModalMeta.field] || '' : '';
 
-    const supportLinks = [
-        {
-            label: 'Shipping',
-            onClick: () => openModal(MODAL_TYPES.SHIPPING_RETURNS),
-        },
-        {
-            label: 'Returns',
-            onClick: () => openModal(MODAL_TYPES.SHIPPING_RETURNS),
-        },
+    const supportLinks = useMemo(() => [
+        { label: 'Shipping', modalKey: 'shipping_returns' },
+        { label: 'Returns', modalKey: 'shipping_returns' },
         { label: 'Contact', href: '/contact' },
-    ];
+    ], []);
 
-    const companyLinks = [
+    const companyLinks = useMemo(() => [
         { label: 'About', href: '/about' },
-        {
-            label: 'Privacy',
-            onClick: () => openModal(MODAL_TYPES.PRIVACY),
-        },
-        {
-            label: 'Terms',
-            onClick: () => openModal(MODAL_TYPES.TERMS),
-        },
-    ];
+        { label: 'Privacy', modalKey: 'privacy' },
+        { label: 'Terms', modalKey: 'terms' },
+    ], []);
 
-    const footerLogo = useMemo(
-        () => resolveAssetUrl(siteSettings?.footer_logo || ''),
-        [siteSettings],
-    );
+    const footerLogo = useMemo(() => resolveAssetUrl(siteSettings?.footer_logo || ''), [siteSettings]);
 
     const socialFromSettings = useMemo(() => {
         const items = Array.isArray(siteSettings?.social_media) ? siteSettings.social_media : [];
-
         return items
-            .map((item, index) => {
-                const name = String(item?.name || '').trim() || `Social ${index + 1}`;
-                const link = String(item?.link || '').trim() || '#';
-                const icon = resolveAssetUrl(item?.icon || '');
-
-                return {
-                    label: name,
-                    href: link,
-                    icon,
-                };
-            })
+            .map((item, index) => ({
+                label: String(item?.name || '').trim() || `Social ${index + 1}`,
+                href: String(item?.link || '').trim() || '#',
+                icon: resolveAssetUrl(item?.icon || ''),
+            }))
             .filter((item) => item.label && item.href);
     }, [siteSettings]);
 
     const contactEmail = String(siteSettings?.email || '').trim() || 'hello@viveren.com';
+    const activeSocials = socialFromSettings.length > 0 ? socialFromSettings : socialLinks;
 
     return (
         <footer className={`${timelessFontClass} font-monstrate bg-[#1a1a1a] text-white`}>
-            {/* Main grid */}
             <div className="mx-auto w-full max-w-[1700px] px-6 pb-14 pt-14 sm:px-10 lg:px-16">
                 <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1.6fr_1fr_1fr_1fr_1.5fr]">
-
+                    
                     {/* Brand column */}
-                    <div className="space-y-5">
-                        <Link to="/" className="inline-flex items-baseline gap-0.5">
+                    <div className="space-y-4">
+                        <Link to="/" className="inline-flex items-center gap-1">
                             {footerLogo ? (
                                 <img
                                     src={footerLogo}
-                                    alt="1971Co"
-                                    className="h-8 w-auto max-w-[220px] object-contain"
+                                    alt="viveren"
+                                    className="h-9 w-auto max-w-[220px] object-contain"
+                                    loading="lazy"
                                 />
                             ) : (
-                                <>
-                                    <span className={`${sectionTypography.footerBrandPrimary} text-white`}>
-                                        1971
-                                    </span>
-                                    <span className={`${sectionTypography.footerBrandSecondary} text-white`}>
-                                        Co.
-                                    </span>
-                                </>
+                                <span className="text-3xl font-bold tracking-tight text-white lowercase">
+                                    viveren
+                                </span>
                             )}
                         </Link>
 
-                        <div className="flex items-center gap-2">
-                            {(socialFromSettings.length > 0 ? socialFromSettings : socialLinks).map((s) =>
-                                typeof s.icon === 'string' && s.icon.trim() !== '' ? (
+                       
+                        <div className="flex items-center gap-3 pt-1">
+                            {activeSocials.map((s) => {
+                                const isImageUrl = typeof s.icon === 'string' && s.icon.trim() !== '';
+                                return (
                                     <a
                                         key={s.label}
                                         href={s.href}
                                         aria-label={s.label}
-                                        className="inline-flex size-8 items-center justify-center border border-zinc-600 text-zinc-400 transition-colors hover:border-white hover:text-white"
+                                        className="inline-flex size-9 items-center justify-center rounded-full bg-zinc-800 text-zinc-300 transition-colors hover:bg-zinc-700 hover:text-white"
                                     >
-                                        <img src={s.icon} alt={s.label} className="size-4 object-contain" />
+                                        {isImageUrl ? (
+                                            <img src={s.icon} alt={s.label} className="size-4 object-contain" loading="lazy" />
+                                        ) : (
+                                            <svg viewBox="0 0 24 24" className="size-4" aria-hidden="true">
+                                                {s.icon}
+                                            </svg>
+                                        )}
                                     </a>
-                                ) : (
-                                    <SocialButton key={s.label} href={s.href} label={s.label}>
-                                        {s.icon}
-                                    </SocialButton>
-                                )
-                            )}
+                                );
+                            })}
+                        </div>
+
+                        <div className="pt-2">
+                            <img
+                                src="/cardImage.png"
+                                alt="Payment and card information"
+                                className="h-7 w-auto max-w-full object-contain object-left"
+                                loading="lazy"
+                            />
                         </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-x-8 gap-y-10 lg:contents">
                         <FooterCol heading="Shop" links={shopLinks} />
-                        <FooterCol heading="Support" links={supportLinks} />
-                        <FooterCol heading="Company" links={companyLinks} />
+                        <FooterCol heading="Support" links={supportLinks} onOpenModal={openModal} />
+                        <FooterCol heading="Company" links={companyLinks} onOpenModal={openModal} />
 
                         {/* Newsletter column */}
                         <div>
@@ -322,28 +257,17 @@ export default function Footer() {
                                     Join
                                 </button>
                             </form>
-                            <div className="mb-5 overflow-hidden">
-                                <img
-                                    src="/cardImage.png"
-                                    alt="Payment and card information"
-                                    className="h-20 w-full object-contain object-center p-3 sm:h-24"
-                                />
-                            </div>
                         </div>
-                        
                     </div>
-
                 </div>
             </div>
 
-            {/* Bottom bar */}
             <div className="border-t border-zinc-700">
                 <div className={`mx-auto flex w-full max-w-[1700px] flex-col items-center justify-between gap-3 px-6 py-5 ${sectionTypography.footerLegal} text-zinc-500 sm:flex-row sm:px-10 lg:px-16`}>
                     <span>© 2026 Viveren. All rights reserved.</span>
                 </div>
             </div>
 
-            {/* Compliance Modal */}
             <ComplianceModal
                 isOpen={!!activeModal}
                 onClose={closeModal}
