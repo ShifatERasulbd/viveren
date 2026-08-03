@@ -809,37 +809,7 @@ function CheckoutForm() {
                 <aside className="bg-white p-5 shadow-sm sm:p-7">
                     <h2 className="font-monstrate text-[1.5rem] uppercase tracking-[0.05em] text-zinc-900">Order Summary</h2>
 
-                    <div className="mt-4 rounded border border-zinc-200 p-3">
-                        <p className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-zinc-400">Courier Service</p>
-                        <div className="mt-3 space-y-2">
-                            <label className="flex cursor-pointer items-center gap-2 text-[0.85rem] text-zinc-700">
-                                <input
-                                    type="radio"
-                                    name="courier"
-                                    value="ups"
-                                    checked={selectedCourier === 'ups'}
-                                    onChange={() => setSelectedCourier('ups')}
-                                    className="h-4 w-4 accent-zinc-900"
-                                />
-                                <span>Ship with UPS</span>
-                            </label>
-                            <label className="flex cursor-pointer items-center gap-2 text-[0.85rem] text-zinc-700">
-                                <input
-                                    type="radio"
-                                    name="courier"
-                                    value="shipstation"
-                                    checked={selectedCourier === 'shipstation'}
-                                    onChange={() => setSelectedCourier('shipstation')}
-                                    className="h-4 w-4 accent-zinc-900"
-                                />
-                                <span>Ship with ShipStation</span>
-                            </label>
-                        </div>
-                        {selectedCourier === 'ups' && isFetchingShipping ? (
-                            <p className="mt-2 text-xs text-zinc-500">Fetching UPS shipment charge...</p>
-                        ) : null}
-                        {shippingError ? <p className="mt-2 text-xs text-amber-600">{shippingError}</p> : null}
-                    </div>
+                   
 
                     <div className="mt-6 space-y-4">
                         {items.map((item) => (

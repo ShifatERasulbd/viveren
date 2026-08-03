@@ -23,6 +23,19 @@ export default function SingleProductMediaGallery({
 
     if (!primaryVideo && !activeImage) return null;
 
+    const galleryItems = [
+        ...(primaryVideo ? [{ type: 'video', key: 'video' }] : []),
+        ...safeImages.slice(0, 6).map((image, index) => ({
+            type: 'image',
+            key: `${image}-${index}`,
+            image,
+            index,
+        })),
+    ];
+
+    const leftColumnItems = galleryItems.filter((_, index) => index % 2 === 0);
+    const rightColumnItems = galleryItems.filter((_, index) => index % 2 !== 0);
+
     const handleImageClick = (image) => {
         onSelectImage(image);
         setModalImage(image);  
@@ -47,57 +60,109 @@ export default function SingleProductMediaGallery({
     return (
         <div className="w-full">
             <div className="grid grid-cols-1 gap-0 border border-zinc-200 sm:grid-cols-2">
-                {/* Primary Video Panel */}
-                {primaryVideo ? (
-                    <div className="relative overflow-hidden border-r border-zinc-200 bg-white">
-                        {!isVideoReady && videoPlaceholderImage ? (
-                            <img
-                                src={videoPlaceholderImage}
-                                alt="Product preview"
-                                className="block h-auto w-full object-cover object-center"
-                            />
-                        ) : null}
-                        <video
-                            ref={videoRef}
-                            src={primaryVideo}
-                            autoPlay
-                            loop
-                            muted
-                            playsInline
-                            controls
-                            onCanPlay={handleVideoCanPlay}
-                            className={`block h-auto w-full object-cover object-center ${
-                                isVideoReady ? 'opacity-100' : 'absolute inset-0 opacity-0'
-                            }`}
-                            preload="metadata"
-                        />
-                    </div>
-                ) : null}
+                <div className="border-zinc-200 sm:border-r">
+                    {leftColumnItems.map((item) => {
+                        if (item.type === 'video') {
+                            return (
+                                <div key={item.key} className="relative overflow-hidden border-b border-zinc-200 bg-white">
+                                    {!isVideoReady && videoPlaceholderImage ? (
+                                        <img
+                                            src={videoPlaceholderImage}
+                                            alt="Product preview"
+                                            className="block h-auto w-full object-cover object-center"
+                                        />
+                                    ) : null}
+                                    <video
+                                        ref={videoRef}
+                                        src={primaryVideo}
+                                        autoPlay
+                                        loop
+                                        muted
+                                        playsInline
+                                        controls
+                                        onCanPlay={handleVideoCanPlay}
+                                        className={`block h-auto w-full object-cover object-center ${
+                                            isVideoReady ? 'opacity-100' : 'absolute inset-0 opacity-0'
+                                        }`}
+                                        preload="metadata"
+                                    />
+                                </div>
+                            );
+                        }
 
-                {/* Product Images Loop */}
-                {safeImages.slice(0, 6).map((image, index) => {
-                    const isCurrentlyActive = activeImage === image;
-                    return (
-                        <div key={`${image}-${index}`} className="relative">
+                        const isCurrentlyActive = activeImage === item.image;
+                        return (
                             <button
+                                key={item.key}
                                 type="button"
-                                onClick={() => handleImageClick(image)}
-                                className={`w-full cursor-zoom-in overflow-hidden border-b border-zinc-200 bg-white transition-all duration-200 sm:border-r ${
+                                onClick={() => handleImageClick(item.image)}
+                                className={`w-full cursor-zoom-in overflow-hidden border-b border-zinc-200 bg-white transition-all duration-200 ${
                                     isCurrentlyActive
                                         ? 'ring-1 ring-inset ring-zinc-900'
                                         : 'hover:opacity-95'
                                 }`}
                             >
                                 <img
-                                    src={image}
-                                    alt={`Product ${index + 1}`}
+                                    src={item.image}
+                                    alt={`Product ${item.index + 1}`}
                                     className="pointer-events-none block h-auto w-full object-cover object-center"
                                 />
                             </button>
+                        );
+                    })}
+                </div>
 
-                        </div>
-                    );
-                })}
+                <div>
+                    {rightColumnItems.map((item) => {
+                        const isCurrentlyActive = item.type === 'image' && activeImage === item.image;
+
+                        if (item.type === 'video') {
+                            return (
+                                <div key={item.key} className="relative overflow-hidden border-b border-zinc-200 bg-white">
+                                    {!isVideoReady && videoPlaceholderImage ? (
+                                        <img
+                                            src={videoPlaceholderImage}
+                                            alt="Product preview"
+                                            className="block h-auto w-full object-cover object-center"
+                                        />
+                                    ) : null}
+                                    <video
+                                        src={primaryVideo}
+                                        autoPlay
+                                        loop
+                                        muted
+                                        playsInline
+                                        controls
+                                        onCanPlay={handleVideoCanPlay}
+                                        className={`block h-auto w-full object-cover object-center ${
+                                            isVideoReady ? 'opacity-100' : 'absolute inset-0 opacity-0'
+                                        }`}
+                                        preload="metadata"
+                                    />
+                                </div>
+                            );
+                        }
+
+                        return (
+                            <button
+                                key={item.key}
+                                type="button"
+                                onClick={() => handleImageClick(item.image)}
+                                className={`w-full cursor-zoom-in overflow-hidden border-b border-zinc-200 bg-white transition-all duration-200 ${
+                                    isCurrentlyActive
+                                        ? 'ring-1 ring-inset ring-zinc-900'
+                                        : 'hover:opacity-95'
+                                }`}
+                            >
+                                <img
+                                    src={item.image}
+                                    alt={`Product ${item.index + 1}`}
+                                    className="pointer-events-none block h-auto w-full object-cover object-center"
+                                />
+                            </button>
+                        );
+                    })}
+                </div>
             </div>
 
             {/* Modal Lightbox Viewport Component */}

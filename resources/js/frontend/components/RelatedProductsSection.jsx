@@ -444,7 +444,7 @@ export default function RelatedProductsSection({ products = [] }) {
     }
 
     return (
-        <section className={`${featuresFontClass} bg-[#f8f8f7] py-10 sm:py-14`}>
+        <section className={`${featuresFontClass}  py-10 sm:py-14`}>
             <style dangerouslySetInnerHTML={{ __html: `
                 @keyframes relatedLightWaveSweep {
                     0%   { transform: translateX(-220%); }
@@ -482,7 +482,7 @@ export default function RelatedProductsSection({ products = [] }) {
                 </div>
 
                 <div className="relative">
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4 lg:gap-x-6">
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-5 lg:gap-x-6">
                         {products.map((product) => (
                             <RelatedProductCard
                                 key={product.id}
