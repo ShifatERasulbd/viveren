@@ -81,7 +81,7 @@ const sectionRegistry = {
         variant: 'hero',
         component: HomeBackgroundImageSection,
     },
-    trending: { height: 'h-[520px]', variant: 'catalog', component: TrendingProduct },
+    trending: { height: 'h-[720px]', variant: 'catalog', component: TrendingProduct },
     newsletter: { height: 'h-[220px]', variant: 'newsletter', component: NewsletterSection },
 };
 

@@ -8,7 +8,7 @@ import SustainabilityPagePreviewCard from '@/components/website/SustainabilityPa
 import SustainabilityPageSectionsCard from '@/components/website/SustainabilityPageSectionsCard';
 
 import { useAppContext } from '@/context/AppContext';
-import { sustainabilitySections } from '@/components/website/sustainabilityPageBuilderData';
+import { sustainabilitySections } from '@/components/website/SustainabilityPageBuilderData';
 
 function moveItemByKey(items, sourceKey, targetKey) {
     const sourceIndex = items.findIndex((item) => item.key === sourceKey);
