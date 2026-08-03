@@ -195,19 +195,20 @@ export default function SingleProductDetailsPanel({
     }, [isSizeChartModalOpen]);
 
     return (
-        <div className="p-4 sm:p-5">
-            <div className="flex items-start justify-between gap-4">
-                 <h1 className="font-serif text-[2rem] uppercase leading-tight tracking-[0.02em] text-zinc-900 sm:text-[1.35rem]">
-                     {product.name}
+        <div className="px-2 py-1 sm:px-3">
+            <div className="border-b border-zinc-200 pb-4">
+                <p className="text-[0.75rem] font-semibold uppercase tracking-[0.08em] text-zinc-900">New Now</p>
+                <h1 className="mt-1 text-[2rem] font-semibold uppercase leading-[1.08] tracking-[0.02em] text-zinc-900 sm:text-[2.15rem]">
+                    {product.name}
                 </h1>
-
-                <p className="text-[1.15rem] font-medium leading-none text-zinc-900">{product.price}</p>
+                <p className="mt-2 text-[1.15rem] font-medium leading-none text-zinc-900">{product.price}</p>
             </div>
-            
-            <div className="mt-5 space-y-4">
+
+            <div className="mt-5 space-y-5">
                 <div>
-                    <h2 className="font-monstrate text-[0.75rem] tracking-[0.08em] text-zinc-800">Color Variations</h2>
-                    <div className="mt-2.5 flex items-center gap-2.5">
+                    <h2 className="text-[0.78rem] uppercase tracking-[0.08em] text-zinc-700">Color Variations</h2>
+                    <div className="mt-2.5 flex items-center justify-between gap-3 border-b border-zinc-200 pb-3">
+                        <div className="flex items-center gap-2.5">
                         {displayColors.map((color) => (
                             <button
                                 key={color.label}
@@ -226,24 +227,23 @@ export default function SingleProductDetailsPanel({
                                 />
                             </button>
                         ))}
+                        </div>
+                        <p className="text-[0.98rem] text-zinc-800">{selectedColorLabel}</p>
                     </div>
-                    <p className="font-monstrate mt-2 text-[0.8rem] uppercase tracking-[0.08em] text-zinc-700">
-                        Selected: <span className="font-semibold text-zinc-950">{selectedColorLabel}</span>
-                    </p>
                 </div>
 
                 <div>
-                    <h2 className="font-monstrate text-[0.75rem] tracking-[0.08em] text-zinc-800">Size Variations</h2>
-                    <div className="mt-2.5 flex flex-wrap gap-2">
+                    <h2 className="text-[0.78rem] uppercase tracking-[0.08em] text-zinc-700">Size Variations</h2>
+                    <div className="mt-2.5 border-y border-zinc-200">
                         {displaySizes.map((size) => (
                             <button
                                 key={size}
                                 type="button"
                                 onClick={() => onSelectSize(size)}
-                                className={`inline-flex min-w-[60px] items-center justify-center border px-3 py-2.5 text-[0.95rem] font-medium uppercase ${
+                                className={`flex w-full items-center justify-start border-b px-3 py-3 text-[0.95rem] font-semibold uppercase last:border-b-0 ${
                                     selectedSize === size
-                                        ? 'border-zinc-950 bg-zinc-950 text-white'
-                                        : 'border-zinc-300 text-zinc-700 hover:border-zinc-900 hover:text-zinc-900'
+                                        ? 'bg-zinc-50 text-zinc-950'
+                                        : 'text-zinc-700 hover:bg-zinc-50 hover:text-zinc-900'
                                 }`}
                             >
                                 {size}
@@ -258,14 +258,14 @@ export default function SingleProductDetailsPanel({
                                 setIsSizeChartModalOpen(true);
                             }
                         }}
-                        className={`font-monstrate mt-2.5 inline-flex items-center gap-2 text-[1rem] font-medium ${
+                        className={`mt-3 inline-flex items-center gap-2 text-[0.98rem] font-medium ${
                             resolvedSizeChartImages.length > 0
                                 ? 'cursor-pointer text-zinc-800 hover:text-zinc-900'
                                 : 'cursor-not-allowed text-zinc-400'
                         }`}
                         disabled={resolvedSizeChartImages.length === 0}
                     >
-                        SIZE Chart <RulerIcon />
+                        Measurements <RulerIcon />
                     </button>
                 </div>
 
@@ -293,9 +293,9 @@ export default function SingleProductDetailsPanel({
                     <button
                         type="button"
                         onClick={onAddToCart}
-                        className="inline-flex h-[52px] min-w-0 flex-1 cursor-pointer items-center justify-center bg-zinc-900 px-4 text-[0.95rem] font-semibold uppercase tracking-[0.05em] text-white shadow-sm transition-all duration-200 hover:bg-black hover:shadow-md active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 sm:px-6 sm:text-[1.05rem]"
+                        className="inline-flex h-[52px] min-w-0 flex-1 cursor-pointer items-center justify-center bg-zinc-900 px-4 text-[0.92rem] font-semibold uppercase tracking-[0.05em] text-white transition-colors duration-200 hover:bg-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
                     >
-                        Add To Cart
+                        Add
                     </button>
 
                     <button
@@ -307,10 +307,19 @@ export default function SingleProductDetailsPanel({
                     </button>
                 </div>
 
+                <button
+                    type="button"
+                    className="inline-flex h-[52px] w-full items-center justify-center border border-zinc-300 text-[0.92rem] font-semibold uppercase tracking-[0.05em] text-zinc-900 transition-colors hover:bg-zinc-50"
+                >
+                    See Look
+                </button>
+
+                <p className="text-[0.82rem] uppercase tracking-[0.04em] text-zinc-500">Free delivery to store</p>
+
                 {/* Clean Product Features Grid without Background Card Wrapper */}
                 {normalizedProductFeatures.length > 0 ? (
                     <div>
-                        <h3 className="font-monstrate text-[0.75rem] tracking-[0.08em] uppercase text-zinc-800">
+                        <h3 className="text-[0.75rem] tracking-[0.08em] uppercase text-zinc-800">
                             Product Features
                         </h3>
                         <div className="mt-2.5 grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3">
@@ -329,7 +338,7 @@ export default function SingleProductDetailsPanel({
                     </div>
                 ) : null}
 
-                <div className="mt-2 border-y border-zinc-200">
+                <div className="mt-1 border-y border-zinc-200">
                     {accordionItems.map((item) => {
                         const isOpen = openAccordionKey === item.key;
                         const hasContent = String(item.content || '').trim() !== '';
@@ -339,7 +348,7 @@ export default function SingleProductDetailsPanel({
                                 <button
                                     type="button"
                                     onClick={() => toggleAccordionItem(item.key)}
-                                    className="font-monstrate flex w-full items-center justify-between py-4 text-left text-[0.96rem] font-medium text-zinc-800"
+                                    className="flex w-full items-center justify-between py-4 text-left text-[0.98rem] font-medium text-zinc-800"
                                     aria-expanded={isOpen}
                                 >
                                     <span>{item.title}</span>
@@ -349,11 +358,11 @@ export default function SingleProductDetailsPanel({
                                 {isOpen ? (
                                     hasContent ? (
                                         <div
-                                            className="font-monstrate pb-4 text-[0.95rem] leading-7 text-zinc-600"
+                                            className="pb-4 text-[1rem] leading-9 text-zinc-600"
                                             dangerouslySetInnerHTML={{ __html: item.content }}
                                         />
                                     ) : (
-                                        <p className="font-monstrate pb-4 text-[0.95rem] text-zinc-500">No details available.</p>
+                                        <p className="pb-4 text-[0.95rem] text-zinc-500">No details available.</p>
                                     )
                                 ) : null}
                             </div>

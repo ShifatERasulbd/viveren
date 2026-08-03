@@ -504,8 +504,8 @@ export default function SingleProductMainSection({ product, initialColor = '' })
     const primaryVideo = filteredVideos[0] || '';
 
     return (
-        <section className={`${featuresFontClass}  px-5 py-6 sm:px-8 lg:px-12 lg:py-8`}>
-            <div className="mx-auto w-full max-w-[1800px]">
+        <section className={`${featuresFontClass} py-6 lg:py-8`}>
+            <div className="w-full">
                 <p className="mb-4 text-[0.95rem] uppercase tracking-[0.08em] text-slate-600 sm:mb-6">
                     {breadcrumbs.map((crumb, index) => (
                         <span key={crumb.label}>
@@ -517,8 +517,7 @@ export default function SingleProductMainSection({ product, initialColor = '' })
                     ))}
                 </p>
 
-                {/* UPDATED: Adjusted the grid system tracking to give more width to the gallery and less to the panel */}
-                <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.5fr)_440px] xl:gap-12">
+                <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(420px,560px)] xl:gap-8">
                     <div className="self-start">
                         <SingleProductMediaGallery
                             images={filteredImages}

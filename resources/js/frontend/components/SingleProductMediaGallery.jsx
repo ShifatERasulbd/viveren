@@ -46,16 +46,15 @@ export default function SingleProductMediaGallery({
 
     return (
         <div className="w-full">
-            {/* Main grid wrapper handling the columns */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-0 border border-zinc-200 sm:grid-cols-2">
                 {/* Primary Video Panel */}
                 {primaryVideo ? (
-                    <div className="relative overflow-hidden border border-zinc-900">
+                    <div className="relative overflow-hidden border-r border-zinc-200 bg-white">
                         {!isVideoReady && videoPlaceholderImage ? (
                             <img
                                 src={videoPlaceholderImage}
                                 alt="Product preview"
-                                className="aspect-[4/5] w-full object-cover object-center"
+                                className="block h-auto w-full object-cover object-center"
                             />
                         ) : null}
                         <video
@@ -67,7 +66,7 @@ export default function SingleProductMediaGallery({
                             playsInline
                             controls
                             onCanPlay={handleVideoCanPlay}
-                            className={`aspect-[4/5] w-full object-cover object-center ${
+                            className={`block h-auto w-full object-cover object-center ${
                                 isVideoReady ? 'opacity-100' : 'absolute inset-0 opacity-0'
                             }`}
                             preload="metadata"
@@ -78,36 +77,21 @@ export default function SingleProductMediaGallery({
                 {/* Product Images Loop */}
                 {safeImages.slice(0, 6).map((image, index) => {
                     const isCurrentlyActive = activeImage === image;
-                    
-                    /* CRITICAL FIX: Calculate the ACTUAL visual column placement.
-                       If a video exists, it occupies slot 0, pushing index 0 to grid slot 1.
-                    */
-                    const visualGridIndex = primaryVideo ? index + 1 : index;
-                    const isRightColumn = visualGridIndex % 2 !== 0;
-
-                    /* THE ROW ALIGNMENT FIX:
-                       If the item is visually on the right column, show zoom on its left.
-                       If the item is visually on the left column, show zoom on its right.
-                    */
-                    const alignmentClass = isRightColumn 
-                        ? 'right-[calc(100%+12px)]' 
-                        : 'left-[calc(100%+12px)]';
-
                     return (
                         <div key={`${image}-${index}`} className="relative">
                             <button
                                 type="button"
                                 onClick={() => handleImageClick(image)}
-                                className={`w-full overflow-hidden border transition-all duration-200 cursor-zoom-in ${
+                                className={`w-full cursor-zoom-in overflow-hidden border-b border-zinc-200 bg-white transition-all duration-200 sm:border-r ${
                                     isCurrentlyActive
-                                        ? 'border-zinc-900'
-                                        : 'border-zinc-200 hover:border-zinc-400'
+                                        ? 'ring-1 ring-inset ring-zinc-900'
+                                        : 'hover:opacity-95'
                                 }`}
                             >
                                 <img
                                     src={image}
                                     alt={`Product ${index + 1}`}
-                                    className="aspect-[4/5] w-full object-cover object-center pointer-events-none"
+                                    className="pointer-events-none block h-auto w-full object-cover object-center"
                                 />
                             </button>
 
