@@ -4,7 +4,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <title>{{ config('app.name', 'Timeless') }}</title>
+        <title>{{ config('app.name', 'Viveren') }}</title>
         <link id="app-favicon" rel="icon" type="image/x-icon" href="/favicon.ico">
 
         <link rel="preconnect" href="https://fonts.bunny.net">
