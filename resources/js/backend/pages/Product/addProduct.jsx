@@ -26,6 +26,7 @@ const initialForm = {
     long_description: '',
     additional_information: '',
     price: '',
+    discount_price: '',
     cover_image: '',
     size_chart_image: '',
     category_id: '',

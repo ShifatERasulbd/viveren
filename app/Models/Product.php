@@ -25,6 +25,7 @@ class Product extends Model
         'long_description',
         'additional_information',
         'price',
+        'discount_price',
         'cover_image',
         'size_chart_image',
         'size_chart_images',

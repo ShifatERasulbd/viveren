@@ -795,6 +795,22 @@ export default function EditForm({
                                         />
                                         {errors.price && <p className="text-xs text-destructive">{errors.price[0]}</p>}
                                     </div>
+                                      <div className="space-y-2">
+                                        <Label htmlFor="product-discount-price">
+                                            Discount Price
+                                        </Label>
+                                        <Input
+                                            id="product-discount-price"
+                                            name="discount_price"
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            value={form.discount_price ?? ''}
+                                            onChange={onChange}
+                                            placeholder="0.00"
+                                        />
+                                        {errors.discount_price && <p className="text-xs text-destructive">{errors.discount_price[0]}</p>}
+                                    </div>
                                 </div>
                             </div>
 

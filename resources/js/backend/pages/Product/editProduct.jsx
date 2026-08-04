@@ -26,6 +26,7 @@ const initialForm = {
     long_description: '',
     additional_information: '',
     price: '',
+    discount_price: '',
     cover_image: '',
     size_chart_image: '',
     category_id: '',
@@ -438,6 +439,7 @@ export default function EditProduct() {
                         long_description: data?.long_description || '',
                         additional_information: data?.additional_information || '',
                         price: data?.price ?? '',
+                        discount_price: data?.discount_price ?? '',
                         cover_image: data?.cover_image || '',
                         size_chart_image: data?.size_chart_image || '',
                         category_id: data?.category_id ?? '',
@@ -479,6 +481,7 @@ export default function EditProduct() {
                             size: String(row?.size || '').trim(),
                             stock: row?.stock ?? '',
                             price: row?.price ?? '',
+                            discount_price: row?.discount_price ?? '',
                             show_on_best_sellers: Boolean(row?.show_on_best_sellers),
                         }));
 
@@ -699,6 +702,7 @@ export default function EditProduct() {
                         sku: existing?.sku || (form.sku ? `${form.sku}-${defaultSkuSuffix}` : ''),
                         stock: pickVariantNumberValue(existing?.stock, form.stock),
                         price: pickVariantNumberValue(existing?.price, form.price),
+                        discount_price: pickVariantNumberValue(existing?.discount_price, form.discount_price),
                         show_on_best_sellers: Boolean(existing?.show_on_best_sellers ?? colorTrendingMap[color]),
                     });
                 });
