@@ -207,7 +207,7 @@ export default function SingleProductDetailsPanel({
             <div className="mt-5 space-y-5">
                 <div>
                     <h2 className="text-[0.78rem] uppercase tracking-[0.08em] text-zinc-700">Color Variations</h2>
-                    <div className="mt-2.5 flex items-center justify-between gap-3 border-b border-zinc-200 pb-3">
+                    <div className="mt-2.5 pb-3">
                         <div className="flex items-center gap-2.5">
                         {displayColors.map((color) => (
                             <button
@@ -228,22 +228,24 @@ export default function SingleProductDetailsPanel({
                             </button>
                         ))}
                         </div>
-                        <p className="text-[0.98rem] text-zinc-800">{selectedColorLabel}</p>
+                        <p className="mt-2 text-[0.82rem] font-medium uppercase tracking-[0.06em] text-zinc-700">
+                            Selected: <span className="font-bold text-zinc-900">{selectedColorLabel}</span>
+                        </p>
                     </div>
                 </div>
 
                 <div>
                     <h2 className="text-[0.78rem] uppercase tracking-[0.08em] text-zinc-700">Size Variations</h2>
-                    <div className="mt-2.5 border-y border-zinc-200">
+                    <div className="mt-2.5 flex flex-wrap gap-2">
                         {displaySizes.map((size) => (
                             <button
                                 key={size}
                                 type="button"
                                 onClick={() => onSelectSize(size)}
-                                className={`flex w-full items-center justify-start border-b px-3 py-3 text-[0.95rem] font-semibold uppercase last:border-b-0 ${
+                                className={`inline-flex h-[46px] min-w-[46px] items-center justify-center border px-3 text-[0.88rem] font-semibold uppercase tracking-[0.04em] transition-colors ${
                                     selectedSize === size
-                                        ? 'bg-zinc-50 text-zinc-950'
-                                        : 'text-zinc-700 hover:bg-zinc-50 hover:text-zinc-900'
+                                        ? 'border-zinc-950 bg-zinc-950 text-white'
+                                        : 'border-zinc-300 bg-white text-zinc-700 hover:border-zinc-600 hover:text-zinc-900'
                                 }`}
                             >
                                 {size}
@@ -258,14 +260,14 @@ export default function SingleProductDetailsPanel({
                                 setIsSizeChartModalOpen(true);
                             }
                         }}
-                        className={`mt-3 inline-flex items-center gap-2 text-[0.98rem] font-medium ${
+                        className={`mt-3 inline-flex items-center gap-1.5 text-[0.88rem] font-semibold uppercase tracking-[0.05em] ${
                             resolvedSizeChartImages.length > 0
                                 ? 'cursor-pointer text-zinc-800 hover:text-zinc-900'
                                 : 'cursor-not-allowed text-zinc-400'
                         }`}
                         disabled={resolvedSizeChartImages.length === 0}
                     >
-                        Measurements <RulerIcon />
+                        SIZE Chart <RulerIcon />
                     </button>
                 </div>
 
@@ -298,21 +300,10 @@ export default function SingleProductDetailsPanel({
                         Add
                     </button>
 
-                    <button
-                        type="button"
-                        className="inline-flex size-[52px] shrink-0 items-center justify-center border border-zinc-300 text-[1.65rem] text-zinc-700 hover:border-zinc-600"
-                        aria-label="Add to wishlist"
-                    >
-                        &#9825;
-                    </button>
+                   
                 </div>
 
-                <button
-                    type="button"
-                    className="inline-flex h-[52px] w-full items-center justify-center border border-zinc-300 text-[0.92rem] font-semibold uppercase tracking-[0.05em] text-zinc-900 transition-colors hover:bg-zinc-50"
-                >
-                    See Look
-                </button>
+             
 
                 <p className="text-[0.82rem] uppercase tracking-[0.04em] text-zinc-500">Free delivery to store</p>
 
