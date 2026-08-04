@@ -389,13 +389,13 @@ function ProductCard({ product, colorLookup = {}, colorNameLookup = {}, onAddToC
     
 
     return (
-        <article className="group mx-auto w-[318px] max-w-[318px] overflow-hidden border border-zinc-200">
+        <article className="group w-full overflow-hidden border border-zinc-200">
             <Link to={productLink} className="block">
-                <div className="relative h-[469px] w-[318px] overflow-hidden bg-zinc-100">
+                <div className="relative aspect-[2/3] w-full overflow-hidden bg-zinc-100">
                     <img
                         src={imageSrc}
                         alt={product.name}
-                        className="h-full w-full object-contain object-center transition-transform duration-500 group-hover:scale-105"
+                        className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
                     />
 
                     {/* Hover action buttons */}
