@@ -301,8 +301,8 @@ function RelatedProductCard({ product, onAddToCart, colorLookup = {}, colorNameB
    
 
     return (
-        <article className="group mx-auto w-full max-w-[315px] cursor-pointer">
-            <div className="relative h-[400px] overflow-hidden bg-zinc-100">
+        <article className="group w-full cursor-pointer">
+            <div className="relative aspect-[3/4] overflow-hidden bg-zinc-100">
                 <Link to={productLink} className="block">
                 <img
                     src={imageSource}
@@ -471,7 +471,7 @@ export default function RelatedProductsSection({ products = [] }) {
                 </div>
 
                 <div className="relative">
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-5 lg:gap-x-6">
+                    <div className="grid grid-cols-2 gap-x-1 gap-y-8 md:grid-cols-3 lg:grid-cols-5 lg:gap-x-1">
                         {products.map((product) => (
                             <RelatedProductCard
                                 key={product.id}
