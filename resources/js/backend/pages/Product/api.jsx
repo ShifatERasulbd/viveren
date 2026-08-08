@@ -46,7 +46,75 @@ function buildProductPayload(data = {}) {
     };
 }
 
-function buildProductFormData(data = {}) {
+function isFileLike(value) {
+    return typeof File !== 'undefined' && value instanceof File;
+}
+
+function readFileAsDataUrl(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error || new Error('Failed to read file'));
+        reader.readAsDataURL(file);
+    });
+}
+
+function loadImageFromDataUrl(dataUrl) {
+    return new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = () => reject(new Error('Failed to decode image'));
+        image.src = dataUrl;
+    });
+}
+
+async function optimizeImageFile(file) {
+    if (!isFileLike(file) || !file.type.startsWith('image/')) {
+        return file;
+    }
+
+    if (file.size <= 1024 * 1024) {
+        return file;
+    }
+
+    try {
+        const dataUrl = await readFileAsDataUrl(file);
+        const image = await loadImageFromDataUrl(dataUrl);
+        const maxDimension = 1600;
+        const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
+        const width = Math.max(1, Math.floor(image.width * scale));
+        const height = Math.max(1, Math.floor(image.height * scale));
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+
+        const context = canvas.getContext('2d');
+        if (!context) {
+            return file;
+        }
+
+        context.drawImage(image, 0, 0, width, height);
+
+        const blob = await new Promise((resolve) => {
+            canvas.toBlob(resolve, 'image/webp', 0.8);
+        });
+
+        if (!blob) {
+            return file;
+        }
+
+        return new File([blob], file.name.replace(/\.[^.]+$/, '.webp'), {
+            type: 'image/webp',
+            lastModified: Date.now(),
+        });
+    } catch (error) {
+        console.warn('Image optimization failed, sending original file instead.', error);
+        return file;
+    }
+}
+
+async function buildProductFormData(data = {}) {
     const payload = buildProductPayload(data);
     const formData = new FormData();
 
@@ -71,33 +139,42 @@ function buildProductFormData(data = {}) {
         formData.append(key, String(value));
     });
 
-    if (data.thumbnailImageFile instanceof File) {
-        formData.append('thumbnail_image', data.thumbnailImageFile);
+    const thumbnailImageFile = isFileLike(data.thumbnailImageFile)
+        ? await optimizeImageFile(data.thumbnailImageFile)
+        : null;
+    const sizeChartImageFile = isFileLike(data.sizeChartImageFile)
+        ? await optimizeImageFile(data.sizeChartImageFile)
+        : null;
+    const sizeChartImageFiles = Array.isArray(data.sizeChartImageFiles)
+        ? await Promise.all(data.sizeChartImageFiles.map((file) => optimizeImageFile(file)))
+        : [];
+    const galleryImageFiles = Array.isArray(data.galleryImageFiles)
+        ? await Promise.all(data.galleryImageFiles.map((file) => optimizeImageFile(file)))
+        : [];
+
+    if (thumbnailImageFile) {
+        formData.append('thumbnail_image', thumbnailImageFile);
     }
 
-    if (data.sizeChartImageFile instanceof File) {
-        formData.append('size_chart_image_file', data.sizeChartImageFile);
+    if (sizeChartImageFile) {
+        formData.append('size_chart_image_file', sizeChartImageFile);
     }
 
-    if (Array.isArray(data.sizeChartImageFiles)) {
-        data.sizeChartImageFiles.forEach((file) => {
-            if (file instanceof File) {
-                formData.append('size_chart_files[]', file);
-            }
-        });
-    }
+    sizeChartImageFiles.forEach((file) => {
+        if (isFileLike(file)) {
+            formData.append('size_chart_files[]', file);
+        }
+    });
 
-    if (Array.isArray(data.galleryImageFiles)) {
-        data.galleryImageFiles.forEach((file) => {
-            if (file instanceof File) {
-                formData.append('image_gallery[]', file);
-            }
-        });
-    }
+    galleryImageFiles.forEach((file) => {
+        if (isFileLike(file)) {
+            formData.append('image_gallery[]', file);
+        }
+    });
 
     if (Array.isArray(data.productVideoFiles)) {
         data.productVideoFiles.forEach((file) => {
-            if (file instanceof File) {
+            if (isFileLike(file)) {
                 formData.append('product_videos[]', file);
             }
         });
@@ -151,10 +228,11 @@ export async function fetchProduct(id) {
 
 export async function createProduct(data) {
     if (hasUploadFiles(data)) {
+        const formData = await buildProductFormData(data);
         return requestJson('/api/products', {
             needsCsrf: true,
             method: 'POST',
-            body: buildProductFormData(data),
+            body: formData,
         });
     }
 
@@ -170,14 +248,12 @@ export async function createProduct(data) {
 
 export async function updateProduct(id, data) {
     if (hasUploadFiles(data)) {
+        const formData = await buildProductFormData(data);
+        formData.append('_method', 'PUT');
         return requestJson(`/api/products/${id}`, {
             needsCsrf: true,
             method: 'POST',
-            body: (() => {
-                const formData = buildProductFormData(data);
-                formData.append('_method', 'PUT');
-                return formData;
-            })(),
+            body: formData,
         });
     }
 
