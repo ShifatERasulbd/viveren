@@ -233,7 +233,7 @@ class ProductController extends Controller
             'variant_rows.*.size' => 'nullable|string|max:255',
             'variant_rows.*.sku' => 'nullable|string|max:255',
             'variant_rows.*.stock' => 'nullable',
-            'variant_rows.*.price' => 'nullable',
+            'variant_rows.*.weight' => 'nullable|numeric|min:0',
             'variant_rows.*.show_on_best_sellers' => 'nullable|boolean',
             'color_variant_images' => 'nullable|array',
             'color_variant_images.*' => 'nullable|array',
@@ -353,6 +353,9 @@ class ProductController extends Controller
             'additional_information' => 'nullable|string',
             'price' => 'required|numeric',
             'discount_price' => 'nullable|numeric',
+            'length' => 'nullable|numeric|min:0',
+            'width' => 'nullable|numeric|min:0',
+            'height' => 'nullable|numeric|min:0',
             'cover_image' => 'nullable|string',
             'size_chart_image' => 'nullable|string',
             'size_chart_images' => 'nullable|array',
@@ -386,7 +389,7 @@ class ProductController extends Controller
             'variant_rows.*.size' => 'nullable|string|max:255',
             'variant_rows.*.sku' => 'nullable|string|max:255',
             'variant_rows.*.stock' => 'nullable',
-            'variant_rows.*.price' => 'nullable',
+            'variant_rows.*.weight' => 'nullable|numeric|min:0',
             'variant_rows.*.show_on_best_sellers' => 'nullable|boolean',
             'color_variant_images' => 'nullable|array',
             'color_variant_images.*' => 'nullable|array',
@@ -830,13 +833,20 @@ class ProductController extends Controller
                 return [];
             }
 
+            $weight = $row['weight'] ?? '';
+            if (is_numeric($weight)) {
+                $weight = (string) (float) $weight;
+            } else {
+                $weight = trim((string) $weight);
+            }
+
             return [
                 'key' => (string) ($row['key'] ?? ''),
                 'color' => $this->normalizeColorSelectionValue($row['color'] ?? ''),
                 'size' => $this->normalizeSizeSelectionValue($row['size'] ?? ''),
                 'sku' => (string) ($row['sku'] ?? ''),
                 'stock' => $row['stock'] ?? '',
-                'price' => $row['price'] ?? '',
+                'weight' => $weight,
                 'show_on_best_sellers' => filter_var(
                     $row['show_on_best_sellers'] ?? false,
                     FILTER_VALIDATE_BOOLEAN,

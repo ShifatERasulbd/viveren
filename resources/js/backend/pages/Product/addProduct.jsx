@@ -299,7 +299,7 @@ export default function AddProduct() {
                         size,
                         sku: existing?.sku || (form.sku ? `${form.sku}-${defaultSkuSuffix}` : ''),
                         stock: pickVariantNumberValue(existing?.stock, form.stock),
-                        price: pickVariantNumberValue(existing?.price, form.price),
+                        weight: pickVariantNumberValue(existing?.weight, ''),
                         show_on_best_sellers: Boolean(existing?.show_on_best_sellers ?? colorTrendingMap[color]),
                     });
                 });

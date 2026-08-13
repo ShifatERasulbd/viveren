@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CheckoutOrder;
+use App\Models\Product;
 use App\Services\ShippingRateService;
 use App\Services\ShipStationService;
 use App\Services\UpsService;
@@ -471,51 +472,213 @@ class CheckoutOrderController extends Controller
     protected function calculateShippingByCourier(string $courier, array $payload): float
     {
         $subtotal = (float) ($payload['subtotal'] ?? 0);
-        $fallbackShipping = $this->shippingRateService->calculate([
-            'country' => $payload['country'] ?? null,
-            'state' => $payload['state'] ?? null,
-        ], $subtotal);
 
-        if ($courier === 'ups') {
-            $weight = $this->estimateWeight($payload['items'] ?? []);
+        if ($courier !== 'ups') {
+            return 0.0;
+        }
 
-            if (! $this->upsService->isConfigured()) {
-                // Graceful fallback while UPS credentials are not set in local/dev.
-                return $fallbackShipping;
+        $resolvedItems = $this->resolveShippingQuoteItems($payload['items'] ?? []);
+        $weight = $this->estimateWeight($resolvedItems);
+        $dimensions = $this->resolvePackageDimensions($resolvedItems);
+
+        if (! $this->upsService->isConfigured()) {
+            throw new \RuntimeException('UPS credentials are not configured.');
+        }
+
+        try {
+            return $this->upsService->getShipmentCharge([
+                'country' => $payload['country'] ?? null,
+                'state' => $payload['state'] ?? null,
+                'city' => $payload['city'] ?? null,
+                'postal_code' => $payload['postal_code'] ?? null,
+                'weight' => $weight,
+                'items' => $resolvedItems,
+                'dimensions' => $dimensions,
+                'residential' => $payload['residential'] ?? null,
+            ]);
+        } catch (\Throwable $exception) {
+            Log::warning('UPS shipping quote failed. Shipping quote is rejected instead of using flat rate.', [
+                'error' => $exception->getMessage(),
+                'country' => $payload['country'] ?? null,
+                'state' => $payload['state'] ?? null,
+                'postal_code' => $payload['postal_code'] ?? null,
+            ]);
+
+            throw $exception;
+        }
+    }
+
+    protected function resolveShippingQuoteItems(array $items): array
+    {
+        if (! is_array($items) || $items === []) {
+            return [];
+        }
+
+        $resolved = [];
+
+        foreach ($items as $item) {
+            if (! is_array($item)) {
+                continue;
             }
 
-            try {
-                return $this->upsService->getShipmentCharge([
-                    'country' => $payload['country'] ?? null,
-                    'state' => $payload['state'] ?? null,
-                    'city' => $payload['city'] ?? null,
-                    'postal_code' => $payload['postal_code'] ?? null,
-                    'weight' => $weight,
-                ]);
-            } catch (\Throwable $exception) {
-                Log::warning('UPS shipping quote failed. Falling back to default shipping rate.', [
-                    'error' => $exception->getMessage(),
-                    'country' => $payload['country'] ?? null,
-                    'state' => $payload['state'] ?? null,
-                    'postal_code' => $payload['postal_code'] ?? null,
-                ]);
+            $resolvedItem = $item;
+            $productId = $item['productId'] ?? $item['product_id'] ?? null;
 
-                return $fallbackShipping;
+            if ($productId !== null && $productId !== '') {
+                $product = Product::query()->find($productId);
+                if ($product) {
+                    $resolvedItem['weight'] = $resolvedItem['weight'] ?? $this->resolveVariantWeight($product, $item['selectedColor'] ?? '', $item['selectedSize'] ?? '', $item['sku'] ?? '');
+                    $resolvedItem['length'] = $resolvedItem['length'] ?? $product->length;
+                    $resolvedItem['width'] = $resolvedItem['width'] ?? $product->width;
+                    $resolvedItem['height'] = $resolvedItem['height'] ?? $product->height;
+                }
+            }
+
+            $resolved[] = $resolvedItem;
+        }
+
+        return $resolved;
+    }
+
+    protected function resolveVariantWeight(Product $product, string $selectedColor = '', string $selectedSize = '', string $selectedSku = ''): ?float
+    {
+        $rows = is_array($product->variant_rows) ? $product->variant_rows : [];
+        if ($rows === []) {
+            return $this->normalizeWeightToFloat($product->weight ?? null);
+        }
+
+        $selectedSku = strtolower(trim((string) $selectedSku));
+        $selectedColor = strtolower(trim((string) $selectedColor));
+        $selectedSize = strtolower(trim((string) $selectedSize));
+
+        foreach ($rows as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $skuMatch = $selectedSku !== '' && strtolower(trim((string) ($row['sku'] ?? ''))) === $selectedSku;
+            if ($skuMatch) {
+                return $this->normalizeWeightToFloat($row['weight'] ?? $product->weight ?? null);
+            }
+
+            $rowColor = strtolower(trim((string) ($row['color'] ?? '')));
+            $rowSize = strtolower(trim((string) ($row['size'] ?? '')));
+
+            if (
+                ($selectedColor === '' || $rowColor === $selectedColor || str_contains($rowColor, $selectedColor))
+                && ($selectedSize === '' || $rowSize === $selectedSize || str_contains($rowSize, $selectedSize))
+            ) {
+                $weight = $this->normalizeWeightToFloat($row['weight'] ?? $product->weight ?? null);
+                if ($weight !== null) {
+                    return $weight;
+                }
             }
         }
 
-        return $fallbackShipping;
+        return $this->normalizeWeightToFloat($product->weight ?? null);
+    }
+
+    protected function normalizeWeightToFloat($weight): ?float
+    {
+        if ($weight === null || $weight === '') {
+            return null;
+        }
+
+        if (is_numeric($weight)) {
+            $value = (float) $weight;
+            return $value > 0 ? $value : null;
+        }
+
+        $raw = trim((string) $weight);
+        if ($raw === '') {
+            return null;
+        }
+
+        if (preg_match('/-?\d+(?:\.\d+)?/', $raw, $matches) === 1) {
+            $value = (float) $matches[0];
+            return $value > 0 ? $value : null;
+        }
+
+        return null;
+    }
+
+    protected function resolvePackageDimensions(array $items): ?array
+    {
+        $lengths = [];
+        $widths = [];
+        $heights = [];
+
+        foreach ($items as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+
+            $length = $this->normalizeDimensionValue($item['length'] ?? null);
+            $width = $this->normalizeDimensionValue($item['width'] ?? null);
+            $height = $this->normalizeDimensionValue($item['height'] ?? null);
+
+            if ($length !== null) {
+                $lengths[] = $length;
+            }
+            if ($width !== null) {
+                $widths[] = $width;
+            }
+            if ($height !== null) {
+                $heights[] = $height;
+            }
+        }
+
+        if ($lengths === [] || $widths === [] || $heights === []) {
+            return null;
+        }
+
+        return [
+            'length' => max(1, (int) array_sum($lengths)),
+            'width' => max(1, (int) array_sum($widths)),
+            'height' => max(1, (int) array_sum($heights)),
+        ];
+    }
+
+    protected function normalizeDimensionValue(mixed $value): ?int
+    {
+        if (! is_numeric($value)) {
+            return null;
+        }
+
+        $numeric = (float) $value;
+        if ($numeric <= 0) {
+            return null;
+        }
+
+        return max(1, (int) ceil($numeric));
     }
 
     protected function estimateWeight(array $items): float
     {
         $quantity = 0;
+        $totalWeight = 0.0;
+        $hasItemWeight = false;
 
         foreach ($items as $item) {
-            $quantity += max(1, (int) ($item['quantity'] ?? 1));
+            if (! is_array($item)) {
+                continue;
+            }
+
+            $lineQuantity = max(1, (int) ($item['quantity'] ?? 1));
+            $quantity += $lineQuantity;
+
+            $lineWeight = $this->normalizeWeightToFloat($item['weight'] ?? null);
+            if ($lineWeight !== null && $lineWeight > 0) {
+                $hasItemWeight = true;
+                $totalWeight += $lineWeight * $lineQuantity;
+            }
         }
 
-        return max(1.0, $quantity * 0.8);
+        if (! $hasItemWeight) {
+            return max(1.0, $quantity * 0.8);
+        }
+
+        return max(0.5, round($totalWeight, 3));
     }
 
     protected function dispatchOrderToCourier(CheckoutOrder $order): array
