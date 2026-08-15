@@ -56,6 +56,7 @@ function resolvePageLabel(pathname) {
     if (path === '/register') return 'Register';
     if (path.startsWith('/search/')) return 'Search';
     if (path.startsWith('/collection/')) return 'Collection';
+    if (path.startsWith('/collections/')) return 'Collection';
     if (path === '/new-arrivals') return 'Collection';
     if (path === '/trending') return 'Trending';
     if (path === '/best-sellers') return 'Best Sellers';
@@ -162,6 +163,7 @@ function AppRouter() {
                         <Route path="shop" element={withPageFallback(ShopPage)} />
                         <Route path="search/:productSlug" element={withPageFallback(ShopPage)} />
                         <Route path="collection/:slug" element={withPageFallback(ShopPage)} />
+                        <Route path="collections/:slug" element={withPageFallback(ShopPage)} />
                         <Route path="new-arrivals" element={withPageFallback(ShopPage)} />
                         <Route path="trending" element={withPageFallback(ShopPage)} />
                         <Route path="best-sellers" element={withPageFallback(ShopPage)} />

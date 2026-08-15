@@ -1003,6 +1003,7 @@ export default function ShopCatalogSection() {
     const [variantModalState, setVariantModalState] = useState(null);
     const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
     const [collectionItems, setCollectionItems] = useState([]);
+    const [newArrivalsProductIds, setNewArrivalsProductIds] = useState([]);
     const [isContentVisible, setIsContentVisible] = useState(false);
     const catalogTopRef = useRef(null);
 
@@ -1020,8 +1021,22 @@ export default function ShopCatalogSection() {
 
     const collectionSlug = useMemo(() => {
         const segments = String(location.pathname || '').split('/').filter(Boolean);
+
         if (segments.length === 1 && String(segments[0]).toLowerCase() === 'new-arrivals') {
             return 'new-arrivals';
+        }
+
+        if (segments.length === 2 && String(segments[0]).toLowerCase() === 'collections') {
+            const value = String(segments[1] || '').trim();
+            if (!value) {
+                return '';
+            }
+
+            try {
+                return decodeURIComponent(value).trim();
+            } catch {
+                return value;
+            }
         }
 
         if (segments.length < 2 || String(segments[0]).toLowerCase() !== 'collection') {
@@ -1036,6 +1051,13 @@ export default function ShopCatalogSection() {
     }, [location.pathname]);
 
     const isCollectionView = Boolean(collectionSlug);
+
+    const isNewArrivalsView = useMemo(() => {
+        const pathName = String(location.pathname || '').toLowerCase();
+        return pathName === '/new-arrivals'
+            || pathName === '/collections/new-arrivals'
+            || pathName === '/collections/new-arrivals/';
+    }, [location.pathname]);
 
     const isBestSellersView = useMemo(() => {
         const pathName = String(location.pathname || '').toLowerCase();
@@ -1062,12 +1084,14 @@ export default function ShopCatalogSection() {
                     setIsLoading(true);
                 }
 
+                const productsEndpoint = isNewArrivalsView ? '/api/public/new-arrivals' : '/api/public/shop-products';
+
                 const [sizesRes, categoriesRes, subCategoriesRes, grandChildsRes, productsRes, collectionsRes, colorsRes] = await Promise.all([
                     fetch('/api/public/sizes', { headers: { Accept: 'application/json' } }),
                     fetch('/api/public/categories', { headers: { Accept: 'application/json' } }),
                     fetch('/api/public/sub-categories', { headers: { Accept: 'application/json' } }),
                     fetch('/api/public/grand-childs', { headers: { Accept: 'application/json' } }),
-                    fetch('/api/public/shop-products', { headers: { Accept: 'application/json' } }),
+                    fetch(productsEndpoint, { headers: { Accept: 'application/json' } }),
                     fetch('/api/public/collections', { headers: { Accept: 'application/json' } }),
                     fetch('/api/public/colors', { headers: { Accept: 'application/json' } }),
                 ]);
@@ -1225,6 +1249,61 @@ export default function ShopCatalogSection() {
         );
     }, [activeCollection]);
 
+    const effectiveCollectionProductIdSet = useMemo(() => {
+        if (isNewArrivalsView && newArrivalsProductIds.length > 0) {
+            return new Set(newArrivalsProductIds);
+        }
+
+        if (isNewArrivalsView) {
+            return new Set();
+        }
+
+        return activeCollectionProductIdSet;
+    }, [isNewArrivalsView, newArrivalsProductIds, activeCollectionProductIdSet]);
+
+    useEffect(() => {
+        if (!isNewArrivalsView) {
+            setNewArrivalsProductIds([]);
+            return;
+        }
+
+        let ignore = false;
+
+        async function loadNewArrivalsProductIds() {
+            try {
+                const response = await fetch('/api/public/new-arrivals', { headers: { Accept: 'application/json' } });
+                if (!response.ok) {
+                    return;
+                }
+
+                const payload = await response.json();
+                const list = Array.isArray(payload?.products)
+                    ? payload.products
+                    : Array.isArray(payload)
+                        ? payload
+                        : [];
+
+                const ids = list
+                    .map((product) => Number(product?.id))
+                    .filter((value) => Number.isInteger(value) && value > 0);
+
+                if (!ignore) {
+                    setNewArrivalsProductIds(ids);
+                }
+            } catch {
+                if (!ignore) {
+                    setNewArrivalsProductIds([]);
+                }
+            }
+        }
+
+        loadNewArrivalsProductIds();
+
+        return () => {
+            ignore = true;
+        };
+    }, [isNewArrivalsView]);
+
     useEffect(() => {
         const params = new URLSearchParams(location.search);
         const pathName = String(location.pathname || '').toLowerCase();
@@ -1309,13 +1388,17 @@ export default function ShopCatalogSection() {
         const hasMax = Number.isFinite(max);
 
         return products.filter((product) => {
+            if (isNewArrivalsView) {
+                return true;
+            }
+
             if (isCollectionView) {
-                if (!activeCollection || activeCollectionProductIdSet.size === 0) {
+                if (effectiveCollectionProductIdSet.size === 0) {
                     return false;
                 }
 
                 const sourceProductId = Number(product.base_product_id ?? product.id);
-                if (!activeCollectionProductIdSet.has(sourceProductId)) {
+                if (!effectiveCollectionProductIdSet.has(sourceProductId)) {
                     return false;
                 }
             }
@@ -1380,8 +1463,9 @@ export default function ShopCatalogSection() {
         sizeNameLookup,
         sizeIdByNameLookup,
         isCollectionView,
+        isNewArrivalsView,
         activeCollection,
-        activeCollectionProductIdSet,
+        effectiveCollectionProductIdSet,
         isBestSellersView,
     ]);
 

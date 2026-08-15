@@ -19,6 +19,14 @@ Route::get('/collection/{slug}', function () {
     return view('home');
 });
 
+Route::get('/collections/{slug}', function () {
+    return view('home');
+});
+
+Route::get('/collections/new-arrivals', function () {
+    return view('home');
+});
+
 Route::get('/new-arrivals', function () {
     return view('home');
 });
