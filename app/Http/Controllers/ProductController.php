@@ -15,10 +15,13 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Throwable;
 
 class ProductController extends Controller
 {
+    public const FABRIC_OPTIONS = ['Flex Twill', 'Dual Skin Scuba', 'Aero Twill', 'Terra Soft'];
+
     public function __construct(private readonly JoorService $joorService)
     {
     }
@@ -259,6 +262,7 @@ class ProductController extends Controller
             'variant_rows.*.stock' => 'nullable',
             'variant_rows.*.weight' => 'nullable|numeric|min:0',
             'variant_rows.*.show_on_best_sellers' => 'nullable|boolean',
+            'variant_rows.*.fabric' => ['nullable', 'string', Rule::in(self::FABRIC_OPTIONS)],
             'color_variant_images' => 'nullable|array',
             'color_variant_images.*' => 'nullable|array',
             'color_variant_images.*.*' => 'nullable|string|max:2048',
@@ -448,6 +452,7 @@ class ProductController extends Controller
             'variant_rows.*.stock' => 'nullable',
             'variant_rows.*.weight' => 'nullable|numeric|min:0',
             'variant_rows.*.show_on_best_sellers' => 'nullable|boolean',
+            'variant_rows.*.fabric' => ['nullable', 'string', Rule::in(self::FABRIC_OPTIONS)],
             'color_variant_images' => 'nullable|array',
             'color_variant_images.*' => 'nullable|array',
             'color_variant_images.*.*' => 'nullable|string|max:2048',
@@ -971,6 +976,7 @@ class ProductController extends Controller
                     FILTER_VALIDATE_BOOLEAN,
                     FILTER_NULL_ON_FAILURE,
                 ) === true,
+                'fabric' => in_array($row['fabric'] ?? '', self::FABRIC_OPTIONS, true) ? $row['fabric'] : '',
             ];
         }, $variantRows));
     }

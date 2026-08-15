@@ -138,6 +138,7 @@ export default function EditProduct() {
     const [selectedColors, setSelectedColors] = useState([]);
     const [selectedSizes, setSelectedSizes] = useState([]);
     const [colorTrendingMap, setColorTrendingMap] = useState({});
+    const [colorFabricMap, setColorFabricMap] = useState({});
     const [errors, setErrors] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -488,9 +489,11 @@ export default function EditProduct() {
                             stock: row?.stock ?? '',
                             weight: row?.weight ?? '',
                             show_on_best_sellers: Boolean(row?.show_on_best_sellers),
+                            fabric: String(row?.fabric || '').trim(),
                         }));
 
                         const nextTrendingMap = {};
+                        const nextFabricMap = {};
                         nextRows.forEach((row) => {
                             const colorKey = String(row.color || '').trim();
                             if (!colorKey) {
@@ -504,10 +507,15 @@ export default function EditProduct() {
                             if (row.show_on_best_sellers === true) {
                                 nextTrendingMap[colorKey] = true;
                             }
+
+                            if (row.fabric && !Object.prototype.hasOwnProperty.call(nextFabricMap, colorKey)) {
+                                nextFabricMap[colorKey] = row.fabric;
+                            }
                         });
 
                         setVariantRows(nextRows);
                         setColorTrendingMap(nextTrendingMap);
+                        setColorFabricMap(nextFabricMap);
                         setSelectedColors([...new Set(nextRows.map((row) => row.color).filter(Boolean))]);
                         setSelectedSizes([...new Set(nextRows.map((row) => row.size).filter(Boolean))]);
                     } else if (fallbackVariants.length > 0) {
@@ -668,6 +676,21 @@ export default function EditProduct() {
             return next;
         });
 
+        setColorFabricMap((previous) => {
+            const next = {};
+
+            Object.entries(previous || {}).forEach(([colorKey, fabricValue]) => {
+                const colorId = resolveColorId(colorKey);
+                if (!colorId) {
+                    return;
+                }
+
+                next[colorId] = fabricValue;
+            });
+
+            return next;
+        });
+
         setForm((previous) => ({
             ...previous,
             color: normalizeIdList(parseSelectionValues(previous.color), resolveColorId).join(', '),
@@ -708,13 +731,14 @@ export default function EditProduct() {
                         stock: pickVariantNumberValue(existing?.stock, form.stock),
                         weight: pickVariantNumberValue(existing?.weight, ''),
                         show_on_best_sellers: Boolean(existing?.show_on_best_sellers ?? colorTrendingMap[color]),
+                        fabric: existing?.fabric || colorFabricMap[color] || '',
                     });
                 });
             });
 
             return next;
         });
-    }, [selectedColors, selectedSizes, form.sku, form.stock, form.price, isGroupEdit, colorLabelById, sizeLabelById, colorTrendingMap]);
+    }, [selectedColors, selectedSizes, form.sku, form.stock, form.price, isGroupEdit, colorLabelById, sizeLabelById, colorTrendingMap, colorFabricMap]);
 
     useEffect(() => {
         const validValues = new Set(galleryPreviewItems.map((item) => item.value));
@@ -876,6 +900,15 @@ export default function EditProduct() {
         });
         setColorVariantSizeChartMap((previous) => {
             if (!previous[colorToRemove]) {
+                return previous;
+            }
+
+            const next = { ...previous };
+            delete next[colorToRemove];
+            return next;
+        });
+        setColorFabricMap((previous) => {
+            if (!Object.prototype.hasOwnProperty.call(previous, colorToRemove)) {
                 return previous;
             }
 
@@ -1055,6 +1088,26 @@ export default function EditProduct() {
         );
     };
 
+    const handleColorFabricChange = (color, fabricValue) => {
+        const normalizedColor = String(color || '').trim();
+        if (!normalizedColor) {
+            return;
+        }
+
+        setColorFabricMap((previous) => ({
+            ...previous,
+            [normalizedColor]: fabricValue,
+        }));
+
+        setVariantRows((previous) =>
+            previous.map((row) => (
+                String(row.color || '').trim() === normalizedColor
+                    ? { ...row, fabric: fabricValue }
+                    : row
+            )),
+        );
+    };
+
     const handleSubmit = async (event) => {
         event.preventDefault();
 
@@ -1185,6 +1238,7 @@ export default function EditProduct() {
                     selectedColors={selectedColors}
                     selectedSizes={selectedSizes}
                     colorTrendingMap={colorTrendingMap}
+                    colorFabricMap={colorFabricMap}
                     variantRows={variantRows}
                     colorVariantImageMap={colorVariantImageMap}
                     colorVariantVideoMap={colorVariantVideoMap}
@@ -1200,6 +1254,7 @@ export default function EditProduct() {
                     onRemoveSize={handleRemoveSize}
                     onVariantRowChange={handleVariantRowChange}
                     onColorTrendingChange={handleColorTrendingChange}
+                    onColorFabricChange={handleColorFabricChange}
                     onColorVariantImagesChange={handleColorVariantImagesChange}
                     onColorVariantVideosChange={handleColorVariantVideosChange}
                     onColorVariantSizeChartsChange={handleColorVariantSizeChartsChange}

@@ -14,6 +14,8 @@ import { Separator } from '@/components/ui/separator';
 import RichTextEditor from './richTextEditor';
 import ProductFeaturesRepeater from './ProductFeaturesRepeater';
 
+const FABRIC_OPTIONS = ['Flex Twill', 'Dual Skin Scuba', 'Aero Twill', 'Terra Soft'];
+
 export default function EditForm({
     form = {},
     colorOptions = [],
@@ -27,9 +29,9 @@ export default function EditForm({
     selectedColors = [],
     selectedSizes = [],
     colorTrendingMap = {},
+    colorFabricMap = {},
     variantRows = [],
     colorVariantImageMap = {},
-    colorVariantVideoMap = {},
     colorVariantSizeChartMap = {},
     galleryPreviewItems = [],
     variantGroupName = '',
@@ -45,8 +47,8 @@ export default function EditForm({
     onRemoveSize,
     onVariantRowChange,
     onColorTrendingChange,
+    onColorFabricChange,
     onColorVariantImagesChange,
-    onColorVariantVideosChange,
     onColorVariantSizeChartsChange,
     onGalleryFilesChange,
     onRemoveExistingGalleryImage,
@@ -67,9 +69,6 @@ export default function EditForm({
     const [isImageModalOpen, setIsImageModalOpen] = useState(false);
     const [activeColorForImages, setActiveColorForImages] = useState('');
     const [draftImageValues, setDraftImageValues] = useState([]);
-    const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
-    const [activeColorForVideos, setActiveColorForVideos] = useState('');
-    const [draftVideoValues, setDraftVideoValues] = useState([]);
     const [isSizeChartModalOpen, setIsSizeChartModalOpen] = useState(false);
     const [activeColorForSizeCharts, setActiveColorForSizeCharts] = useState('');
     const [draftSizeChartValues, setDraftSizeChartValues] = useState([]);
@@ -145,33 +144,6 @@ export default function EditForm({
             onColorVariantImagesChange?.(activeColorForImages, draftImageValues);
         }
         closeColorImagesModal();
-    };
-
-    const openColorVideosModal = (color) => {
-        setActiveColorForVideos(color);
-        setDraftVideoValues(colorVariantVideoMap[color] || []);
-        setIsVideoModalOpen(true);
-    };
-
-    const closeColorVideosModal = () => {
-        setIsVideoModalOpen(false);
-        setActiveColorForVideos('');
-        setDraftVideoValues([]);
-    };
-
-    const toggleDraftVideo = (value) => {
-        setDraftVideoValues((previous) =>
-            previous.includes(value)
-                ? previous.filter((item) => item !== value)
-                : [...previous, value],
-        );
-    };
-
-    const saveColorVideosSelection = () => {
-        if (activeColorForVideos) {
-            onColorVariantVideosChange?.(activeColorForVideos, draftVideoValues);
-        }
-        closeColorVideosModal();
     };
 
     const openColorSizeChartsModal = (color) => {
@@ -879,7 +851,7 @@ export default function EditForm({
                                                     <th className="py-2 pr-2">Weight</th>
                                                     <th className="py-2">Trending</th>
                                                     <th className="py-2">Color Images</th>
-                                                    <th className="py-2">Color Videos</th>
+                                                    <th className="py-2">Fabric</th>
                                                     <th className="py-2">Size Charts</th>
                                                 </tr>
                                             </thead>
@@ -956,23 +928,21 @@ export default function EditForm({
                                                         </td>
                                                         <td className="py-2">
                                                             {firstColorRowKeys[row.key] ? (
-                                                                <div className="space-y-1">
-                                                                    <Button
-                                                                        type="button"
-                                                                        variant="outline"
-                                                                        size="sm"
-                                                                        className="w-full"
-                                                                        onClick={() => openColorVideosModal(row.color)}
-                                                                        disabled={isSubmitting || productVideoPreviewItems.length === 0}
-                                                                    >
-                                                                        Attach Videos
-                                                                    </Button>
-                                                                    <p className="text-[11px] text-muted-foreground">
-                                                                        {(colorVariantVideoMap[row.color] || []).length} selected for {getColorLabel(row.color)}
-                                                                    </p>
-                                                                </div>
+                                                                <select
+                                                                    value={colorFabricMap[row.color] || ''}
+                                                                    onChange={(event) => onColorFabricChange?.(row.color, event.target.value)}
+                                                                    disabled={isSubmitting}
+                                                                    className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm shadow-xs outline-none ring-offset-background focus-visible:ring-1 focus-visible:ring-ring"
+                                                                >
+                                                                    <option value="">Select fabric</option>
+                                                                    {FABRIC_OPTIONS.map((fabric) => (
+                                                                        <option key={fabric} value={fabric}>
+                                                                            {fabric}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
                                                             ) : (
-                                                                <p className="text-xs text-muted-foreground">Uses {getColorLabel(row.color)} videos</p>
+                                                                <p className="text-xs text-muted-foreground">Uses {getColorLabel(row.color)} fabric</p>
                                                             )}
                                                         </td>
                                                         <td className="py-2">
@@ -1076,70 +1046,6 @@ export default function EditForm({
                             </Button>
                             <Button type="button" onClick={saveColorImagesSelection}>
                                 Save Selection ({draftImageValues.length})
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {isVideoModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                    <div className="w-full max-w-4xl rounded-lg border bg-background shadow-lg">
-                        <div className="flex items-center justify-between border-b px-4 py-3">
-                            <h3 className="text-base font-semibold">Attach Videos to {getColorLabel(activeColorForVideos)}</h3>
-                            <Button type="button" variant="ghost" size="sm" onClick={closeColorVideosModal}>
-                                Close
-                            </Button>
-                        </div>
-
-                        <div className="max-h-[70vh] overflow-y-auto p-4">
-                            {productVideoPreviewItems.length > 0 ? (
-                                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-                                    {productVideoPreviewItems.map((video) => {
-                                        const isSelected = draftVideoValues.includes(video.value);
-
-                                        return (
-                                            <button
-                                                key={video.id}
-                                                type="button"
-                                                onClick={() => toggleDraftVideo(video.value)}
-                                                className={`overflow-hidden rounded-md border p-2 text-left transition ${
-                                                    isSelected
-                                                        ? 'border-primary ring-2 ring-primary/30'
-                                                        : 'border-input hover:border-primary/60'
-                                                }`}
-                                            >
-                                                <video
-                                                    src={video.url}
-                                                    className="h-36 w-full rounded bg-muted/30 object-cover"
-                                                    preload="metadata"
-                                                    muted
-                                                />
-                                                <div className="space-y-1 p-1">
-                                                    <p className="truncate text-xs font-medium" title={video.name}>
-                                                        {video.name}
-                                                    </p>
-                                                    <p className="text-[11px] text-muted-foreground">
-                                                        {isSelected ? 'Selected' : 'Click to select'}
-                                                    </p>
-                                                </div>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            ) : (
-                                <div className="rounded border border-dashed p-6 text-center text-sm text-muted-foreground">
-                                    Upload product videos first to attach them to this color variant.
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="flex items-center justify-end gap-2 border-t px-4 py-3">
-                            <Button type="button" variant="outline" onClick={closeColorVideosModal}>
-                                Cancel
-                            </Button>
-                            <Button type="button" onClick={saveColorVideosSelection}>
-                                Save Selection ({draftVideoValues.length})
                             </Button>
                         </div>
                     </div>

@@ -97,6 +97,7 @@ export default function AddProduct() {
     const [selectedColors, setSelectedColors] = useState([]);
     const [selectedSizes, setSelectedSizes] = useState([]);
     const [colorTrendingMap, setColorTrendingMap] = useState({});
+    const [colorFabricMap, setColorFabricMap] = useState({});
     const [variantRows, setVariantRows] = useState([]);
     const [colorVariantImageMap, setColorVariantImageMap] = useState({});
     const [colorVariantVideoMap, setColorVariantVideoMap] = useState({});
@@ -301,13 +302,14 @@ export default function AddProduct() {
                         stock: pickVariantNumberValue(existing?.stock, form.stock),
                         weight: pickVariantNumberValue(existing?.weight, ''),
                         show_on_best_sellers: Boolean(existing?.show_on_best_sellers ?? colorTrendingMap[color]),
+                        fabric: existing?.fabric || colorFabricMap[color] || '',
                     });
                 });
             });
 
             return next;
         });
-    }, [selectedColors, selectedSizes, form.sku, form.stock, form.price, colorTrendingMap]);
+    }, [selectedColors, selectedSizes, form.sku, form.stock, form.price, colorTrendingMap, colorFabricMap]);
 
     const handleChange = (event) => {
         const { name, value, type, checked } = event.target;
@@ -467,6 +469,15 @@ export default function AddProduct() {
             delete next[colorToRemove];
             return next;
         });
+        setColorFabricMap((previous) => {
+            if (!Object.prototype.hasOwnProperty.call(previous, colorToRemove)) {
+                return previous;
+            }
+
+            const next = { ...previous };
+            delete next[colorToRemove];
+            return next;
+        });
     };
 
     const handleReorderColors = (fromColor, toColor) => {
@@ -515,6 +526,26 @@ export default function AddProduct() {
             previous.map((row) => (
                 String(row.color || '').trim() === normalizedColor
                     ? { ...row, show_on_best_sellers: Boolean(checked) }
+                    : row
+            )),
+        );
+    };
+
+    const handleColorFabricChange = (color, fabricValue) => {
+        const normalizedColor = String(color || '').trim();
+        if (!normalizedColor) {
+            return;
+        }
+
+        setColorFabricMap((previous) => ({
+            ...previous,
+            [normalizedColor]: fabricValue,
+        }));
+
+        setVariantRows((previous) =>
+            previous.map((row) => (
+                String(row.color || '').trim() === normalizedColor
+                    ? { ...row, fabric: fabricValue }
                     : row
             )),
         );
@@ -633,6 +664,7 @@ export default function AddProduct() {
                     selectedColors={selectedColors}
                     selectedSizes={selectedSizes}
                     colorTrendingMap={colorTrendingMap}
+                    colorFabricMap={colorFabricMap}
                     variantRows={variantRows}
                     colorVariantImageMap={colorVariantImageMap}
                     colorVariantVideoMap={colorVariantVideoMap}
@@ -645,6 +677,7 @@ export default function AddProduct() {
                     onRemoveSize={handleRemoveSize}
                     onVariantRowChange={handleVariantRowChange}
                     onColorTrendingChange={handleColorTrendingChange}
+                    onColorFabricChange={handleColorFabricChange}
                     onColorVariantImagesChange={handleColorVariantImagesChange}
                     onColorVariantVideosChange={handleColorVariantVideosChange}
                     onGalleryFilesChange={handleGalleryFilesChange}

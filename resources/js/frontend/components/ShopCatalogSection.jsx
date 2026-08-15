@@ -12,6 +12,10 @@ import { sectionTypography } from '../utils/sectionTypography';
 const productImage = '/uploads/heroes/images/hero1.webp';
 const PLACEHOLDER_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='800' viewBox='0 0 600 800'%3E%3Crect width='100%25' height='100%25' fill='%23eef0f3'/%3E%3C/svg%3E";
 const PRODUCTS_PER_PAGE = 12;
+const FABRIC_OPTIONS = ['Flex Twill', 'Dual Skin Scuba', 'Aero Twill', 'Terra Soft'];
+const FABRIC_SLUG_MAP = Object.fromEntries(
+    FABRIC_OPTIONS.map((fabric) => [fabric.toLowerCase().replace(/\s+/g, '-'), fabric]),
+);
 
 function parseSizeList(value) {
     if (Array.isArray(value)) {
@@ -570,6 +574,17 @@ function isBestSellerProduct(product) {
     return false;
 }
 
+function isFabricProduct(product, fabricValue) {
+    if (!product || typeof product !== 'object' || !fabricValue) {
+        return false;
+    }
+
+    const variantRows = Array.isArray(product.variant_rows) ? product.variant_rows : [];
+    const needle = normalizeQueryValue(fabricValue);
+
+    return variantRows.some((row) => normalizeQueryValue(String(row?.fabric || '')) === needle);
+}
+
 function ColorSwatch({ color, active, onClick, colorLookup, colorNameLookup = {} }) {
     const displayColor = resolveColorDisplayName(color, colorNameLookup);
 
@@ -1052,6 +1067,16 @@ export default function ShopCatalogSection() {
 
     const isCollectionView = Boolean(collectionSlug);
 
+    const activeFabricValue = useMemo(() => {
+        if (!isCollectionView) {
+            return '';
+        }
+
+        return FABRIC_SLUG_MAP[normalizeQueryValue(collectionSlug)] || '';
+    }, [isCollectionView, collectionSlug]);
+
+    const isFabricCollectionView = Boolean(activeFabricValue);
+
     const isNewArrivalsView = useMemo(() => {
         const pathName = String(location.pathname || '').toLowerCase();
         return pathName === '/new-arrivals'
@@ -1397,7 +1422,11 @@ export default function ShopCatalogSection() {
                 return true;
             }
 
-            if (isCollectionView && !isBestSellersView) {
+            if (isFabricCollectionView) {
+                if (!isFabricProduct(product, activeFabricValue)) {
+                    return false;
+                }
+            } else if (isCollectionView && !isBestSellersView) {
                 if (effectiveCollectionProductIdSet.size === 0) {
                     return false;
                 }
@@ -1469,6 +1498,8 @@ export default function ShopCatalogSection() {
         sizeIdByNameLookup,
         isCollectionView,
         isNewArrivalsView,
+        isFabricCollectionView,
+        activeFabricValue,
         activeCollection,
         effectiveCollectionProductIdSet,
         isBestSellersView,
