@@ -519,11 +519,16 @@ function toAbsoluteImageUrl(path) {
         return productImage;
     }
 
-    if (path.startsWith('http')) {
-        return path;
+    const normalizedPath = path
+        .trim()
+        .replace(/\\/g, '/')
+        .replace(/^\/+/, '/');
+
+    if (normalizedPath.startsWith('http')) {
+        return normalizedPath;
     }
 
-    return `/${path.replace(/^\/+/, '')}`;
+    return `/${normalizedPath.replace(/^\/+/, '')}`;
 }
 
 function normalizeImageKey(path) {
@@ -531,7 +536,11 @@ function normalizeImageKey(path) {
         return '';
     }
 
-    return path.replace(/^https?:\/\/[^/]+/i, '').replace(/^\/+/, '').trim();
+    return path
+        .replace(/\\/g, '/')
+        .replace(/^https?:\/\/[^/]+/i, '')
+        .replace(/^\/+/, '')
+        .trim();
 }
 
 function isBestSellerProduct(product) {
@@ -655,10 +664,6 @@ function ProductCard({ product, colorLookup = {}, colorNameLookup = {}, onAddToC
     }, [product.id, product.color, initialImageIndex, initialSeedColor]);
 
     useEffect(() => {
-        setIsImageLoaded(false);
-    }, [currentImageIndex, galleryImages, product.id]);
-
-    useEffect(() => {
         const currentImage = galleryImages[currentImageIndex];
         if (!currentImage) {
             return;
@@ -680,6 +685,49 @@ function ProductCard({ product, colorLookup = {}, colorNameLookup = {}, onAddToC
     }, [currentImageIndex, galleryImages, colors, colorVariantImages, selectedColor]);
 
     const imageSrc = galleryImages[currentImageIndex] || productImage;
+    const [resolvedImageSrc, setResolvedImageSrc] = useState(productImage);
+
+    useEffect(() => {
+        let cancelled = false;
+        setIsImageLoaded(false);
+
+        const timeoutId = setTimeout(() => {
+            if (cancelled) {
+                return;
+            }
+
+            setResolvedImageSrc(productImage);
+            setIsImageLoaded(true);
+        }, 3000);
+
+        const probe = new Image();
+        probe.onload = () => {
+            if (cancelled) {
+                return;
+            }
+
+            clearTimeout(timeoutId);
+            setResolvedImageSrc(imageSrc);
+            setIsImageLoaded(true);
+        };
+
+        probe.onerror = () => {
+            if (cancelled) {
+                return;
+            }
+
+            clearTimeout(timeoutId);
+            setResolvedImageSrc(productImage);
+            setIsImageLoaded(true);
+        };
+
+        probe.src = imageSrc;
+
+        return () => {
+            cancelled = true;
+            clearTimeout(timeoutId);
+        };
+    }, [imageSrc, product.id]);
 
     function handlePrevImage(event) {
         event.preventDefault();
@@ -761,12 +809,15 @@ function ProductCard({ product, colorLookup = {}, colorNameLookup = {}, onAddToC
                         }`}
                     />
                     <img
-                        src={imageSrc}
+                        src={resolvedImageSrc}
                         alt={product.name}
                         loading="lazy"
                         decoding="async"
                         onLoad={() => setIsImageLoaded(true)}
-                        onError={() => setIsImageLoaded(true)}
+                        onError={() => {
+                            setResolvedImageSrc(productImage);
+                            setIsImageLoaded(true);
+                        }}
                         className={`h-full w-full object-cover object-center transition-all duration-500 group-hover:scale-105 ${
                             isImageLoaded ? 'opacity-100' : 'opacity-0'
                         }`}

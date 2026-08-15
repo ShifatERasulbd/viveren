@@ -27,7 +27,7 @@ function calculateStripeCharge(baseAmount) {
 }
 
 function normalizeShippingOption(option, index) {
-    const code = String(option?.code || '').trim();
+    const code = normalizeServiceCode(option?.code, '02');
     const amount = Number(option?.amount ?? option?.price ?? 0);
     const safeAmount = Number.isFinite(amount) && amount >= 0 ? amount : 0;
     const description = String(option?.description || '').trim();
@@ -245,30 +245,20 @@ function CheckoutForm() {
         && String(form.country || '').trim(),
     ), [form.state, form.city, form.postal_code, form.country]);
 
-    const minimumShippingFromOptions = useMemo(() => {
-        if (!Array.isArray(shippingOptions) || shippingOptions.length === 0) {
-            return null;
-        }
-
-        const amounts = shippingOptions
-            .map((option) => Number(option?.amount ?? 0))
-            .filter((value) => Number.isFinite(value) && value >= 0);
-
-        if (amounts.length === 0) {
-            return null;
-        }
-
-        return Math.min(...amounts);
-    }, [shippingOptions]);
+    const selectedShippingOption = useMemo(
+        () => shippingOptions.find((option) => option.code === normalizeServiceCode(selectedShippingOptionCode, '02')) || null,
+        [shippingOptions, selectedShippingOptionCode],
+    );
 
     const shipping = useMemo(() => {
-        if (minimumShippingFromOptions !== null) {
-            return roundCurrency(minimumShippingFromOptions);
+        const selectedAmount = Number(selectedShippingOption?.amount ?? NaN);
+        if (Number.isFinite(selectedAmount) && selectedAmount >= 0) {
+            return roundCurrency(selectedAmount);
         }
 
         const value = Number(quotedShipping);
         return Number.isFinite(value) && value > 0 ? value : 0;
-    }, [minimumShippingFromOptions, quotedShipping]);
+    }, [selectedShippingOption, quotedShipping]);
 
     const tax = useMemo(() => {
         const value = Number(quotedTax);
