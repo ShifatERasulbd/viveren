@@ -59,6 +59,7 @@ function resolvePageLabel(pathname) {
     if (path.startsWith('/collections/')) return 'Collection';
     if (path === '/new-arrivals') return 'Collection';
     if (path === '/trending') return 'Trending';
+    if (path === '/collections/trending-products') return 'Trending';
     if (path === '/best-sellers') return 'Best Sellers';
     if (path.startsWith('/product-details/')) return 'Product Details';
     if (path === '/singleproduct') return 'Product Details';
@@ -166,6 +167,7 @@ function AppRouter() {
                         <Route path="collections/:slug" element={withPageFallback(ShopPage)} />
                         <Route path="new-arrivals" element={withPageFallback(ShopPage)} />
                         <Route path="trending" element={withPageFallback(ShopPage)} />
+                        <Route path="collections/trending-products" element={withPageFallback(ShopPage)} />
                         <Route path="best-sellers" element={withPageFallback(ShopPage)} />
                         <Route path=":subCategorySlug/:grandChildSlug?" element={withPageFallback(ShopPage)} />
                         <Route path="product-details/:slug/:color?" element={withPageFallback(SingleProductPage)} />

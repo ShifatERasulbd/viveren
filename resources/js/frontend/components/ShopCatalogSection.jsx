@@ -1061,7 +1061,12 @@ export default function ShopCatalogSection() {
 
     const isBestSellersView = useMemo(() => {
         const pathName = String(location.pathname || '').toLowerCase();
-        if (pathName === '/best-sellers' || pathName === '/trending') {
+        if (
+            pathName === '/best-sellers'
+            || pathName === '/trending'
+            || pathName === '/collections/trending-products'
+            || pathName === '/collections/best-selling-products'
+        ) {
             return true;
         }
 
@@ -1072,7 +1077,7 @@ export default function ShopCatalogSection() {
 
     const isTrendingPath = useMemo(() => {
         const pathName = String(location.pathname || '').toLowerCase();
-        return pathName === '/trending';
+        return pathName === '/trending' || pathName === '/collections/trending-products';
     }, [location.pathname]);
 
     useEffect(() => {
@@ -1319,7 +1324,7 @@ export default function ShopCatalogSection() {
                 }
             })()
             : '';
-        const isShopPathSegment = !['collection', 'best-sellers', 'trending', 'shop', 'search'].includes(pathSegments[0]);
+        const isShopPathSegment = !['collection', 'collections', 'new-arrivals', 'best-sellers', 'trending', 'shop', 'search'].includes(pathSegments[0]);
         const subCategoryValueFromPath = pathSegments.length >= 1 && isShopPathSegment ? pathSegments[0] : '';
         const grandChildValueFromPath = pathSegments.length >= 2 && isShopPathSegment ? pathSegments[1] : '';
         const categoryValue = categoryValueFromPath || params.get('category');
@@ -1392,7 +1397,7 @@ export default function ShopCatalogSection() {
                 return true;
             }
 
-            if (isCollectionView) {
+            if (isCollectionView && !isBestSellersView) {
                 if (effectiveCollectionProductIdSet.size === 0) {
                     return false;
                 }

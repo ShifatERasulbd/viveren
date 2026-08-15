@@ -31,6 +31,10 @@ Route::get('/new-arrivals', function () {
     return view('home');
 });
 
+Route::get('/collections/trending-products', function () {
+    return view('home');
+});
+
 Route::get('/product-details/{slug}/{color?}', function () {
     return view('home');
 });
