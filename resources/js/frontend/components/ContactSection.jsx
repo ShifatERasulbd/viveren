@@ -12,7 +12,7 @@ export default function ContactSection() {
                     <ContactQuestionForm />
                 </div>
 
-                <ContactLocationCards />
+              
             </div>
         </section>
     );

@@ -1,20 +1,6 @@
+import { useEffect, useMemo, useState } from 'react';
 import { Globe, MessageCircle, Play, Send } from 'lucide-react';
-
-const contactDetails = [
-    {
-        label: 'Office',
-        value: '70 Washington Square',
-        secondary: 'New York, NY 10012, USA',
-    },
-    {
-        label: 'Phone',
-        value: '(2) 123 -456 -789',
-    },
-    {
-        label: 'Email',
-        value: 'hello@timeless.ca',
-    },
-];
+import { bootstrapPublicSettings, getSettingsPayload, onSettingsUpdated } from '../../utils/siteSettings';
 
 const socialLinks = [
     { label: 'Facebook', icon: Globe, href: '#facebook' },
@@ -24,6 +10,20 @@ const socialLinks = [
 ];
 
 export default function ContactInformationPanel() {
+    const [siteSettings, setSiteSettings] = useState(() => getSettingsPayload() || {});
+
+    useEffect(() => {
+        bootstrapPublicSettings().then((payload) => setSiteSettings(payload || {}));
+
+        const unsubscribe = onSettingsUpdated((payload) => {
+            setSiteSettings(payload || {});
+        });
+
+        return unsubscribe;
+    }, []);
+
+    const email = useMemo(() => String(siteSettings?.email || '').trim(), [siteSettings]);
+
     return (
         <div>
             <h2 className="font-serif text-[1.9rem] uppercase tracking-[0.02em] text-zinc-900 sm:text-[2.2rem]">
@@ -31,17 +31,16 @@ export default function ContactInformationPanel() {
             </h2>
 
             <div className="mt-10 space-y-8 text-zinc-600">
-                {contactDetails.map((detail) => (
-                    <div key={detail.label}>
+                {email && (
+                    <div>
                         <h3 className="text-[0.95rem] font-semibold uppercase tracking-[0.06em] text-zinc-900">
-                            {detail.label}
+                            Email
                         </h3>
                         <p className="mt-3 text-[1rem] leading-8">
-                            {detail.value}
-                            {detail.secondary ? <span className="block">{detail.secondary}</span> : null}
+                            {email}
                         </p>
                     </div>
-                ))}
+                )}
 
                 <div>
                     <h3 className="text-[0.95rem] font-semibold uppercase tracking-[0.06em] text-zinc-900">
