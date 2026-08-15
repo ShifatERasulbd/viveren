@@ -5,17 +5,24 @@ namespace App\Http\Controllers;
 use App\Models\Color;
 use App\Models\Product;
 use App\Models\Size;
+use App\Services\JoorService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Throwable;
 
 class ProductController extends Controller
 {
+    public function __construct(private readonly JoorService $joorService)
+    {
+    }
+
     public function index(): JsonResponse
     {
         $products = Product::query()
@@ -183,9 +190,17 @@ class ProductController extends Controller
         return response()->json($products);
     }
 
-    public function show(Product $product): JsonResponse
+    public function show(string $product): JsonResponse
     {
-        return response()->json($product);
+        $productModel = $this->resolveProductModel($product);
+
+        if (! $productModel) {
+            return response()->json([
+                'message' => 'Product not found.',
+            ], 404);
+        }
+
+        return response()->json($productModel);
     }
 
     public function store(Request $request): JsonResponse
@@ -323,22 +338,55 @@ class ProductController extends Controller
             $validated,
         );
 
+        $joorSynced = false;
+        $joorSyncError = null;
+        $joorResponse = null;
+
+        try {
+            $joorResponse = $this->joorService->syncProduct($product);
+            $joorSynced = (bool) ($joorResponse['ok'] ?? false);
+
+            if (! $joorSynced) {
+                $errors = data_get($joorResponse, 'body.errors', []);
+                $joorSyncError = is_array($errors) ? json_encode($errors) : 'JOOR sync failed.';
+            }
+        } catch (Throwable $exception) {
+            Log::warning('Failed to sync product to JOOR.', [
+                'product_id' => $product->id,
+                'sku' => $product->sku,
+                'error' => $exception->getMessage(),
+            ]);
+
+            $joorSyncError = $exception->getMessage();
+        }
+
         return response()->json([
             'message' => $product->wasRecentlyCreated
                 ? 'Product created successfully'
                 : 'Product updated successfully (matched by SKU)',
             'product' => $product,
+            'joor_synced' => $joorSynced,
+            'joor_sync_error' => $joorSyncError,
+            'joor_response' => $joorResponse,
         ], $product->wasRecentlyCreated ? 201 : 200);
     }
 
-    public function update(Request $request, Product $product): JsonResponse
+    public function update(Request $request, string $product): JsonResponse
     {
+        $productModel = $this->resolveProductModel($product, (string) $request->input('sku', ''));
+
+        if (! $productModel) {
+            return response()->json([
+                'message' => 'Product not found. The requested product ID may be outdated.',
+            ], 404);
+        }
+
         $this->normalizeBooleanFields($request, ['show_on_best_sellers', 'clear_gallery', 'clear_videos', 'clear_size_charts']);
         $this->normalizeJsonFields($request, ['variant_rows', 'color_variant_images', 'color_variant_videos', 'color_variant_size_charts', 'size_chart_images', 'product_features', 'image_gallery_existing', 'product_videos_existing', 'size_chart_images_existing']);
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'slug' => 'nullable|string|max:255|unique:products,slug,' . $product->id,
+            'slug' => 'nullable|string|max:255|unique:products,slug,' . $productModel->id,
             'sku' => 'required|string|max:255',
             'color' => 'nullable|string|max:255',
             'size' => 'nullable|string|max:255',
@@ -400,7 +448,7 @@ class ProductController extends Controller
         ]);
 
         if ($request->hasFile('thumbnail_image')) {
-            $validated['cover_image'] = $this->uploadThumbnailImage($request, $product->cover_image);
+            $validated['cover_image'] = $this->uploadThumbnailImage($request, $productModel->cover_image);
         } elseif (! isset($validated['cover_image']) || trim((string) $validated['cover_image']) === '') {
             unset($validated['cover_image']);
         }
@@ -409,9 +457,9 @@ class ProductController extends Controller
             ? []
             : (is_array($request->input('size_chart_images_existing'))
                 ? $request->input('size_chart_images_existing')
-                : (is_array($product->size_chart_images ?? null)
-                    ? $product->size_chart_images
-                    : array_values(array_filter([$product->size_chart_image]))));
+                : (is_array($productModel->size_chart_images ?? null)
+                    ? $productModel->size_chart_images
+                    : array_values(array_filter([$productModel->size_chart_image]))));
 
         $uploadedSizeChartResult = $this->uploadSizeChartImages($request);
         $manualSizeCharts = array_values(array_filter(
@@ -430,7 +478,7 @@ class ProductController extends Controller
 
         $existingGallery = $request->boolean('clear_gallery')
             ? []
-            : (is_array($request->input('image_gallery_existing')) ? $request->input('image_gallery_existing') : ($product->image_gallery ?? []));
+            : (is_array($request->input('image_gallery_existing')) ? $request->input('image_gallery_existing') : ($productModel->image_gallery ?? []));
 
         $uploadedGallery = [];
         $uploadedNameMap = [];
@@ -452,7 +500,7 @@ class ProductController extends Controller
 
         $existingVideos = $request->boolean('clear_videos')
             ? []
-            : (is_array($request->input('product_videos_existing')) ? $request->input('product_videos_existing') : ($product->product_videos ?? []));
+            : (is_array($request->input('product_videos_existing')) ? $request->input('product_videos_existing') : ($productModel->product_videos ?? []));
 
         $uploadedVideoNameMap = [];
 
@@ -472,47 +520,69 @@ class ProductController extends Controller
 
         $finalGallery = is_array($validated['image_gallery'] ?? null)
             ? $validated['image_gallery']
-            : (is_array($product->image_gallery ?? null) ? $product->image_gallery : []);
+            : (is_array($productModel->image_gallery ?? null) ? $productModel->image_gallery : []);
 
-        $validated['color'] = $this->normalizeColorSelectionValue($validated['color'] ?? ($product->color ?? ''));
-        $validated['size'] = $this->normalizeSizeSelectionValue($validated['size'] ?? ($product->size ?? ''));
-        $validated['variant_rows'] = $this->normalizeVariantRows($validated['variant_rows'] ?? ($product->variant_rows ?? []));
-        $validated['product_features'] = $this->normalizeProductFeatures($validated['product_features'] ?? ($product->product_features ?? []));
+        $validated['color'] = $this->normalizeColorSelectionValue($validated['color'] ?? ($productModel->color ?? ''));
+        $validated['size'] = $this->normalizeSizeSelectionValue($validated['size'] ?? ($productModel->size ?? ''));
+        $validated['variant_rows'] = $this->normalizeVariantRows($validated['variant_rows'] ?? ($productModel->variant_rows ?? []));
+        $validated['product_features'] = $this->normalizeProductFeatures($validated['product_features'] ?? ($productModel->product_features ?? []));
         $validated['show_on_best_sellers'] = $request->boolean('show_on_best_sellers');
-        $validated['fit'] = trim((string) ($validated['fit'] ?? ($validated['long_description'] ?? ($product->fit ?? ''))));
-        $validated['fabric_and_care'] = trim((string) ($validated['fabric_and_care'] ?? ($validated['additional_information'] ?? ($product->fabric_and_care ?? ''))));
+        $validated['fit'] = trim((string) ($validated['fit'] ?? ($validated['long_description'] ?? ($productModel->fit ?? ''))));
+        $validated['fabric_and_care'] = trim((string) ($validated['fabric_and_care'] ?? ($validated['additional_information'] ?? ($productModel->fabric_and_care ?? ''))));
         $validated['long_description'] = $validated['fit'];
         $validated['additional_information'] = $validated['fabric_and_care'];
         $validated['color_variant_images'] = $this->resolveColorVariantImages(
-            $validated['color_variant_images'] ?? ($product->color_variant_images ?? []),
+            $validated['color_variant_images'] ?? ($productModel->color_variant_images ?? []),
             $finalGallery,
             $uploadedNameMap,
         );
         $validated['color_variant_videos'] = $this->resolveColorVariantVideos(
-            $validated['color_variant_videos'] ?? ($product->color_variant_videos ?? []),
+            $validated['color_variant_videos'] ?? ($productModel->color_variant_videos ?? []),
             is_array($validated['product_videos'] ?? null)
                 ? $validated['product_videos']
-                : (is_array($product->product_videos ?? null) ? $product->product_videos : []),
+                : (is_array($productModel->product_videos ?? null) ? $productModel->product_videos : []),
             $uploadedVideoNameMap,
         );
         $validated['color_variant_size_charts'] = $this->resolveColorVariantSizeCharts(
-            $validated['color_variant_size_charts'] ?? ($product->color_variant_size_charts ?? []),
+            $validated['color_variant_size_charts'] ?? ($productModel->color_variant_size_charts ?? []),
             $finalSizeCharts,
             $uploadedSizeChartResult['name_map'],
         );
         $validated['slug'] = $this->resolveProductSlug(
             $validated['slug'] ?? null,
             $validated['name'] ?? '',
-            $product->id,
+            $productModel->id,
         );
 
-        $oldGallery = is_array($product->image_gallery ?? null) ? $product->image_gallery : [];
-        $oldVideos = is_array($product->product_videos ?? null) ? $product->product_videos : [];
-        $oldSizeCharts = is_array($product->size_chart_images ?? null)
-            ? $product->size_chart_images
-            : array_values(array_filter([$product->size_chart_image]));
+        $oldGallery = is_array($productModel->image_gallery ?? null) ? $productModel->image_gallery : [];
+        $oldVideos = is_array($productModel->product_videos ?? null) ? $productModel->product_videos : [];
+        $oldSizeCharts = is_array($productModel->size_chart_images ?? null)
+            ? $productModel->size_chart_images
+            : array_values(array_filter([$productModel->size_chart_image]));
 
-        $product->update($validated);
+        $productModel->update($validated);
+
+        $joorSynced = false;
+        $joorSyncError = null;
+        $joorResponse = null;
+
+        try {
+            $joorResponse = $this->joorService->syncProduct($productModel);
+            $joorSynced = (bool) ($joorResponse['ok'] ?? false);
+
+            if (! $joorSynced) {
+                $errors = data_get($joorResponse, 'body.errors', []);
+                $joorSyncError = is_array($errors) ? json_encode($errors) : 'JOOR sync failed.';
+            }
+        } catch (Throwable $exception) {
+            Log::warning('Failed to sync product to JOOR on update.', [
+                'product_id' => $productModel->id,
+                'sku' => $productModel->sku,
+                'error' => $exception->getMessage(),
+            ]);
+
+            $joorSyncError = $exception->getMessage();
+        }
 
         if (array_key_exists('image_gallery', $validated)) {
             $this->deleteRemovedUploadedFiles(
@@ -535,12 +605,26 @@ class ProductController extends Controller
             );
         }
 
-        return response()->json(['message' => 'Product updated successfully', 'product' => $product]);
+        return response()->json([
+            'message' => 'Product updated successfully',
+            'product' => $productModel,
+            'joor_synced' => $joorSynced,
+            'joor_sync_error' => $joorSyncError,
+            'joor_response' => $joorResponse,
+        ]);
     }
 
-    public function destroy(Product $product): JsonResponse
+    public function destroy(string $product): JsonResponse
     {
-        $deletedIds = [$product->id];
+        $productModel = $this->resolveProductModel($product);
+
+        if (! $productModel) {
+            return response()->json([
+                'message' => 'Product not found.',
+            ], 404);
+        }
+
+        $deletedIds = [$productModel->id];
         $deletedCount = 0;
 
         request()->validate([
@@ -549,7 +633,7 @@ class ProductController extends Controller
         ]);
 
         $requestedScope = request()->input('delete_scope', 'single');
-        $groupName = trim((string) request()->input('group_name', $product->name));
+        $groupName = trim((string) request()->input('group_name', $productModel->name));
 
         if ($requestedScope === 'group' && $groupName !== '') {
             $products = Product::query()
@@ -561,7 +645,7 @@ class ProductController extends Controller
                 $deletedCount = Product::query()->whereIn('id', $deletedIds)->delete();
             }
         } else {
-            $product->delete();
+            $productModel->delete();
             $deletedCount = 1;
         }
 
@@ -571,6 +655,32 @@ class ProductController extends Controller
             'deleted_count' => $deletedCount,
             'deleted_ids' => $deletedIds,
         ]);
+    }
+
+    private function resolveProductModel(string $productKey, ?string $fallbackSku = null): ?Product
+    {
+        $trimmedKey = trim($productKey);
+
+        if ($trimmedKey !== '' && ctype_digit($trimmedKey)) {
+            $model = Product::query()->find((int) $trimmedKey);
+            if ($model) {
+                return $model;
+            }
+        }
+
+        if ($trimmedKey !== '') {
+            $model = Product::query()->where('sku', $trimmedKey)->first();
+            if ($model) {
+                return $model;
+            }
+        }
+
+        $sku = trim((string) $fallbackSku);
+        if ($sku !== '') {
+            return Product::query()->where('sku', $sku)->first();
+        }
+
+        return null;
     }
 
     public function reorder(Request $request): JsonResponse

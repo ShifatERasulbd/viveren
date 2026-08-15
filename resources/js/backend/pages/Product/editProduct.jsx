@@ -1093,7 +1093,7 @@ export default function EditProduct() {
                 }
             }
 
-            await updateProduct(id, {
+            const response = await updateProduct(id, {
                 ...form,
                 long_description: form.fit,
                 additional_information: form.fabric_and_care,
@@ -1119,6 +1119,24 @@ export default function EditProduct() {
                 size_chart_images_existing: existingSizeChartImages,
                 clear_size_charts: existingSizeChartImages.length === 0 && newSizeChartImageFiles.length === 0,
             });
+
+            const joorPayload = {
+                joor_synced: response?.joor_synced ?? null,
+                joor_sync_error: response?.joor_sync_error ?? null,
+                joor_response: response?.joor_response ?? null,
+            };
+
+            console.log('JOOR response (update product):', joorPayload);
+
+            try {
+                sessionStorage.setItem('latestJoorResponse', JSON.stringify({
+                    source: 'update',
+                    at: new Date().toISOString(),
+                    ...joorPayload,
+                }));
+            } catch (storageError) {
+                console.warn('Unable to persist JOOR response in sessionStorage.', storageError);
+            }
 
             toast.success('Product updated successfully', {
                 style: {

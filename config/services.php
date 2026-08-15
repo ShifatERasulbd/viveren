@@ -80,4 +80,28 @@ return [
         'api_key' => env('PUBLIC_ORDERS_API_KEY'),
     ],
 
+    'joor' => [
+        'auth_base_url' => env('JOOR_AUTH_BASE_URL', 'https://atlas-sandbox.jooraccess.com'),
+        'api_base_url' => env('JOOR_API_BASE_URL', 'https://apisandbox.jooraccess.com/v4'),
+        'auth_endpoint' => env('JOOR_AUTH_ENDPOINT', '/auth/'),
+        'products_endpoint' => env('JOOR_PRODUCTS_ENDPOINT', '/products/bulk_create'),
+        'verify_ssl' => env('JOOR_VERIFY_SSL', true),
+        'timeout' => env('JOOR_TIMEOUT', 30),
+        'client_id' => env('JOOR_CLIENT_ID'),
+        'client_secret' => env('JOOR_CLIENT_SECRET'),
+        'username' => env('JOOR_USERNAME'),
+        'password' => env('JOOR_PASSWORD'),
+        'token' => env('JOOR_API_TOKEN'),
+        'joor_id' => env('JOOR_ID'),
+        'user_id' => env('JOOR_USER_ID'),
+        'default_tag_parent_id' => env('JOOR_DEFAULT_TAG_PARENT_ID'),
+        'color_tag_parent_id' => env('JOOR_COLOR_TAG_PARENT_ID'),
+        'category_tag_parent_id' => env('JOOR_CATEGORY_TAG_PARENT_ID'),
+        'default_category_id' => env('JOOR_DEFAULT_CATEGORY_ID'),
+        'category_name_map' => env('JOOR_CATEGORY_NAME_MAP'),
+        'sku_color_trait_id' => env('JOOR_SKU_COLOR_TRAIT_ID', 'U0tVVHJhaXQ6U3R5bGVDb2xvcg=='),
+        'sku_size_trait_id' => env('JOOR_SKU_SIZE_TRAIT_ID', 'U0tVVHJhaXQ6U2l6ZQ=='),
+        'default_sku_size' => env('JOOR_DEFAULT_SKU_SIZE', 'One Size'),
+    ],
+
 ];

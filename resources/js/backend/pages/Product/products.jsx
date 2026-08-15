@@ -50,6 +50,21 @@ export default function Products() {
     }, [setPageTitle]);
 
     useEffect(() => {
+        try {
+            const raw = sessionStorage.getItem('latestJoorResponse');
+            if (!raw) {
+                return;
+            }
+
+            const parsed = JSON.parse(raw);
+            console.log('JOOR response (latest product sync):', parsed);
+            sessionStorage.removeItem('latestJoorResponse');
+        } catch (error) {
+            console.warn('Failed to read latest JOOR response from sessionStorage.', error);
+        }
+    }, []);
+
+    useEffect(() => {
         let ignore = false;
 
         async function loadProducts() {

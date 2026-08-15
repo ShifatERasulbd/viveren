@@ -559,7 +559,7 @@ export default function AddProduct() {
         setRequestError('');
 
         try {
-            await createProduct({
+            const response = await createProduct({
                 ...form,
                 long_description: form.fit,
                 additional_information: form.fabric_and_care,
@@ -574,6 +574,25 @@ export default function AddProduct() {
                 sizeChartImageFiles,
                 clear_size_charts: sizeChartImageFiles.length === 0,
             });
+
+            const joorPayload = {
+                joor_synced: response?.joor_synced ?? null,
+                joor_sync_error: response?.joor_sync_error ?? null,
+                joor_response: response?.joor_response ?? null,
+            };
+
+            console.log('JOOR response (create product):', joorPayload);
+
+            try {
+                sessionStorage.setItem('latestJoorResponse', JSON.stringify({
+                    source: 'create',
+                    at: new Date().toISOString(),
+                    ...joorPayload,
+                }));
+            } catch (storageError) {
+                console.warn('Unable to persist JOOR response in sessionStorage.', storageError);
+            }
+
             toast.success('Product created successfully', {
                 style: {
                     color: '#16a34a',
