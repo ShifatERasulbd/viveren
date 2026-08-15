@@ -10,6 +10,7 @@ import ShopSidebar from './ShopSidebar.jsx';
 import { sectionTypography } from '../utils/sectionTypography';
 
 const productImage = '/uploads/heroes/images/hero1.webp';
+const PLACEHOLDER_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='800' viewBox='0 0 600 800'%3E%3Crect width='100%25' height='100%25' fill='%23eef0f3'/%3E%3C/svg%3E";
 const PRODUCTS_PER_PAGE = 12;
 
 function parseSizeList(value) {
@@ -516,13 +517,17 @@ function getSwatchColor(value, colorLookup = {}) {
 
 function toAbsoluteImageUrl(path) {
     if (!path || typeof path !== 'string') {
-        return productImage;
+        return PLACEHOLDER_IMAGE;
     }
 
     const normalizedPath = path
         .trim()
         .replace(/\\/g, '/')
         .replace(/^\/+/, '/');
+
+    if (normalizedPath.startsWith('data:image')) {
+        return normalizedPath;
+    }
 
     if (normalizedPath.startsWith('http')) {
         return normalizedPath;
@@ -614,7 +619,7 @@ function ProductCard({ product, colorLookup = {}, colorNameLookup = {}, onAddToC
         });
 
         if (deduped.length === 0) {
-            return [productImage];
+            return [PLACEHOLDER_IMAGE];
         }
 
         return deduped.map((item) => toAbsoluteImageUrl(item));
@@ -685,7 +690,7 @@ function ProductCard({ product, colorLookup = {}, colorNameLookup = {}, onAddToC
     }, [currentImageIndex, galleryImages, colors, colorVariantImages, selectedColor]);
 
     const imageSrc = galleryImages[currentImageIndex] || productImage;
-    const [resolvedImageSrc, setResolvedImageSrc] = useState(productImage);
+    const [resolvedImageSrc, setResolvedImageSrc] = useState(PLACEHOLDER_IMAGE);
 
     useEffect(() => {
         let cancelled = false;
@@ -696,7 +701,7 @@ function ProductCard({ product, colorLookup = {}, colorNameLookup = {}, onAddToC
                 return;
             }
 
-            setResolvedImageSrc(productImage);
+            setResolvedImageSrc(PLACEHOLDER_IMAGE);
             setIsImageLoaded(true);
         }, 3000);
 
@@ -717,7 +722,7 @@ function ProductCard({ product, colorLookup = {}, colorNameLookup = {}, onAddToC
             }
 
             clearTimeout(timeoutId);
-            setResolvedImageSrc(productImage);
+            setResolvedImageSrc(PLACEHOLDER_IMAGE);
             setIsImageLoaded(true);
         };
 
@@ -815,7 +820,7 @@ function ProductCard({ product, colorLookup = {}, colorNameLookup = {}, onAddToC
                         decoding="async"
                         onLoad={() => setIsImageLoaded(true)}
                         onError={() => {
-                            setResolvedImageSrc(productImage);
+                            setResolvedImageSrc(PLACEHOLDER_IMAGE);
                             setIsImageLoaded(true);
                         }}
                         className={`h-full w-full object-cover object-center transition-all duration-500 group-hover:scale-105 ${
