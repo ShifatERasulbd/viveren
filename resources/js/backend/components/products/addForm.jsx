@@ -773,7 +773,7 @@ export default function AddForm({
                                                         <th className="py-2 pr-2">Size</th>
                                                         <th className="py-2 pr-2">SKU</th>
                                                         <th className="py-2 pr-2">Stock</th>
-                                                        <th className="py-2">Price</th>
+                                                        <th className="py-2 pr-2">Weight</th>
                                                         <th className="py-2 pl-2">Trending</th>
                                                         <th className="py-2 pl-2">Color Images</th>
                                                         <th className="py-2 pl-2">Color Videos</th>
@@ -801,13 +801,13 @@ export default function AddForm({
                                                                     disabled={isSubmitting}
                                                                 />
                                                             </td>
-                                                            <td className="py-2">
+                                                            <td className="py-2 pr-2">
                                                                 <Input
                                                                     type="number"
                                                                     min="0"
                                                                     step="0.01"
-                                                                    value={row.price ?? ''}
-                                                                    onChange={(event) => onVariantRowChange?.(row.key, 'price', event.target.value)}
+                                                                    value={row.weight ?? ''}
+                                                                    onChange={(event) => onVariantRowChange?.(row.key, 'weight', event.target.value)}
                                                                     disabled={isSubmitting}
                                                                 />
                                                             </td>

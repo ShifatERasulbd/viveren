@@ -25,7 +25,21 @@ class UPSCourierController extends Controller
             'state'         => 'required|string|max:2',
             'postal_code'   => 'required|string',
             'weight'        => 'required|numeric',
+            'country'       => 'nullable|string|max:2',
         ]);
+
+        $destinationCountry = strtoupper(trim((string) ($validated['country'] ?? 'US')));
+        if ($destinationCountry === '') {
+            $destinationCountry = 'US';
+        }
+
+        $originAddress = [
+            "AddressLine" => [config('services.ups.origin_address_1', '123 Warehouse Rd')],
+            "City" => config('services.ups.origin_city', 'Billerica'),
+            "StateProvinceCode" => config('services.ups.origin_state', 'MA '),
+            "PostalCode" => config('services.ups.origin_postal_code', '01821'),
+            "CountryCode" => config('services.ups.origin_country', 'US')
+        ];
 
         // 2. Format the strict payload expected by the UPS Shipping API
         $upsPayload = [
@@ -36,15 +50,13 @@ class UPSCourierController extends Controller
                 "Shipment" => [
                     "Description" => "E-Commerce Order Fulfillment",
                     "Shipper" => [
-                        "Name" => "Your Company Name",
-                        "ShipperNumber" => config('services.ups.shipper_number'), // Your 6-character UPS account number
-                        "Address" => [
-                            "AddressLine" => ["123 Warehouse Rd"],
-                            "City" => "Warehouse City",
-                            "StateProvinceCode" => "TX",
-                            "PostalCode" => "75001",
-                            "CountryCode" => "US"
-                        ]
+                        "Name" => config('services.ups.shipper_name', '1971Co'),
+                        "ShipperNumber" => config('services.ups.shipper_number'),
+                        "Address" => $originAddress
+                    ],
+                    "ShipFrom" => [
+                        "Name" => config('services.ups.shipper_name', '1971Co'),
+                        "Address" => $originAddress
                     ],
                     "ShipTo" => [
                         "Name" => $validated['customer_name'],
@@ -53,16 +65,16 @@ class UPSCourierController extends Controller
                             "City" => $validated['city'],
                             "StateProvinceCode" => $validated['state'],
                             "PostalCode" => $validated['postal_code'],
-                            "CountryCode" => "US"
+                            "CountryCode" => $destinationCountry
                         ]
                     ],
                     "Service" => [
-                        "Code" => "03", // "03" stands for UPS Ground
-                        "Description" => "UPS Ground"
+                        "Code" => config('services.ups.service_code', '03'),
+                        "Description" => config('services.ups.service_description', 'UPS Ground')
                     ],
                     "PaymentInformation" => [
                         "ShipmentCharge" => [
-                            "Type" => "01", // Bill to Shipper
+                            "Type" => "01",
                             "BillShipper" => [
                                 "AccountNumber" => config('services.ups.shipper_number')
                             ]
@@ -71,7 +83,7 @@ class UPSCourierController extends Controller
                     "Package" => [
                         [
                             "Packaging" => [
-                                "Code" => "02", // Customer Supplied Package / Box
+                                "Code" => config('services.ups.packaging_code', '02'),
                                 "Description" => "Customer Box"
                             ],
                             "PackageWeight" => [
@@ -86,7 +98,7 @@ class UPSCourierController extends Controller
                 ],
                 "LabelSpecification" => [
                     "LabelImageFormat" => [
-                        "Code" => "GIF" // Returns a clean image string back to React
+                        "Code" => "GIF"
                     ]
                 ]
             ]
@@ -95,7 +107,7 @@ class UPSCourierController extends Controller
         // 3. Dispatch straight to the UPS live panel
         try {
             $result = $this->ups->createShipment($upsPayload);
-            
+
             // Extract the generated tracking number and label image string
             $trackingNumber = $result['ShipmentResponse']['ShipmentResults']['ShipmentIdentificationNumber'] ?? null;
             $labelGraphic   = $result['ShipmentResponse']['ShipmentResults']['PackageResults'][0]['ShippingLabel']['GraphicImage'] ?? null;

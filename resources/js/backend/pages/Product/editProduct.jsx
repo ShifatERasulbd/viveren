@@ -27,6 +27,9 @@ const initialForm = {
     additional_information: '',
     price: '',
     discount_price: '',
+    length: '',
+    width: '',
+    height: '',
     cover_image: '',
     size_chart_image: '',
     category_id: '',
@@ -422,7 +425,7 @@ export default function EditProduct() {
                             : (variant?.color || ''),
                         size: variant?.size || '',
                         stock: variant?.stock ?? 0,
-                        price: variant?.price ?? 0,
+                        weight: variant?.weight ?? '',
                     }));
 
                     setForm({
@@ -440,6 +443,9 @@ export default function EditProduct() {
                         additional_information: data?.additional_information || '',
                         price: data?.price ?? '',
                         discount_price: data?.discount_price ?? '',
+                        length: data?.length ?? '',
+                        width: data?.width ?? '',
+                        height: data?.height ?? '',
                         cover_image: data?.cover_image || '',
                         size_chart_image: data?.size_chart_image || '',
                         category_id: data?.category_id ?? '',
@@ -480,8 +486,7 @@ export default function EditProduct() {
                             color: String(row?.color || '').trim(),
                             size: String(row?.size || '').trim(),
                             stock: row?.stock ?? '',
-                            price: row?.price ?? '',
-                            discount_price: row?.discount_price ?? '',
+                            weight: row?.weight ?? '',
                             show_on_best_sellers: Boolean(row?.show_on_best_sellers),
                         }));
 
@@ -701,8 +706,7 @@ export default function EditProduct() {
                         size,
                         sku: existing?.sku || (form.sku ? `${form.sku}-${defaultSkuSuffix}` : ''),
                         stock: pickVariantNumberValue(existing?.stock, form.stock),
-                        price: pickVariantNumberValue(existing?.price, form.price),
-                        discount_price: pickVariantNumberValue(existing?.discount_price, form.discount_price),
+                        weight: pickVariantNumberValue(existing?.weight, ''),
                         show_on_best_sellers: Boolean(existing?.show_on_best_sellers ?? colorTrendingMap[color]),
                     });
                 });
@@ -1084,8 +1088,8 @@ export default function EditProduct() {
                     throw new Error('Each variant must have a SKU.');
                 }
 
-                if (row.price === '' || Number.isNaN(Number(row.price))) {
-                    throw new Error('Each variant must have a valid price.');
+                if (row.weight !== '' && row.weight !== null && row.weight !== undefined && Number.isNaN(Number(row.weight))) {
+                    throw new Error('Each variant weight must be numeric when provided.');
                 }
 
                 if (row.stock === '' || Number.isNaN(Number(row.stock))) {

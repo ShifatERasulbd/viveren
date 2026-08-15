@@ -10,6 +10,7 @@ import ShopSidebar from './ShopSidebar.jsx';
 import { sectionTypography } from '../utils/sectionTypography';
 
 const productImage = '/uploads/heroes/images/hero1.webp';
+const PLACEHOLDER_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='800' viewBox='0 0 600 800'%3E%3Crect width='100%25' height='100%25' fill='%23eef0f3'/%3E%3C/svg%3E";
 const PRODUCTS_PER_PAGE = 12;
 
 function parseSizeList(value) {
@@ -516,14 +517,23 @@ function getSwatchColor(value, colorLookup = {}) {
 
 function toAbsoluteImageUrl(path) {
     if (!path || typeof path !== 'string') {
-        return productImage;
+        return PLACEHOLDER_IMAGE;
     }
 
-    if (path.startsWith('http')) {
-        return path;
+    const normalizedPath = path
+        .trim()
+        .replace(/\\/g, '/')
+        .replace(/^\/+/, '/');
+
+    if (normalizedPath.startsWith('data:image')) {
+        return normalizedPath;
     }
 
-    return `/${path.replace(/^\/+/, '')}`;
+    if (normalizedPath.startsWith('http')) {
+        return normalizedPath;
+    }
+
+    return `/${normalizedPath.replace(/^\/+/, '')}`;
 }
 
 function normalizeImageKey(path) {
@@ -531,7 +541,11 @@ function normalizeImageKey(path) {
         return '';
     }
 
-    return path.replace(/^https?:\/\/[^/]+/i, '').replace(/^\/+/, '').trim();
+    return path
+        .replace(/\\/g, '/')
+        .replace(/^https?:\/\/[^/]+/i, '')
+        .replace(/^\/+/, '')
+        .trim();
 }
 
 function isBestSellerProduct(product) {
@@ -605,7 +619,7 @@ function ProductCard({ product, colorLookup = {}, colorNameLookup = {}, onAddToC
         });
 
         if (deduped.length === 0) {
-            return [productImage];
+            return [PLACEHOLDER_IMAGE];
         }
 
         return deduped.map((item) => toAbsoluteImageUrl(item));
@@ -647,6 +661,7 @@ function ProductCard({ product, colorLookup = {}, colorNameLookup = {}, onAddToC
 
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [selectedColor, setSelectedColor] = useState(() => initialSeedColor);
+    const [isImageLoaded, setIsImageLoaded] = useState(false);
 
     useEffect(() => {
         setCurrentImageIndex(initialImageIndex);
@@ -675,6 +690,49 @@ function ProductCard({ product, colorLookup = {}, colorNameLookup = {}, onAddToC
     }, [currentImageIndex, galleryImages, colors, colorVariantImages, selectedColor]);
 
     const imageSrc = galleryImages[currentImageIndex] || productImage;
+    const [resolvedImageSrc, setResolvedImageSrc] = useState(PLACEHOLDER_IMAGE);
+
+    useEffect(() => {
+        let cancelled = false;
+        setIsImageLoaded(false);
+
+        const timeoutId = setTimeout(() => {
+            if (cancelled) {
+                return;
+            }
+
+            setResolvedImageSrc(PLACEHOLDER_IMAGE);
+            setIsImageLoaded(true);
+        }, 3000);
+
+        const probe = new Image();
+        probe.onload = () => {
+            if (cancelled) {
+                return;
+            }
+
+            clearTimeout(timeoutId);
+            setResolvedImageSrc(imageSrc);
+            setIsImageLoaded(true);
+        };
+
+        probe.onerror = () => {
+            if (cancelled) {
+                return;
+            }
+
+            clearTimeout(timeoutId);
+            setResolvedImageSrc(PLACEHOLDER_IMAGE);
+            setIsImageLoaded(true);
+        };
+
+        probe.src = imageSrc;
+
+        return () => {
+            cancelled = true;
+            clearTimeout(timeoutId);
+        };
+    }, [imageSrc, product.id]);
 
     function handlePrevImage(event) {
         event.preventDefault();
@@ -749,11 +807,25 @@ function ProductCard({ product, colorLookup = {}, colorNameLookup = {}, onAddToC
     return (
         <article className="group w-full overflow-hidden border border-zinc-200">
             <Link to={productLink} className="block">
-                <div className="relative aspect-[3/4] w-full overflow-hidden bg-zinc-100">
+                <div className="relative h-[430px] w-full overflow-hidden bg-zinc-100 sm:h-[470px] lg:h-[510px]">
+                    <div
+                        className={`absolute inset-0 bg-zinc-200/70 transition-opacity duration-500 ${
+                            isImageLoaded ? 'opacity-0' : 'animate-pulse opacity-100'
+                        }`}
+                    />
                     <img
-                        src={imageSrc}
+                        src={resolvedImageSrc}
                         alt={product.name}
-                        className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+                        loading="lazy"
+                        decoding="async"
+                        onLoad={() => setIsImageLoaded(true)}
+                        onError={() => {
+                            setResolvedImageSrc(PLACEHOLDER_IMAGE);
+                            setIsImageLoaded(true);
+                        }}
+                        className={`h-full w-full object-cover object-center transition-all duration-500 group-hover:scale-105 ${
+                            isImageLoaded ? 'opacity-100' : 'opacity-0'
+                        }`}
                     />
 
                     <div className="product-hover-cta absolute inset-x-3 bottom-3 flex translate-y-3 items-center justify-center gap-2 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
@@ -931,6 +1003,7 @@ export default function ShopCatalogSection() {
     const [variantModalState, setVariantModalState] = useState(null);
     const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
     const [collectionItems, setCollectionItems] = useState([]);
+    const [isContentVisible, setIsContentVisible] = useState(false);
     const catalogTopRef = useRef(null);
 
     function handlePageChange(page) {
@@ -1357,6 +1430,21 @@ export default function ShopCatalogSection() {
         };
     }, [isMobileFiltersOpen]);
 
+    useEffect(() => {
+        if (isLoading) {
+            setIsContentVisible(false);
+            return;
+        }
+
+        const timer = window.setTimeout(() => {
+            setIsContentVisible(true);
+        }, 40);
+
+        return () => {
+            window.clearTimeout(timer);
+        };
+    }, [isLoading]);
+
     if (isLoading) {
         return (
             <section className={`${featuresFontClass} px-5 py-12 sm:px-8 lg:px-12 lg:py-16`}>
@@ -1379,7 +1467,7 @@ export default function ShopCatalogSection() {
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                             {Array.from({ length: 8 }).map((_, index) => (
                                 <article key={`shop-card-skeleton-${index}`} className="overflow-hidden border border-zinc-200">
-                                    <div className="h-[250px] bg-zinc-200 sm:h-[320px]" />
+                                    <div className="h-[430px] bg-zinc-200 sm:h-[470px] lg:h-[510px]" />
                                     <div className="space-y-2 p-4">
                                         <div className="h-3.5 w-[80%] rounded bg-zinc-200" />
                                         <div className="h-3.5 w-20 rounded bg-zinc-200" />
@@ -1394,7 +1482,12 @@ export default function ShopCatalogSection() {
     }
 
     return (
-        <section ref={catalogTopRef} className={`${featuresFontClass} px-5 py-12 sm:px-8 lg:px-12 lg:py-16`}>
+        <section
+            ref={catalogTopRef}
+            className={`${featuresFontClass} px-5 py-12 transition-opacity duration-500 sm:px-8 lg:px-12 lg:py-16 ${
+                isContentVisible ? 'opacity-100' : 'opacity-0'
+            }`}
+        >
             <div className="mx-auto grid w-full max-w-[1709px] gap-8 lg:grid-cols-[360px_1fr] lg:gap-10">
                 <div className="hidden lg:block">
                     <ShopSidebar
