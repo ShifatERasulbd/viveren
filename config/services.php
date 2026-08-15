@@ -71,6 +71,7 @@ return [
         'origin_state' => env('UPS_ORIGIN_STATE', 'MA'),
         'origin_postal_code' => env('UPS_ORIGIN_POSTAL_CODE', '01821'),
         'origin_country' => env('UPS_ORIGIN_COUNTRY', 'US'),
+        'use_negotiated_rates' => env('UPS_USE_NEGOTIATED_RATES', true),
         'service_code' => env('UPS_SERVICE_CODE', '03'),
         'service_description' => env('UPS_SERVICE_DESCRIPTION', 'UPS Ground'),
         'packaging_code' => env('UPS_PACKAGING_CODE', '02'),

@@ -26,6 +26,31 @@ function calculateStripeCharge(baseAmount) {
     return roundCurrency((amount * STRIPE_PERCENT_RATE) + STRIPE_FIXED_FEE);
 }
 
+function normalizeShippingOption(option, index) {
+    const code = String(option?.code || '').trim();
+    const amount = Number(option?.amount ?? option?.price ?? 0);
+    const safeAmount = Number.isFinite(amount) && amount >= 0 ? amount : 0;
+    const description = String(option?.description || '').trim();
+
+    return {
+        ...option,
+        code,
+        amount: safeAmount,
+        label: description || (index === 0 ? 'Standard' : index === 1 ? 'Express' : 'Super Express'),
+    };
+}
+
+function normalizeServiceCode(value, fallback = '02') {
+    const raw = String(value ?? '').trim();
+    const resolved = raw || fallback;
+
+    if (/^\d+$/.test(resolved)) {
+        return resolved.padStart(2, '0');
+    }
+
+    return resolved.toUpperCase();
+}
+
 const cardElementOptions = {
     hidePostalCode: true,
     style: {
@@ -114,12 +139,13 @@ function CheckoutForm() {
     const selectedCourier = 'ups';
     const [quotedShipping, setQuotedShipping] = useState(0);
     const [shippingOptions, setShippingOptions] = useState([]);
-    const [selectedShippingOptionCode, setSelectedShippingOptionCode] = useState('');
+    const [selectedShippingOptionCode, setSelectedShippingOptionCode] = useState('02');
     const [selectedDeliveryDate, setSelectedDeliveryDate] = useState('');
     const [selectedDeliveryTime, setSelectedDeliveryTime] = useState('');
     const [isFetchingShipping, setIsFetchingShipping] = useState(false);
     const [shippingError, setShippingError] = useState('');
     const [quotedTax, setQuotedTax] = useState(0);
+    const [quotedTaxRatePercent, setQuotedTaxRatePercent] = useState(0);
     const [isFetchingTax, setIsFetchingTax] = useState(false);
     const [taxError, setTaxError] = useState('');
     const [stateOptions, setStateOptions] = useState([]);
@@ -219,10 +245,30 @@ function CheckoutForm() {
         && String(form.country || '').trim(),
     ), [form.state, form.city, form.postal_code, form.country]);
 
+    const minimumShippingFromOptions = useMemo(() => {
+        if (!Array.isArray(shippingOptions) || shippingOptions.length === 0) {
+            return null;
+        }
+
+        const amounts = shippingOptions
+            .map((option) => Number(option?.amount ?? 0))
+            .filter((value) => Number.isFinite(value) && value >= 0);
+
+        if (amounts.length === 0) {
+            return null;
+        }
+
+        return Math.min(...amounts);
+    }, [shippingOptions]);
+
     const shipping = useMemo(() => {
+        if (minimumShippingFromOptions !== null) {
+            return roundCurrency(minimumShippingFromOptions);
+        }
+
         const value = Number(quotedShipping);
         return Number.isFinite(value) && value > 0 ? value : 0;
-    }, [quotedShipping]);
+    }, [minimumShippingFromOptions, quotedShipping]);
 
     const tax = useMemo(() => {
         const value = Number(quotedTax);
@@ -434,6 +480,8 @@ function CheckoutForm() {
         setIsFetchingShipping(true);
         setShippingError('');
 
+        const requestServiceCode = normalizeServiceCode(selectedShippingOptionCode, '02');
+
         const quotePayload = {
             courier: 'ups',
             subtotal,
@@ -441,7 +489,7 @@ function CheckoutForm() {
             state: form.state,
             postal_code: form.postal_code,
             country: form.country,
-            service_code: selectedShippingOptionCode || undefined,
+            service_code: requestServiceCode,
             delivery_date: selectedDeliveryDate || undefined,
             delivery_time: selectedDeliveryTime || undefined,
             items: normalizedItems,
@@ -472,14 +520,25 @@ function CheckoutForm() {
                     throw new Error(payload?.error || payload?.message || 'Unable to fetch UPS shipping charge');
                 }
 
-                const nextOptions = Array.isArray(payload?.shipping_options) ? payload.shipping_options : [];
+                const nextOptions = (Array.isArray(payload?.shipping_options) ? payload.shipping_options : [])
+                    .map((option, index) => normalizeShippingOption(option, index))
+                    .filter((option) => option.code !== '');
+
                 if (nextOptions.length > 0) {
                     setShippingOptions(nextOptions);
 
-                    const defaultCode = payload?.selected_service_code || nextOptions[0]?.code || '';
-                    if (defaultCode) {
-                        setSelectedShippingOptionCode((current) => current || defaultCode);
-                    }
+                    const selectedCodeFromPayload = normalizeServiceCode(payload?.selected_service_code, '02');
+                    const firstCode = normalizeServiceCode(nextOptions[0]?.code, '02');
+
+                    setSelectedShippingOptionCode((current) => {
+                        const currentCode = normalizeServiceCode(current, '02');
+                        const stillExists = currentCode !== '' && nextOptions.some((option) => option.code === currentCode);
+                        if (stillExists) {
+                            return currentCode;
+                        }
+
+                        return selectedCodeFromPayload || firstCode;
+                    });
                 }
 
                 setQuotedShipping(Number(payload?.shipping || 0));
@@ -506,12 +565,14 @@ function CheckoutForm() {
     useEffect(() => {
         if (subtotal <= 0) {
             setQuotedTax(0);
+            setQuotedTaxRatePercent(0);
             setTaxError('');
             return;
         }
 
         if (!hasCompleteShippingAddress) {
             setQuotedTax(0);
+            setQuotedTaxRatePercent(0);
             setTaxError('');
             return;
         }
@@ -546,6 +607,7 @@ function CheckoutForm() {
                 }
 
                 setQuotedTax(Number(payload?.tax || 0));
+                setQuotedTaxRatePercent(Number(payload?.tax_rate_percent || 0));
             } catch (error) {
                 if (error?.name === 'AbortError') {
                     return;
@@ -553,6 +615,7 @@ function CheckoutForm() {
 
                 setTaxError(error?.message || 'Unable to calculate tax');
                 setQuotedTax(0);
+                setQuotedTaxRatePercent(0);
             } finally {
                 setIsFetchingTax(false);
             }
@@ -1113,6 +1176,7 @@ function CheckoutForm() {
                             <span>State Tax</span>
                             <span>{tax === 0 ? '$0.00' : `$${tax.toFixed(2)}`}</span>
                         </div>
+                      
                         
                         {isFetchingShipping ? (
                             <p className="text-xs text-zinc-500">Fetching UPS shipping quote...</p>
@@ -1161,10 +1225,10 @@ function CheckoutForm() {
                             </div>
 
                             {shippingOptions.length > 0 ? (
-                                shippingOptions.slice(0, 3).map((option, index) => {
+                                shippingOptions.slice(0, 3).map((option) => {
                                     const isSelected = option.code === selectedShippingOptionCode;
-                                    const selectedPrice = Number(option.price || 0);
-                                    const displayLabel = index === 0 ? 'Standard' : index === 1 ? 'Express' : 'Super Express';
+                                    const selectedPrice = Number(option.amount || 0);
+                                    const displayLabel = option.label || 'UPS Service';
 
                                     return (
                                         <button

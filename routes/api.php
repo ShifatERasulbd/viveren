@@ -70,6 +70,7 @@ Route::get('/public/compliance', [App\Http\Controllers\CompliancePageController:
 Route::get('/public/orders/{orderNumber}', [CheckoutOrderController::class, 'publicShow']);
 
 Route::post('/public/shipping/quote', [CheckoutOrderController::class, 'quoteShipping']);
+Route::post('/public/tax/quote', [CheckoutOrderController::class, 'quoteTax']);
 Route::get('/public/locations/states', [UsLocationController::class, 'states']);
 Route::get('/public/locations/cities', [UsLocationController::class, 'citiesByState']);
 Route::get('/public/locations/postal-code', [UsLocationController::class, 'postalCodeByCityState']);
