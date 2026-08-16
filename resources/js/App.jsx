@@ -1,6 +1,6 @@
 import React, { Suspense, lazy, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { Toaster } from 'sonner';
 
 import CartDrawer from './frontend/components/CartDrawer.jsx';
@@ -25,6 +25,7 @@ const SustainabilityPage = lazy(() => import('./frontend/pages/Sustainability.js
 const TermsPage = lazy(() => import('./frontend/pages/TermsPage.jsx'));
 const PrivacyPage = lazy(() => import('./frontend/pages/PrivacyPage.jsx'));
 const ShippingPage = lazy(() => import('./frontend/pages/ShippingPage.jsx'));
+const NotFoundPage = lazy(() => import('./frontend/pages/NotFoundPage.jsx'));
 
 const BRAND_NAME = window.APP_NAME || 'Viveren';
 
@@ -72,7 +73,7 @@ function resolvePageLabel(pathname) {
     if (path.startsWith('/reset-password')) return 'Reset Password';
     if (path.split('/').filter(Boolean).length <= 2) return 'Shop';
 
-    return 'Home';
+    return 'Page Not Found';
 }
 
 
@@ -190,8 +191,8 @@ function AppRouter() {
                         <Route path="login" element={withPageFallback(AuthPage)} />
                         <Route path="register" element={withPageFallback(AuthPage)} />
                         <Route path="reset-password/:token" element={withPageFallback(ResetPasswordPage)} />
+                        <Route path="*" element={withPageFallback(NotFoundPage)} />
                     </Route>
-                    <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
             </BrowserRouter>
         </CartProvider>

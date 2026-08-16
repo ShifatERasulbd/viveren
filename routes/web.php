@@ -93,3 +93,8 @@ Route::get('/{subCategorySlug}/{grandChildSlug?}', function () {
     return view('home');
 });
 
+// Catch-all for any other frontend path so the SPA can render its own 404 page.
+Route::get('/{any}', function () {
+    return view('home');
+})->where('any', '.*');
+
