@@ -15,7 +15,21 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useAppContext } from '@/context/AppContext';
 
-import { deleteSize, fetchSizes } from './api';
+import { deleteSize, fetchSizes, reorderSizes } from './api';
+
+function moveItemById(items, sourceId, targetId) {
+  const sourceIndex = items.findIndex((item) => Number(item.id) === Number(sourceId));
+  const targetIndex = items.findIndex((item) => Number(item.id) === Number(targetId));
+
+  if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) {
+    return items;
+  }
+
+  const next = [...items];
+  const [moved] = next.splice(sourceIndex, 1);
+  next.splice(targetIndex, 0, moved);
+  return next;
+}
 
 export default function Size() {
   const navigate = useNavigate();
@@ -25,6 +39,7 @@ export default function Size() {
   const [errorMessage, setErrorMessage] = useState('');
   const [deletingId, setDeletingId] = useState(null);
   const [sizeToDelete, setSizeToDelete] = useState(null);
+  const [isReordering, setIsReordering] = useState(false);
 
     useEffect(() => {
     setPageTitle('Size');
@@ -88,6 +103,41 @@ export default function Size() {
     }
   };
 
+  const handleReorder = async (sourceId, targetId) => {
+    if (isReordering || sourceId === targetId) {
+      return;
+    }
+
+    const previous = sizes;
+    const reordered = moveItemById(previous, sourceId, targetId);
+    if (reordered === previous) {
+      return;
+    }
+
+    setSizes(reordered);
+    setIsReordering(true);
+    setErrorMessage('');
+
+    try {
+      const payload = await reorderSizes(reordered.map((size) => Number(size.id)));
+      if (Array.isArray(payload)) {
+        setSizes(payload);
+      }
+      toast.success('Size order updated.', {
+        style: { color: '#16a34a' },
+      });
+    } catch (error) {
+      setSizes(previous);
+      const message = error.message || 'Failed to reorder Sizes.';
+      setErrorMessage(message);
+      toast.error(message, {
+        style: { color: '#dc2626' },
+      });
+    } finally {
+      setIsReordering(false);
+    }
+  };
+
     return (
     <div className="space-y-5">
       {errorMessage && <p className="text-sm text-destructive">{errorMessage}</p>}
@@ -98,7 +148,9 @@ export default function Size() {
               onAdd={() => navigate('/admin/size/add')}
               onEdit={(id) => navigate(`/admin/size/${id}/edit`)}
                 onRequestDelete={setSizeToDelete}
+                onReorder={handleReorder}
                 deletingId={deletingId}
+                isReordering={isReordering}
                 isLoading={isLoading}
                 />
                     </div>

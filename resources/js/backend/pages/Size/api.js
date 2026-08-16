@@ -50,6 +50,14 @@ export async function deleteSize(id) {
     });
 }
 
+export async function reorderSizes(ids = []) {
+    return requestJson('/api/sizes/reorder', {
+        needsCsrf: true,
+        method: 'PUT',
+        body: JSON.stringify({ ids }),
+    });
+}
+
 // Backward-compatible aliases for any older imports still present.
 export const updateSizes = updateSize;
 export const deleteSizes = deleteSize;

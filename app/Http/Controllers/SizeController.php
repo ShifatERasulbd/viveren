@@ -5,12 +5,31 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Size;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 class SizeController extends Controller
 {
      public function index():JsonResponse
     {
-        return response()->json(Size::orderBy('size')->get());
+        return response()->json(Size::orderBy('position')->orderBy('id')->get());
+    }
+
+    public function reorder(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['required', 'integer', 'distinct', 'exists:sizes,id'],
+        ]);
+
+        $ids = array_map('intval', $validated['ids']);
+
+        DB::transaction(function () use ($ids) {
+            foreach ($ids as $index => $id) {
+                Size::query()->whereKey($id)->update(['position' => $index + 1]);
+            }
+        });
+
+        return response()->json(Size::orderBy('position')->orderBy('id')->get());
     }
 
     public function store(Request $request):JsonResponse
@@ -20,6 +39,8 @@ class SizeController extends Controller
         ]);
 
         $validated['size'] = trim($validated['size']);
+
+        $validated['position'] = (int) Size::max('position') + 1;
 
         $size = Size::create($validated);
         return response()->json($size, 201);

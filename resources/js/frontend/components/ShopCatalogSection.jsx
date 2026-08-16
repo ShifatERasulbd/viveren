@@ -439,6 +439,7 @@ function normalizeGrandChildOptions(payload) {
         .map((item) => ({
             id: String(item?.id ?? ''),
             name: String(item?.name || '').trim(),
+            slug: String(item?.slug || '').trim(),
         }))
         .filter((item) => item.id && item.name);
 }
@@ -583,6 +584,28 @@ function isFabricProduct(product, fabricValue) {
     const needle = normalizeQueryValue(fabricValue);
 
     return variantRows.some((row) => normalizeQueryValue(String(row?.fabric || '')) === needle);
+}
+
+function matchesCategoryFilter(product, selectedIds, categoryById, newArrivalProductIdSet) {
+    return selectedIds.some((selectedId) => {
+        const option = categoryById[selectedId];
+        const optionValue = normalizeQueryValue(option?.slug || option?.name);
+
+        if (optionValue === 'new-arrivals') {
+            return newArrivalProductIdSet.has(Number(product.base_product_id ?? product.id));
+        }
+
+        if (optionValue === 'trending-products') {
+            return isBestSellerProduct(product);
+        }
+
+        const fabricValue = FABRIC_SLUG_MAP[optionValue];
+        if (fabricValue) {
+            return isFabricProduct(product, fabricValue);
+        }
+
+        return String(product.grand_child_id || '') === String(selectedId);
+    });
 }
 
 function ColorSwatch({ color, active, onClick, colorLookup, colorNameLookup = {} }) {
@@ -1291,12 +1314,17 @@ export default function ShopCatalogSection() {
         return activeCollectionProductIdSet;
     }, [isNewArrivalsView, newArrivalsProductIds, activeCollectionProductIdSet]);
 
-    useEffect(() => {
-        if (!isNewArrivalsView) {
-            setNewArrivalsProductIds([]);
-            return;
-        }
+    const newArrivalProductIdSet = useMemo(
+        () => new Set(newArrivalsProductIds.map((id) => Number(id))),
+        [newArrivalsProductIds],
+    );
 
+    const categoryById = useMemo(
+        () => Object.fromEntries(categoryOptions.map((option) => [String(option.id), option])),
+        [categoryOptions],
+    );
+
+    useEffect(() => {
         let ignore = false;
 
         async function loadNewArrivalsProductIds() {
@@ -1332,7 +1360,7 @@ export default function ShopCatalogSection() {
         return () => {
             ignore = true;
         };
-    }, [isNewArrivalsView]);
+    }, []);
 
     useEffect(() => {
         const params = new URLSearchParams(location.search);
@@ -1464,7 +1492,7 @@ export default function ShopCatalogSection() {
             }
 
             if (selectedCategories.length > 0) {
-                if (!selectedCategories.includes(product.grand_child_id)) {
+                if (!matchesCategoryFilter(product, selectedCategories, categoryById, newArrivalProductIdSet)) {
                     return false;
                 }
             }
@@ -1491,6 +1519,8 @@ export default function ShopCatalogSection() {
         selectedAvailability,
         selectedSizes,
         selectedCategories,
+        categoryById,
+        newArrivalProductIdSet,
         minPrice,
         maxPrice,
         searchTerm,

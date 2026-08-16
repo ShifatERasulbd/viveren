@@ -104,6 +104,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
 	Route::middleware('user-type:admin')->group(function () {
 
+	Route::put('/sizes/reorder', [SizeController::class, 'reorder']);
 	Route::apiResource('/sizes', SizeController::class);
 
 	Route::apiResource('/colors', ColorController::class);
