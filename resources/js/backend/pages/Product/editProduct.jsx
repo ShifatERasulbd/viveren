@@ -943,6 +943,18 @@ export default function EditProduct() {
         setSelectedSizes((previous) => previous.filter((size) => size !== sizeToRemove));
     };
 
+    const handleReorderSizes = (fromSize, toSize) => {
+        if (!fromSize || !toSize || fromSize === toSize) {
+            return;
+        }
+
+        setSelectedSizes((previous) => {
+            const fromIndex = previous.indexOf(fromSize);
+            const toIndex = previous.indexOf(toSize);
+            return reorderItems(previous, fromIndex, toIndex);
+        });
+    };
+
     const handleGalleryFilesChange = (event) => {
         const files = Array.from(event.target.files || []);
         setNewGalleryImageFiles(files);
@@ -1252,6 +1264,7 @@ export default function EditProduct() {
                     onReorderColors={handleReorderColors}
                     onAddSize={handleAddSize}
                     onRemoveSize={handleRemoveSize}
+                    onReorderSizes={handleReorderSizes}
                     onVariantRowChange={handleVariantRowChange}
                     onColorTrendingChange={handleColorTrendingChange}
                     onColorFabricChange={handleColorFabricChange}
