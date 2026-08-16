@@ -142,8 +142,8 @@ export default function Footer() {
 
     const helpLinks = useMemo(() => [
         { label: 'Contact Us', href: '/contact' },
-        { label: 'Shipping', modalKey: 'shipping_returns' },
-        { label: 'Returns', modalKey: 'shipping_returns' },
+        { label: 'Shipping', href: '/shipping' },
+        { label: 'Returns', href: '/shipping' },
         { label: 'Size Guide', modalKey: 'size_guide' },
     ], []);
 
@@ -231,12 +231,12 @@ export default function Footer() {
                 <div className={`mx-auto flex w-full max-w-[1700px] flex-col items-center justify-between gap-3 px-6 py-5 ${sectionTypography.footerLegal} text-zinc-500 sm:flex-row sm:px-10 lg:px-16`}>
                     <span>© 2026 Viveren. All rights reserved.</span>
                     <div className="flex items-center gap-6">
-                        <button type="button" onClick={() => openModal('privacy')} className="transition-colors hover:text-white">
+                        <Link to="/privacy" className="transition-colors hover:text-white">
                             Privacy
-                        </button>
-                        <button type="button" onClick={() => openModal('terms')} className="transition-colors hover:text-white">
+                        </Link>
+                        <Link to="/terms" className="transition-colors hover:text-white">
                             Terms
-                        </button>
+                        </Link>
                        
                     </div>
                 </div>

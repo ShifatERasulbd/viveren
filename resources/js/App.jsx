@@ -22,6 +22,9 @@ const CheckoutPage = lazy(() => import('./frontend/pages/Checkout.jsx'));
 const OrderConfirmationPage = lazy(() => import('./frontend/pages/OrderConfirmation.jsx'));
 
 const SustainabilityPage = lazy(() => import('./frontend/pages/Sustainability.jsx'));
+const TermsPage = lazy(() => import('./frontend/pages/TermsPage.jsx'));
+const PrivacyPage = lazy(() => import('./frontend/pages/PrivacyPage.jsx'));
+const ShippingPage = lazy(() => import('./frontend/pages/ShippingPage.jsx'));
 
 const BRAND_NAME = window.APP_NAME || 'Viveren';
 
@@ -50,6 +53,9 @@ function resolvePageLabel(pathname) {
     if (path === '/about') return 'About';
     if (path === '/sustainability') return 'Sustainability';
     if (path === '/contact') return 'Contact';
+    if (path === '/terms') return 'Terms & Conditions';
+    if (path === '/privacy') return 'Privacy Policy';
+    if (path === '/shipping') return 'Shipping & Returns';
     if (path === '/checkout') return 'Checkout';
     if (path === '/order-confirmation') return 'Order Confirmation';
     if (path === '/login') return 'Login';
@@ -174,6 +180,9 @@ function AppRouter() {
                         <Route path="singleProduct" element={withPageFallback(SingleProductPage)} />
                         <Route path="about" element={withPageFallback(AboutPage)} />
                         <Route path="contact" element={withPageFallback(ContactPage)} />
+                        <Route path="terms" element={withPageFallback(TermsPage)} />
+                        <Route path="privacy" element={withPageFallback(PrivacyPage)} />
+                        <Route path="shipping" element={withPageFallback(ShippingPage)} />
 
                         <Route path="sustainability" element={withPageFallback(SustainabilityPage)} />
                         <Route path="checkout" element={withPageFallback(CheckoutPage)} />
