@@ -364,7 +364,7 @@ export default function AddForm({
                                     onChange={onGalleryFilesChange}
                                     disabled={isSubmitting}
                                 />
-                                <p className="text-xs text-muted-foreground">Select multiple gallery images (JPG, PNG, WEBP, max 4MB each).</p>
+                                <p className="text-xs text-muted-foreground">Select multiple gallery images (JPG, PNG, WEBP).</p>
                                 {errors.image_gallery && <p className="text-xs text-destructive">{errors.image_gallery[0]}</p>}
                             </div>
 
