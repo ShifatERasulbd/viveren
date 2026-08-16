@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { Label } from '@/components/ui/label';
@@ -19,6 +20,17 @@ export default function RichTextEditor({
             onChange?.(editor.getHTML());
         },
     });
+
+    useEffect(() => {
+        if (!editor) {
+            return;
+        }
+
+        const incoming = value || '';
+        if (incoming !== editor.getHTML()) {
+            editor.commands.setContent(incoming, false);
+        }
+    }, [editor, value]);
 
     if (!editor) {
         return null;
