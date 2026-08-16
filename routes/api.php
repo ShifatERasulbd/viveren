@@ -105,7 +105,7 @@ Route::middleware('auth:sanctum')->group(function () {
 	Route::middleware('user-type:admin')->group(function () {
 
 	Route::put('/sizes/reorder', [SizeController::class, 'reorder']);
-	Route::apiResource('/sizes', SizeController::class);
+	Route::apiResource('/sizes', SizeController::class)->whereNumber('size');
 
 	Route::apiResource('/colors', ColorController::class);
 	Route::get('/heroes', [HeroController::class, 'index']);
