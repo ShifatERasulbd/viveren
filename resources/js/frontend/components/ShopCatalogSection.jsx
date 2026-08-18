@@ -866,7 +866,7 @@ function ProductCard({ product, colorLookup = {}, colorNameLookup = {}, onAddToC
                         }`}
                     />
 
-                    <div className="product-hover-cta absolute inset-x-3 bottom-3 flex translate-y-3 items-center justify-center gap-2 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+                    <div className="product-hover-cta absolute inset-x-3 bottom-3 hidden translate-y-3 items-center justify-center gap-2 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 sm:flex">
                         <button
                             type="button"
                             onClick={handleAddToCart}
@@ -941,6 +941,24 @@ function ProductCard({ product, colorLookup = {}, colorNameLookup = {}, onAddToC
                 <p className={`${sectionTypography.productPrice} text-[1.2rem] font-semibold leading-none text-zinc-800 sm:text-[.95rem]`}>
                     ${Number(product.priceValue).toFixed(2)}
                 </p>
+
+                <div className="flex items-center gap-2 pt-2 sm:hidden">
+                    <button
+                        type="button"
+                        onClick={handleAddToCart}
+                        className="inline-flex h-9 min-w-0 flex-1 items-center justify-center bg-zinc-900 px-2 text-[0.62rem] font-semibold uppercase tracking-[0.06em] text-white"
+                    >
+                        Add to cart
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleQuickView}
+                        aria-label="View product"
+                        className="inline-flex size-9 shrink-0 items-center justify-center border border-zinc-300 text-zinc-700"
+                    >
+                        <Eye className="size-4" />
+                    </button>
+                </div>
             </div>
         </article>
     );
@@ -981,7 +999,7 @@ function ShopProductsGrid({
             </div>
 
             {visibleProducts.length > 0 ? (
-                <div className="grid grid-cols-1 gap-x-1 gap-y-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+                <div className="grid grid-cols-2 gap-x-1 gap-y-4 md:grid-cols-3 xl:grid-cols-4">
                     {visibleProducts.map((product) => (
                         <ProductCard key={product.id} product={product} colorLookup={colorLookup} colorNameLookup={colorNameLookup} onAddToCart={onAddToCart} seedColorOnly={seedColorOnly} hideColorSwatches={hideColorSwatches} />
                     ))}
@@ -1614,7 +1632,7 @@ export default function ShopCatalogSection() {
                             <div className="h-9 w-28 rounded bg-zinc-200" />
                         </div>
 
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                        <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
                             {Array.from({ length: 8 }).map((_, index) => (
                                 <article key={`shop-card-skeleton-${index}`} className="overflow-hidden border border-zinc-200">
                                     <div className="h-[430px] bg-zinc-200 sm:h-[470px] lg:h-[510px]" />

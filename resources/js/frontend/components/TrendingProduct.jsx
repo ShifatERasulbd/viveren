@@ -391,11 +391,11 @@ function ProductCard({ product, colorLookup = {}, colorNameLookup = {}, onAddToC
     return (
         <article className="group w-full overflow-hidden border border-zinc-200">
             <Link to={productLink} className="block">
-                <div className="relative aspect-[2/3] w-full overflow-hidden bg-zinc-100">
+                <div className="relative aspect-[1/2] w-full overflow-hidden bg-zinc-100 sm:aspect-[2/3]">
                     <img
                         src={imageSrc}
                         alt={product.name}
-                        className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+                        className="h-full w-full object-contain object-center transition-transform duration-500 group-hover:scale-105 sm:object-cover"
                     />
 
                     {/* Hover action buttons */}
@@ -576,13 +576,13 @@ export default function TrendingProduct() {
                     speed={1400}
                     autoplay={{ delay: 4000, disableOnInteraction: false }}
                     spaceBetween={0}
-                    slidesPerView={1.5}
+                    slidesPerView={2}
                     breakpoints={{
                         640: { slidesPerView: 3 },
                         1024: { slidesPerView: 4 },
                         1280: { slidesPerView: 5 },
                     }}
-                    className="px-0"
+                    className="new-arrivals-swiper px-0"
                 >
                     {products.map((product, index) => (
                         <SwiperSlide key={product.id || index}>
@@ -608,7 +608,20 @@ export default function TrendingProduct() {
             />
 
             <style>{`
-                .swiper-button-next, .swiper-button-prev { color: #000 !important; }
+                .new-arrivals-swiper .swiper-button-next,
+                .new-arrivals-swiper .swiper-button-prev {
+                    color: #000 !important;
+                    opacity: 0;
+                    pointer-events: none;
+                    transition: opacity 200ms ease;
+                }
+                .new-arrivals-swiper:hover .swiper-button-next,
+                .new-arrivals-swiper:hover .swiper-button-prev,
+                .new-arrivals-swiper:focus-within .swiper-button-next,
+                .new-arrivals-swiper:focus-within .swiper-button-prev {
+                    opacity: 1;
+                    pointer-events: auto;
+                }
             `}</style>
         </motion.section>
     );

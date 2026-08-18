@@ -62,7 +62,26 @@ export default function CollectionsSection() {
 
     return (
         <section className={`${timelessFontClass} pt-2 pb-8 overflow-hidden w-full`}>
-            <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-0">
+            <div className="w-full md:hidden">
+                <Swiper
+                    modules={[Navigation, Autoplay]}
+                    navigation
+                    loop={true}
+                    speed={800}
+                    autoplay={{ delay: 3000, disableOnInteraction: false }}
+                    spaceBetween={0}
+                    slidesPerView={1}
+                    className="px-0"
+                >
+                    {collections.map((col, index) => (
+                        <SwiperSlide key={col.id || index}>
+                            <CollectionCard {...col} isBuilderPreview={isBuilderPreview} index={index} />
+                        </SwiperSlide>
+                    ))}
+                </Swiper>
+            </div>
+
+            <div className="hidden w-full grid-cols-2 gap-0 md:grid">
                 
                 {/* Left Half Animation */}
                 <motion.div
