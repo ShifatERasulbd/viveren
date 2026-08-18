@@ -843,7 +843,7 @@ function ProductCard({ product, colorLookup = {}, colorNameLookup = {}, onAddToC
     
 
     return (
-        <article className="group w-full overflow-hidden border border-zinc-200">
+        <article className="group min-w-0 w-full overflow-hidden border border-zinc-200">
             <Link to={productLink} className="block">
                 <div className="relative h-[430px] w-full overflow-hidden bg-zinc-100 sm:h-[470px] lg:h-[510px]">
                     <div
@@ -982,7 +982,7 @@ function ShopProductsGrid({
     const end = visibleProducts.length > 0 ? start + visibleProducts.length - 1 : 0;
 
     return (
-        <div>
+        <div className="min-w-0 max-w-full">
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3  py-4">
                 <p className="text-[0.88rem]  tracking-[0.07em] text-slate-600">
                     Showing {start}-{end} of {totalResults} results
@@ -999,7 +999,7 @@ function ShopProductsGrid({
             </div>
 
             {visibleProducts.length > 0 ? (
-                <div className="grid grid-cols-2 gap-x-1 gap-y-4 md:grid-cols-3 xl:grid-cols-4">
+                <div className="grid min-w-0 grid-cols-2 gap-x-1 gap-y-4 md:grid-cols-3 xl:grid-cols-4">
                     {visibleProducts.map((product) => (
                         <ProductCard key={product.id} product={product} colorLookup={colorLookup} colorNameLookup={colorNameLookup} onAddToCart={onAddToCart} seedColorOnly={seedColorOnly} hideColorSwatches={hideColorSwatches} />
                     ))}
@@ -1615,8 +1615,8 @@ export default function ShopCatalogSection() {
 
     if (isLoading) {
         return (
-            <section className={`${featuresFontClass} px-5 py-12 sm:px-8 lg:px-12 lg:py-16`}>
-                <div className="mx-auto grid w-full max-w-[1709px] animate-pulse gap-8 lg:grid-cols-[360px_1fr] lg:gap-10">
+            <section className={`${featuresFontClass} max-w-full overflow-x-hidden px-5 py-12 sm:px-8 lg:px-12 lg:py-16`}>
+                <div className="mx-auto grid min-w-0 w-full max-w-[1709px] animate-pulse gap-8 lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-10">
                     <div className="space-y-4 rounded border border-zinc-200  p-5">
                         <div className="h-5 w-28 rounded bg-zinc-200" />
                         <div className="h-10 rounded bg-zinc-200" />
@@ -1626,7 +1626,7 @@ export default function ShopCatalogSection() {
                         <div className="h-10 rounded bg-zinc-200" />
                     </div>
 
-                    <div>
+                    <div className="min-w-0">
                         <div className="mb-5 flex items-center justify-between gap-3 py-4">
                             <div className="h-4 w-52 rounded bg-zinc-200" />
                             <div className="h-9 w-28 rounded bg-zinc-200" />
@@ -1652,11 +1652,11 @@ export default function ShopCatalogSection() {
     return (
         <section
             ref={catalogTopRef}
-            className={`${featuresFontClass} px-5 py-12 transition-opacity duration-500 sm:px-8 lg:px-12 lg:py-16 ${
+            className={`${featuresFontClass} max-w-full overflow-x-hidden px-5 py-12 transition-opacity duration-500 sm:px-8 lg:px-12 lg:py-16 ${
                 isContentVisible ? 'opacity-100' : 'opacity-0'
             }`}
         >
-            <div className="mx-auto grid w-full max-w-[1709px] gap-8 lg:grid-cols-[360px_1fr] lg:gap-10">
+            <div className="mx-auto grid min-w-0 w-full max-w-[1709px] gap-8 lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-10">
                 <div className="hidden lg:block">
                     <ShopSidebar
                         sizeOptions={sizeOptions}

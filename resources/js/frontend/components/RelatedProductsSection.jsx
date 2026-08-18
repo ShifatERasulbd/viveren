@@ -181,7 +181,7 @@ function normalizeImageKey(path) {
     return path.replace(/^https?:\/\/[^/]+/i, '').replace(/^\/+/, '').trim();
 }
 
-function resolveVariantImagesByColor(variantMap, colorValue) {
+function resolveVariantImagesByColor(variantMap, colorValue, colorNameById = {}) {
     if (!variantMap || typeof variantMap !== 'object') {
         return [];
     }
@@ -196,9 +196,13 @@ function resolveVariantImagesByColor(variantMap, colorValue) {
         return direct;
     }
 
-    const matchedEntry = Object.entries(variantMap).find(
-        ([key]) => String(key || '').trim().toLowerCase() === colorKey.toLowerCase(),
-    );
+    const normalizedColorKey = colorKey.toLowerCase();
+    const matchedEntry = Object.entries(variantMap).find(([key]) => {
+        const normalizedKey = String(key || '').trim();
+        const resolvedName = String(colorNameById[normalizedKey] || '').trim();
+        return normalizedKey.toLowerCase() === normalizedColorKey
+            || resolvedName.toLowerCase() === normalizedColorKey;
+    });
 
     return Array.isArray(matchedEntry?.[1]) ? matchedEntry[1].filter(Boolean) : [];
 }
@@ -213,7 +217,10 @@ function RelatedProductCard({ product, onAddToCart, colorLookup = {}, colorNameB
 
     const galleryImages = useMemo(() => {
         const rawGallery = Array.isArray(product?.image_gallery) ? product.image_gallery : [];
-        const allCandidates = [product?.cover_image, ...rawGallery].filter(Boolean);
+        const variantImages = Object.values(colorVariantImages).flatMap((images) =>
+            Array.isArray(images) ? images : [],
+        );
+        const allCandidates = [product?.cover_image, ...rawGallery, ...variantImages].filter(Boolean);
         const seen = new Set();
         const deduped = [];
 
@@ -228,7 +235,7 @@ function RelatedProductCard({ product, onAddToCart, colorLookup = {}, colorNameB
         });
 
         return deduped.length > 0 ? deduped : [fallbackImage];
-    }, [product?.cover_image, product?.image_gallery]);
+    }, [product?.cover_image, product?.image_gallery, colorVariantImages]);
 
     const [selectedColor, setSelectedColor] = useState(() => String(colors[0] || '').trim() || null);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -245,7 +252,7 @@ function RelatedProductCard({ product, onAddToCart, colorLookup = {}, colorNameB
             return;
         }
 
-        const mappedImages = resolveVariantImagesByColor(colorVariantImages, selected);
+        const mappedImages = resolveVariantImagesByColor(colorVariantImages, selected, colorNameById);
         if (mappedImages.length === 0) {
             return;
         }
@@ -258,7 +265,7 @@ function RelatedProductCard({ product, onAddToCart, colorLookup = {}, colorNameB
         if (targetIndex >= 0) {
             setCurrentImageIndex(targetIndex);
         }
-    }, [selectedColor, colorVariantImages, galleryImages]);
+    }, [selectedColor, colorVariantImages, galleryImages, colorNameById]);
 
     const imageSource = galleryImages[currentImageIndex] || galleryImages[0] || fallbackImage;
     const displayPrice = useMemo(
