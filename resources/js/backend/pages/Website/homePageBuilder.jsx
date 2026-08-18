@@ -34,8 +34,8 @@ import {
 
 const defaultHeroDraft = {
     title: 'Custom apparel solutions',
-    header_title: 'SUBSCRIBE AND SAVE 10% ON YOUR FIRST ORDER',
-    header_title_items: ['SUBSCRIBE AND SAVE 10% ON YOUR FIRST ORDER'],
+    header_title: '',
+    header_title_items: [''],
     description:
         'Elevate your brand with premium customized apparel designed for teams, events, corporate identity, and professional wear.',
     image_url: '/uploads/heroes/images/hero1.webp',
@@ -157,7 +157,7 @@ function normalizeHeaderTitleItems(items, fallback = '') {
     }
 
     const fallbackValue = String(fallback || '').trim();
-    return fallbackValue ? [fallbackValue] : ['SUBSCRIBE AND SAVE 10% ON YOUR FIRST ORDER'];
+    return fallbackValue ? [fallbackValue] : [];
 }
 
 function resolveHeaderTitleText(items, fallback = '') {
@@ -242,11 +242,11 @@ export default function HomePageBuilder() {
                     title: latestHero.title || previous.title,
                     header_title_items: normalizeHeaderTitleItems(
                         latestHero.header_title_items,
-                        latestHero.header_title || previous.header_title,
+                        latestHero.header_title,
                     ),
                     header_title: resolveHeaderTitleText(
                         latestHero.header_title_items,
-                        latestHero.header_title || previous.header_title,
+                        latestHero.header_title,
                     ),
                     description: latestHero.description || previous.description,
                     title_display_mode: latestHero.title_display_mode || previous.title_display_mode,
@@ -1380,11 +1380,11 @@ export default function HomePageBuilder() {
                     video_url: savedHero.video_url || previous.video_url,
                     header_title_items: normalizeHeaderTitleItems(
                         savedHero.header_title_items,
-                        savedHero.header_title || previous.header_title,
+                        savedHero.header_title,
                     ),
                     header_title: resolveHeaderTitleText(
                         savedHero.header_title_items,
-                        savedHero.header_title || previous.header_title,
+                        savedHero.header_title,
                     ),
                 }));
             }

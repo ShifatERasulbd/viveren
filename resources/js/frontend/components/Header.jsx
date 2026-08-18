@@ -447,15 +447,17 @@ export default function Header() {
     }, [siteSettings]);
 
     const headerLogo = useMemo(() => resolveMediaUrl(siteSettings?.header_logo || ''), [siteSettings]);
-    const headerText = heroHeaderText || siteSettings?.header_title;
+    const headerText = String(heroHeaderText || '').trim();
 
     return (
         <>
             <TopBar text={headerText} animate />
 
-            <div className="sr-only">
-                <TextGenerateEffect text={headerText} />
-            </div>
+            {headerText ? (
+                <div className="sr-only">
+                    <TextGenerateEffect text={headerText} />
+                </div>
+            ) : null}
 
             <header className={`${timelessFontClass} site-header sticky top-0 z-[300] border-b border-zinc-200 bg-white text-zinc-950 backdrop-blur`}>
                 <div className="site-header-inner mx-auto flex h-[90px] w-full max-w-[1920px] items-center justify-between px-4 sm:px-6 lg:px-10 xl:grid xl:grid-cols-[1fr_auto_1fr]">

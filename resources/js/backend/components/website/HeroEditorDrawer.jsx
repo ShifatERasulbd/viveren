@@ -203,7 +203,7 @@ export default function HeroEditorDrawer({
                                         id={`header-title-${index}`}
                                         value={item || ''}
                                         onChange={(event) => updateHeaderTitleItem(index, event.target.value)}
-                                        placeholder="SUBSCRIBE AND SAVE 10% ON YOUR FIRST ORDER"
+                                        placeholder="Enter promotional offer"
                                     />
                                 </div>
                             ))}
