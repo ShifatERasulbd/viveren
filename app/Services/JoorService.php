@@ -61,17 +61,140 @@ class JoorService
             }
         }
 
+        $imageSync = null;
+        if (! $hasErrors && is_scalar($joorProductId)) {
+            $imageSync = $this->syncProductImages($product, (string) $joorProductId, $query);
+            if (! ($imageSync['ok'] ?? false) && ! ($imageSync['skipped'] ?? false)) {
+                $hasErrors = true;
+            }
+        }
+
         return [
             'status' => $response->status(),
             'body' => $body,
             'ok' => $response->successful() && ! $hasErrors,
             'sku_sync' => $skuSync,
+            'image_sync' => $imageSync,
             'request' => [
                 'url' => $this->apiUrl($endpoint),
                 'query' => $query,
                 'payload' => $payload,
             ],
         ];
+    }
+
+    private function syncProductImages(Product $product, string $joorProductId, array $query): array
+    {
+        $imageUrls = $this->resolveProductImageUrls($product);
+
+        if ($imageUrls === []) {
+            return [
+                'ok' => false,
+                'skipped' => true,
+                'reason' => 'Product has no images to sync to JOOR.',
+            ];
+        }
+
+        $payload = [];
+        foreach (array_values($imageUrls) as $index => $url) {
+            $extension = strtolower((string) pathinfo(parse_url($url, PHP_URL_PATH) ?: $url, PATHINFO_EXTENSION));
+
+            // JOOR /assets/products only accepts these image extensions.
+            if (! in_array($extension, ['gif', 'jpeg', 'jpg', 'png'], true)) {
+                continue;
+            }
+
+            $payload[] = [
+                'product' => ['id' => $joorProductId],
+                'asset' => [
+                    'type' => 'image',
+                    'filename' => $this->buildAssetFilename((string) $product->sku, $index, $extension),
+                    'source_url' => $url,
+                ],
+                'display_order' => $index,
+            ];
+        }
+
+        if ($payload === []) {
+            return [
+                'ok' => false,
+                'skipped' => true,
+                'reason' => 'No product images with a supported extension (gif, jpeg, jpg, png) to sync to JOOR.',
+            ];
+        }
+
+        // replace_all clears previously synced images so re-syncing reflects the current image set.
+        $assetsQuery = array_merge($query, ['replace_all' => 'true']);
+        $response = $this->request()->post($this->apiUrl('/assets/products') . '?' . http_build_query($assetsQuery), $payload);
+        $body = $response->json() ?? ['raw' => $response->body()];
+        $hasErrors = is_array($body) && is_array($body['errors'] ?? null) && count($body['errors']) > 0;
+
+        return [
+            'status' => $response->status(),
+            'body' => $body,
+            'ok' => $response->successful() && ! $hasErrors,
+            'request' => [
+                'url' => $this->apiUrl('/assets/products'),
+                'query' => $assetsQuery,
+                'payload' => $payload,
+            ],
+        ];
+    }
+
+    private function resolveProductImageUrls(Product $product): array
+    {
+        $paths = [];
+
+        if (is_string($product->cover_image) && trim($product->cover_image) !== '') {
+            $paths[] = $product->cover_image;
+        }
+
+        $gallery = $product->image_gallery;
+        if (is_array($gallery)) {
+            foreach ($gallery as $path) {
+                if (is_string($path) && trim($path) !== '') {
+                    $paths[] = $path;
+                }
+            }
+        }
+
+        $urls = [];
+        foreach (array_unique($paths) as $path) {
+            $url = $this->resolveAbsoluteMediaUrl($path);
+            if ($url !== null) {
+                $urls[] = $url;
+            }
+        }
+
+        return array_values(array_unique($urls));
+    }
+
+    private function resolveAbsoluteMediaUrl(mixed $path): ?string
+    {
+        $trimmed = trim((string) $path);
+        if ($trimmed === '') {
+            return null;
+        }
+
+        if (str_starts_with($trimmed, 'http://') || str_starts_with($trimmed, 'https://')) {
+            return $trimmed;
+        }
+
+        return rtrim((string) config('app.url'), '/') . '/' . ltrim($trimmed, '/');
+    }
+
+    private function buildAssetFilename(string $sku, int $index, string $extension): string
+    {
+        $base = trim((string) preg_replace('/[^A-Za-z0-9]+/', '-', strtoupper(trim($sku))), '-');
+        if ($base === '') {
+            $base = 'ASSET';
+        }
+
+        // JOOR requires a unique filename no longer than 100 characters.
+        $suffix = '-' . ($index + 1) . '.' . $extension;
+        $base = substr($base, 0, max(1, 100 - strlen($suffix)));
+
+        return $base . $suffix;
     }
 
     protected function request(): PendingRequest
