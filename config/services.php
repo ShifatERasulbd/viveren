@@ -103,6 +103,7 @@ return [
         'sku_color_trait_id' => env('JOOR_SKU_COLOR_TRAIT_ID', 'U0tVVHJhaXQ6U3R5bGVDb2xvcg=='),
         'sku_size_trait_id' => env('JOOR_SKU_SIZE_TRAIT_ID', 'U0tVVHJhaXQ6U2l6ZQ=='),
         'default_sku_size' => env('JOOR_DEFAULT_SKU_SIZE', 'One Size'),
+        'price_type_id' => env('JOOR_PRICE_TYPE_ID'),
     ],
 
 ];

@@ -35,4 +35,31 @@ class JoorServiceTest extends TestCase
         $this->assertArrayNotHasKey('image_url', $payload);
         $this->assertArrayNotHasKey('images', $payload);
     }
+
+    public function test_build_sku_payload_does_not_send_price_or_image(): void
+    {
+        $product = Product::make([
+            'sku' => 'SKU-123',
+            'color' => '"Red"',
+            'size' => '"M"',
+            'price' => '129.99',
+            'cover_image' => '/uploads/products/thumbnails/test-cover.jpg',
+        ]);
+        // getRawOriginal() reads from the model's original state, which make() leaves empty.
+        $product->syncOriginal();
+
+        $service = new class extends JoorService
+        {
+            public function buildSkuForTest(Product $product, string $joorProductId): array
+            {
+                return $this->buildSkuPayload($product, $joorProductId);
+            }
+        };
+
+        $payload = $service->buildSkuForTest($product, 'joor-product-1');
+
+        $this->assertNotEmpty($payload);
+        $this->assertArrayNotHasKey('price', $payload[0]);
+        $this->assertArrayNotHasKey('image_url', $payload[0]);
+    }
 }

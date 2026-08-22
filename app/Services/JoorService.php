@@ -197,11 +197,30 @@ class JoorService
         $response = $this->request()->post($this->apiUrl('/skus/bulk_create') . '?' . http_build_query($query), $skuPayload);
         $body = $response->json() ?? ['raw' => $response->body()];
         $hasErrors = is_array($body) && is_array($body['errors'] ?? null) && count($body['errors']) > 0;
+        $ok = $response->successful() && ! $hasErrors;
+
+        $priceSync = null;
+        if ($ok) {
+            $skuIds = collect(data_get($body, 'data', []))
+                ->pluck('id')
+                ->filter(static fn ($id): bool => is_scalar($id) && (string) $id !== '')
+                ->map(static fn ($id): string => (string) $id)
+                ->values()
+                ->all();
+
+            if ($skuIds !== []) {
+                $priceSync = $this->syncSkuPrices($product, $skuIds, $query);
+                if (! ($priceSync['ok'] ?? false)) {
+                    $ok = false;
+                }
+            }
+        }
 
         return [
             'status' => $response->status(),
             'body' => $body,
-            'ok' => $response->successful() && ! $hasErrors,
+            'ok' => $ok,
+            'price_sync' => $priceSync,
             'request' => [
                 'url' => $this->apiUrl('/skus/bulk_create'),
                 'query' => $query,
@@ -210,7 +229,145 @@ class JoorService
         ];
     }
 
-    private function buildSkuPayload(Product $product, string $joorProductId): array
+    private function syncSkuPrices(Product $product, array $skuIds, array $query): array
+    {
+        $price = $this->resolveProductPrice($product);
+        if ($price === null) {
+            return [
+                'ok' => false,
+                'skipped' => true,
+                'reason' => 'Product has no numeric price to sync to JOOR.',
+            ];
+        }
+
+        $priceTypeId = $this->fetchJoorPriceTypeId($query);
+        if ($priceTypeId === null) {
+            return [
+                'ok' => false,
+                'skipped' => true,
+                'reason' => 'No JOOR price type is configured for this account.',
+            ];
+        }
+
+        $priceValue = number_format($price, 2, '.', '');
+
+        // JOOR's /prices/bulk_create requires wholesale_value/retail_value as strings alongside price_type_id.
+        $payload = array_map(static fn (string $skuId): array => [
+            'sku_id' => $skuId,
+            'wholesale_value' => $priceValue,
+            'retail_value' => $priceValue,
+            'price_type_id' => $priceTypeId,
+        ], $skuIds);
+
+        $response = $this->request()->post($this->apiUrl('/prices/bulk_create') . '?' . http_build_query($query), $payload);
+        $body = $response->json() ?? ['raw' => $response->body()];
+        $errors = is_array($body) && is_array($body['errors'] ?? null) ? $body['errors'] : [];
+
+        // A price already exists for this SKU/price-type when re-syncing an existing product; update it instead.
+        $duplicatedSkuIds = $this->extractDuplicatedPriceSkuIds($errors);
+        $updateResult = $duplicatedSkuIds !== []
+            ? $this->updateExistingSkuPrices($duplicatedSkuIds, $priceValue, $query)
+            : null;
+
+        $blockingErrors = array_values(array_filter(
+            $errors,
+            static fn ($error): bool => ! is_array($error) || strtoupper((string) ($error['status'] ?? '')) !== 'DUPLICATED',
+        ));
+
+        $ok = $response->successful()
+            && $blockingErrors === []
+            && ($updateResult === null || ($updateResult['ok'] ?? false));
+
+        return [
+            'status' => $response->status(),
+            'body' => $body,
+            'ok' => $ok,
+            'update' => $updateResult,
+            'request' => [
+                'url' => $this->apiUrl('/prices/bulk_create'),
+                'query' => $query,
+                'payload' => $payload,
+            ],
+        ];
+    }
+
+    private function extractDuplicatedPriceSkuIds(array $errors): array
+    {
+        $skuIds = [];
+
+        foreach ($errors as $error) {
+            if (! is_array($error) || strtoupper((string) ($error['status'] ?? '')) !== 'DUPLICATED') {
+                continue;
+            }
+
+            $skuId = data_get($error, 'details.sku_id');
+            if (is_scalar($skuId) && (string) $skuId !== '') {
+                $skuIds[] = (string) $skuId;
+            }
+        }
+
+        return array_values(array_unique($skuIds));
+    }
+
+    private function updateExistingSkuPrices(array $skuIds, string $priceValue, array $query): array
+    {
+        $priceIds = [];
+
+        foreach ($skuIds as $skuId) {
+            $lookupUrl = $this->apiUrl('/prices') . '?' . http_build_query(array_merge($query, ['sku_ids' => $skuId]));
+            $lookupResponse = $this->request()->get($lookupUrl);
+            $priceId = data_get($lookupResponse->json(), 'data.0.id');
+
+            if (is_scalar($priceId) && (string) $priceId !== '') {
+                $priceIds[] = (string) $priceId;
+            }
+        }
+
+        if ($priceIds === []) {
+            return [
+                'ok' => false,
+                'skipped' => true,
+                'reason' => 'Could not resolve existing JOOR price IDs to update.',
+            ];
+        }
+
+        $payload = array_map(static fn (string $priceId): array => [
+            'id' => $priceId,
+            'wholesale_value' => $priceValue,
+            'retail_value' => $priceValue,
+        ], $priceIds);
+
+        $response = $this->request()->post($this->apiUrl('/prices/bulk_update') . '?' . http_build_query($query), $payload);
+        $body = $response->json() ?? ['raw' => $response->body()];
+        $hasErrors = is_array($body) && is_array($body['errors'] ?? null) && count($body['errors']) > 0;
+
+        return [
+            'status' => $response->status(),
+            'body' => $body,
+            'ok' => $response->successful() && ! $hasErrors,
+            'request' => [
+                'url' => $this->apiUrl('/prices/bulk_update'),
+                'query' => $query,
+                'payload' => $payload,
+            ],
+        ];
+    }
+
+    private function fetchJoorPriceTypeId(array $query): ?string
+    {
+        $configuredId = trim((string) $this->config('price_type_id', ''));
+        if ($configuredId !== '') {
+            return $configuredId;
+        }
+
+        $response = $this->request()->get($this->apiUrl('/price_types') . '?' . http_build_query($query));
+        $body = $response->json() ?? [];
+        $priceTypeId = data_get($body, 'data.0.id');
+
+        return is_scalar($priceTypeId) && (string) $priceTypeId !== '' ? (string) $priceTypeId : null;
+    }
+
+    protected function buildSkuPayload(Product $product, string $joorProductId): array
     {
         $colors = $this->resolveProductColors($product);
         $sizes = $this->resolveProductSizes($product);
@@ -254,6 +411,13 @@ class JoorService
         }
 
         return $payload;
+    }
+
+    private function resolveProductPrice(Product $product): ?float
+    {
+        $raw = $product->price;
+
+        return is_numeric($raw) ? (float) $raw : null;
     }
 
     private function buildSkuExternalId(string $sku, string $color, string $size): string
