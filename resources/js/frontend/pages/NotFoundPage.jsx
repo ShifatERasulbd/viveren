@@ -13,7 +13,7 @@ export default function NotFoundPage() {
                 The page you're looking for doesn't exist or may have been moved.
             </p>
             <Link
-                to="/"
+                to="/home"
                 className="mt-8 inline-flex items-center justify-center bg-zinc-950 px-6 py-3 text-[0.75rem] font-medium uppercase tracking-[0.14em] text-white transition-colors hover:bg-zinc-800"
             >
                 Back to Home

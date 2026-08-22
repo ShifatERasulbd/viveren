@@ -91,8 +91,8 @@ export default function Header() {
         closeMobileMenu();
         closeSearch();
 
-        if (location && location.pathname !== '/') {
-            navigate('/');
+        if (location && location.pathname !== '/home') {
+            navigate('/home');
             window.setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 40);
             return;
         }

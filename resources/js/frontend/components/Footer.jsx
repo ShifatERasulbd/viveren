@@ -174,7 +174,7 @@ export default function Footer() {
                     
                     {/* Brand column */}
                     <div className="space-y-4">
-                        <Link to="/" className="inline-flex items-center gap-1">
+                        <Link to="/home" className="inline-flex items-center gap-1">
                             {footerLogo ? (
                                 <img
                                     src={footerLogo}

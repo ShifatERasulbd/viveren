@@ -12,6 +12,7 @@ import { bootstrapPublicSettings, getSettingsPayload, onSettingsUpdated } from '
 import { initializeGoogleAnalytics, trackPageView } from './utils/googleAnalytics.js';
 
 const HomePage = lazy(() => import('./frontend/pages/HomePage.jsx'));
+const ComingSoonPage = lazy(() => import('./frontend/pages/comming-soon.jsx'));
 const ShopPage = lazy(() => import('./frontend/pages/ShopPage.jsx'));
 const SingleProductPage = lazy(() => import('./frontend/pages/singleProduct.jsx'));
 const AboutPage = lazy(() => import('./frontend/pages/about.jsx'));
@@ -49,7 +50,8 @@ function normalizeAssetPath(value) {
 function resolvePageLabel(pathname) {
     const path = String(pathname || '/').toLowerCase();
 
-    if (path === '/') return 'Home';
+    if (path === '/') return 'Coming Soon';
+    if (path === '/home') return 'Home';
     if (path === '/shop') return 'Shop';
     if (path === '/about') return 'About';
     if (path === '/sustainability') return 'Sustainability';
@@ -143,13 +145,16 @@ function withPageFallback(Component) {
 }
 
 function FrontendLayout() {
+    const { pathname } = useLocation();
+    const isComingSoon = pathname === '/';
+
     return (
         <div className="min-h-screen bg-background text-zinc-950">
-            <Header />
+            {!isComingSoon && <Header />}
             <main>
                 <Outlet />
             </main>
-            <Footer />
+            {!isComingSoon && <Footer />}
             <CartDrawer />
             <Toaster position="top-right" richColors />
         </div>
@@ -167,7 +172,8 @@ function AppRouter() {
                 <DocumentBrandingManager />
                 <Routes>
                     <Route path="/" element={<FrontendLayout />}>
-                        <Route index element={withPageFallback(HomePage)} />
+                        <Route index element={withPageFallback(ComingSoonPage)} />
+                        <Route path="home" element={withPageFallback(HomePage)} />
                         <Route path="shop" element={withPageFallback(ShopPage)} />
                         <Route path="search/:productSlug" element={withPageFallback(ShopPage)} />
                         <Route path="collection/:slug" element={withPageFallback(ShopPage)} />
