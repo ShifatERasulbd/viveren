@@ -1,61 +1,23 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 
+const BACKGROUND_IMAGE =
+  'https://viveren.com/uploads/about/hero/1784550617_about_hero_6a5e14d953fcb5.37550518.png';
 
 export default function ComingSoonPage() {
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
-  const [backgroundImage, setBackgroundImage] = useState('');
-
-  useEffect(() => {
-    let ignore = false;
-
-    async function loadHeroImage() {
-      try {
-        const slidesResponse = await fetch('/api/public/heroes', {
-          headers: { Accept: 'application/json' },
-        });
-        if (slidesResponse.ok) {
-          const slidesPayload = await slidesResponse.json();
-          const firstImage = Array.isArray(slidesPayload)
-            ? slidesPayload.find((slide) => slide?.image_url)?.image_url
-            : '';
-          if (!ignore && firstImage) {
-            setBackgroundImage(firstImage);
-            return;
-          }
-        }
-
-        const response = await fetch('/api/public/hero', {
-          headers: { Accept: 'application/json' },
-        });
-        if (response.ok) {
-          const payload = await response.json();
-          if (!ignore && payload?.image_url) {
-            setBackgroundImage(payload.image_url);
-          }
-        }
-      } catch {
-        // Keep the fallback background image on failure
-      }
-    }
-
-    loadHeroImage();
-    return () => {
-      ignore = true;
-    };
-  }, []);
 
   const handleSubmit = (e) => {
-  e.preventDefault();
-  if (email === 'it1@arbellafashion.com') {
-    window.location.href = '/home';
-    return;
-  }
-  if (email) {
-    setSubmitted(true);
-    // Handle your newsletter subscription logic here
-  }
-};
+    e.preventDefault();
+    if (email === 'it1@arbellafashion.com') {
+      window.location.href = '/home';
+      return;
+    }
+    if (email) {
+      setSubmitted(true);
+      // Handle your newsletter subscription logic here
+    }
+  };
 
   return (
     <div className="relative w-full h-screen overflow-hidden font-sans text-white">
@@ -68,7 +30,7 @@ export default function ComingSoonPage() {
       <div 
         className="relative w-full h-[calc(100vh-32px)] bg-cover bg-center flex flex-col items-center justify-center px-4"
         style={{
-          backgroundImage: `url('${backgroundImage}')`
+          backgroundImage: `url('${BACKGROUND_IMAGE}')`
         }}
       >
         {/* Dark Translucent Overlay */}
@@ -88,8 +50,6 @@ export default function ComingSoonPage() {
             Inspired by the Latin word <i>vivere</i>—to live—we create elevated essentials that 
             combine timeless design, premium craftsmanship, and lasting comfort.
           </p>
-
-         
 
           {/* Subscription Form */}
           {submitted ? (
