@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from 'react';
 
-const FALLBACK_BACKGROUND_IMAGE =
-  'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=1920';
 
 export default function ComingSoonPage() {
   const [email, setEmail] = useState('');
@@ -70,7 +68,7 @@ export default function ComingSoonPage() {
       <div 
         className="relative w-full h-[calc(100vh-32px)] bg-cover bg-center flex flex-col items-center justify-center px-4"
         style={{
-          backgroundImage: `url('${backgroundImage || FALLBACK_BACKGROUND_IMAGE}')`
+          backgroundImage: `url('${backgroundImage}')`
         }}
       >
         {/* Dark Translucent Overlay */}
