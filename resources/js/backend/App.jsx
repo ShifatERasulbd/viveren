@@ -71,6 +71,11 @@ const EditProduct = lazyWithRetry(() => import('@/pages/Product/editProduct'), '
 const Orders = lazyWithRetry(() => import('@/pages/Order/orders'), 'orders');
 const EditOrder = lazyWithRetry(() => import('@/pages/Order/editOrder'), 'edit-order');
 
+// JOOR Order Management
+const JoorOrders = lazyWithRetry(() => import('@/pages/JoorOrder/joorOrders'), 'joor-orders');
+const AddJoorOrder = lazyWithRetry(() => import('@/pages/JoorOrder/addJoorOrder'), 'add-joor-order');
+const EditJoorOrder = lazyWithRetry(() => import('@/pages/JoorOrder/editJoorOrder'), 'edit-joor-order');
+
 // Settings Management
 const Settings = lazyWithRetry(() => import('@/pages/Settings/settings'), 'settings');
 const AddSettings = lazyWithRetry(() => import('@/pages/Settings/addSettings'), 'add-settings');
@@ -141,6 +146,11 @@ export default function App() {
                             {/* Order Management */}
                             <Route path="orders" element={<Orders />} />
                             <Route path="orders/:id/edit" element={<EditOrder />} />
+
+                            {/* JOOR Order Management */}
+                            <Route path="joor-orders" element={<JoorOrders />} />
+                            <Route path="joor-orders/add" element={<AddJoorOrder />} />
+                            <Route path="joor-orders/:id/edit" element={<EditJoorOrder />} />
 
                             {/* Settings Management */}
                             <Route path="settings" element={<Settings />} />

@@ -52,6 +52,7 @@ const inventoryItems = [
 
 const orderItems = [
     { title: 'Orders', icon: ShoppingBag, path: '/admin/orders' },
+    { title: 'JOOR Orders', icon: ShoppingBag, path: '/admin/joor-orders' },
 ];
 
 

@@ -83,6 +83,99 @@ class JoorService
         ];
     }
 
+    /**
+     * GET /orders — fetch a filtered list of orders from JOOR.
+     */
+    public function getOrders(array $filters = []): array
+    {
+        $query = $this->resolveBaseQuery();
+
+        foreach (['order_ids', 'status', 'date_approved_start', 'date_approved_end', 'export_status', 'last_modified', 'page', 'page_size', 'sort_by', 'sort_order'] as $key) {
+            if (isset($filters[$key]) && $filters[$key] !== '' && $filters[$key] !== null) {
+                $query[$key] = $filters[$key];
+            }
+        }
+
+        $response = $this->request()->get($this->apiUrl('/orders') . '?' . http_build_query($query));
+        $body = $response->json() ?? ['raw' => $response->body()];
+        $hasErrors = is_array($body) && is_array($body['errors'] ?? null) && count($body['errors']) > 0;
+
+        return [
+            'status' => $response->status(),
+            'body' => $body,
+            'ok' => $response->successful() && ! $hasErrors,
+            'request' => [
+                'url' => $this->apiUrl('/orders'),
+                'query' => $query,
+            ],
+        ];
+    }
+
+    /**
+     * POST /orders/bulk_create — create a single order in JOOR.
+     */
+    public function createOrder(array $order): array
+    {
+        $query = $this->resolveBaseQuery();
+        $payload = [$order];
+
+        $response = $this->request()->post($this->apiUrl('/orders/bulk_create') . '?' . http_build_query($query), $payload);
+        $body = $response->json() ?? ['raw' => $response->body()];
+        $hasErrors = is_array($body) && is_array($body['errors'] ?? null) && count($body['errors']) > 0;
+
+        return [
+            'status' => $response->status(),
+            'body' => $body,
+            'ok' => $response->successful() && ! $hasErrors,
+            'request' => [
+                'url' => $this->apiUrl('/orders/bulk_create'),
+                'query' => $query,
+                'payload' => $payload,
+            ],
+        ];
+    }
+
+    /**
+     * POST /orders/bulk_update — update a single order in JOOR. $order must include 'id'.
+     */
+    public function updateOrder(array $order): array
+    {
+        $query = $this->resolveBaseQuery();
+        $payload = [$order];
+
+        $response = $this->request()->post($this->apiUrl('/orders/bulk_update') . '?' . http_build_query($query), $payload);
+        $body = $response->json() ?? ['raw' => $response->body()];
+        $hasErrors = is_array($body) && is_array($body['errors'] ?? null) && count($body['errors']) > 0;
+
+        return [
+            'status' => $response->status(),
+            'body' => $body,
+            'ok' => $response->successful() && ! $hasErrors,
+            'request' => [
+                'url' => $this->apiUrl('/orders/bulk_update'),
+                'query' => $query,
+                'payload' => $payload,
+            ],
+        ];
+    }
+
+    private function resolveBaseQuery(): array
+    {
+        $accountId = trim((string) $this->config('joor_id', ''));
+        if ($accountId === '') {
+            throw new RuntimeException('JOOR account ID is required (JOOR_ID).');
+        }
+
+        $query = ['account' => $accountId];
+
+        $userId = trim((string) $this->config('user_id', ''));
+        if ($userId !== '') {
+            $query['user_id'] = $userId;
+        }
+
+        return $query;
+    }
+
     private function syncProductImages(Product $product, string $joorProductId, array $query): array
     {
         $imageUrls = $this->resolveProductImageUrls($product);

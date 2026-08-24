@@ -8,6 +8,7 @@ use App\Http\Controllers\CollectionController;
 use App\Http\Controllers\ColorController;
 use App\Http\Controllers\CheckoutOrderController;
 use App\Http\Controllers\CompliancePageController;
+use App\Http\Controllers\JoorOrderController;
 use App\Http\Controllers\AboutHeroController;
 use App\Http\Controllers\AboutGivingBackController;
 use App\Http\Controllers\AboutMissionController;
@@ -174,6 +175,11 @@ Route::middleware('auth:sanctum')->group(function () {
 	Route::delete('/orders/{checkoutOrder}', [CheckoutOrderController::class, 'destroy']);
 	Route::post('/orders/bulk-update', [CheckoutOrderController::class, 'bulkUpdate']);
 	Route::post('/orders/bulk-delete', [CheckoutOrderController::class, 'bulkDelete']);
+
+	// JOOR Order Management
+	Route::get('/joor-orders', [JoorOrderController::class, 'index']);
+	Route::post('/joor-orders', [JoorOrderController::class, 'store']);
+	Route::put('/joor-orders/{id}', [JoorOrderController::class, 'update']);
 
 	// Public API Key Management
 	Route::get('/public-api-keys', [PublicApiKeyController::class, 'index']);
