@@ -17,6 +17,17 @@ const FABRIC_SLUG_MAP = Object.fromEntries(
     FABRIC_OPTIONS.map((fabric) => [fabric.toLowerCase().replace(/\s+/g, '-'), fabric]),
 );
 
+function getProductGender(product) {
+    const name = String(product?.name || '').trim().toLowerCase();
+    if (name.startsWith('women')) {
+        return 'Women';
+    }
+    if (name.startsWith('men')) {
+        return 'Men';
+    }
+    return '';
+}
+
 function parseSizeList(value) {
     if (Array.isArray(value)) {
         return value
@@ -435,13 +446,31 @@ function normalizeGrandChildOptions(payload) {
         return [];
     }
 
-    return payload
+    const groupsByName = new Map();
+
+    payload
         .map((item) => ({
             id: String(item?.id ?? ''),
             name: String(item?.name || '').trim(),
             slug: String(item?.slug || '').trim(),
         }))
-        .filter((item) => item.id && item.name);
+        .filter((item) => item.id && item.name)
+        .forEach((item) => {
+            const key = item.name.toLowerCase();
+            const existing = groupsByName.get(key);
+            if (existing) {
+                existing.ids.push(item.id);
+            } else {
+                groupsByName.set(key, { ids: [item.id], name: item.name, slug: item.slug });
+            }
+        });
+
+    return [...groupsByName.values()].map((group) => ({
+        id: group.ids.join(','),
+        ids: group.ids,
+        name: group.name,
+        slug: group.slug,
+    }));
 }
 
 function normalizeQueryValue(value) {
@@ -604,7 +633,8 @@ function matchesCategoryFilter(product, selectedIds, categoryById, newArrivalPro
             return isFabricProduct(product, fabricValue);
         }
 
-        return String(product.grand_child_id || '') === String(selectedId);
+        const ids = Array.isArray(option?.ids) ? option.ids : [selectedId];
+        return ids.includes(String(product.grand_child_id || ''));
     });
 }
 
@@ -1051,6 +1081,7 @@ export default function ShopCatalogSection() {
     const [selectedAvailability, setSelectedAvailability] = useState([]);
     const [selectedSizes, setSelectedSizes] = useState([]);
     const [selectedCategories, setSelectedCategories] = useState([]);
+    const [selectedGenders, setSelectedGenders] = useState(['Women']);
     const [searchTerm, setSearchTerm] = useState('');
     const [minPrice, setMinPrice] = useState('0');
     const [maxPrice, setMaxPrice] = useState('59.99');
@@ -1342,6 +1373,16 @@ export default function ShopCatalogSection() {
         [categoryOptions],
     );
 
+    const grandChildIdToGroupKey = useMemo(() => {
+        const map = {};
+        categoryOptions.forEach((option) => {
+            (Array.isArray(option.ids) ? option.ids : [option.id]).forEach((rawId) => {
+                map[String(rawId)] = String(option.id);
+            });
+        });
+        return map;
+    }, [categoryOptions]);
+
     useEffect(() => {
         let ignore = false;
 
@@ -1444,9 +1485,13 @@ export default function ShopCatalogSection() {
             }
         }
 
-        setSelectedCategories([...selectedGrandChildIds]);
+        const groupedKeys = new Set(
+            [...selectedGrandChildIds].map((rawId) => grandChildIdToGroupKey[rawId] || rawId),
+        );
+
+        setSelectedCategories([...groupedKeys]);
         setCurrentPage(1);
-    }, [location.pathname, location.search, allCategories, allSubCategories, allGrandChilds, sizeNameLookup, sizeIdByNameLookup]);
+    }, [location.pathname, location.search, allCategories, allSubCategories, allGrandChilds, sizeNameLookup, sizeIdByNameLookup, grandChildIdToGroupKey]);
 
     function toggleSelected(setter, value) {
         setter((previous) =>
@@ -1515,6 +1560,13 @@ export default function ShopCatalogSection() {
                 }
             }
 
+            if (selectedGenders.length > 0) {
+                const productGender = getProductGender(product);
+                if (productGender && !selectedGenders.includes(productGender)) {
+                    return false;
+                }
+            }
+
             if (searchTerm) {
                 const haystack = `${product.name} ${product.sku || ''}`.toLowerCase();
                 if (!haystack.includes(searchTerm.toLowerCase())) {
@@ -1537,6 +1589,7 @@ export default function ShopCatalogSection() {
         selectedAvailability,
         selectedSizes,
         selectedCategories,
+        selectedGenders,
         categoryById,
         newArrivalProductIdSet,
         minPrice,
@@ -1664,12 +1717,14 @@ export default function ShopCatalogSection() {
                         selectedAvailability={selectedAvailability}
                         selectedSizes={selectedSizes}
                         selectedCategories={selectedCategories}
+                        selectedGenders={selectedGenders}
                         minPrice={minPrice}
                         maxPrice={maxPrice}
                         highestPrice={highestDbPrice}
                         onToggleAvailability={(value) => toggleSelected(setSelectedAvailability, value)}
                         onToggleSize={(value) => toggleSelected(setSelectedSizes, value)}
                         onToggleCategory={(value) => toggleSelected(setSelectedCategories, value)}
+                        onToggleGender={(value) => toggleSelected(setSelectedGenders, value)}
                         onMinPriceChange={(value) => {
                             setMinPrice(value);
                             setCurrentPage(1);
@@ -1736,6 +1791,7 @@ export default function ShopCatalogSection() {
                     selectedAvailability={selectedAvailability}
                     selectedSizes={selectedSizes}
                     selectedCategories={selectedCategories}
+                    selectedGenders={selectedGenders}
                     minPrice={minPrice}
                     maxPrice={maxPrice}
                     highestPrice={highestDbPrice}
@@ -1743,6 +1799,7 @@ export default function ShopCatalogSection() {
                     onToggleAvailability={(value) => toggleSelected(setSelectedAvailability, value)}
                     onToggleSize={(value) => toggleSelected(setSelectedSizes, value)}
                     onToggleCategory={(value) => toggleSelected(setSelectedCategories, value)}
+                    onToggleGender={(value) => toggleSelected(setSelectedGenders, value)}
                     onMinPriceChange={(value) => {
                         setMinPrice(value);
                         setCurrentPage(1);

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 
 const availabilityFilters = ['In stock', 'Out of stock'];
+const genderFilters = ['Men', 'Women'];
 
 function FilterChevron({ open = false }) {
     return (
@@ -75,9 +76,11 @@ export default function ShopSidebar({
     minPrice = '',
     maxPrice = '',
     highestPrice = '',
+    selectedGenders = [],
     onToggleAvailability,
     onToggleSize,
     onToggleCategory,
+    onToggleGender,
     onMinPriceChange,
     onMaxPriceChange,
     hideTitle = false,
@@ -85,6 +88,7 @@ export default function ShopSidebar({
     const [openSections, setOpenSections] = useState({
         availability: true,
         price: true,
+        gender: true,
         size: true,
         categories: true,
     });
@@ -159,6 +163,18 @@ export default function ShopSidebar({
                 </SidebarFilterRow>
 
                 <SidebarFilterRow
+                    title="Gender"
+                    open={openSections.gender}
+                    onToggle={() => toggleSection('gender')}
+                >
+                    <CheckboxFilterList
+                        values={genderFilters}
+                        checkedValues={selectedGenders}
+                        onToggle={onToggleGender}
+                    />
+                </SidebarFilterRow>
+
+                {/* <SidebarFilterRow
                     title="Size"
                     open={openSections.size}
                     onToggle={() => toggleSection('size')}
@@ -168,7 +184,7 @@ export default function ShopSidebar({
                         checkedValues={selectedSizes}
                         onToggle={onToggleSize}
                     />
-                </SidebarFilterRow>
+                </SidebarFilterRow> */}
 
                 <SidebarFilterRow
                     title="Category"
