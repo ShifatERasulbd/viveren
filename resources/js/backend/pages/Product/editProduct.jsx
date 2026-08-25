@@ -10,7 +10,7 @@ import { fetchGrandChilds } from '@/pages/GrandChild/api';
 import { fetchSizes } from '@/pages/Size/api';
 import { fetchSubCategories } from '@/pages/SubCategory/api';
 
-import { fetchProduct, updateProduct } from './api';
+import { fetchProduct, fetchProducts, updateProduct } from './api';
 
 const initialForm = {
     name: '',
@@ -129,6 +129,9 @@ export default function EditProduct() {
     const [colorVariantSizeChartMap, setColorVariantSizeChartMap] = useState({});
     const [colorOptions, setColorOptions] = useState([]);
     const [sizeOptions, setSizeOptions] = useState([]);
+    const [comboProductOptions, setComboProductOptions] = useState([]);
+    const [comboProductSelectValue, setComboProductSelectValue] = useState('');
+    const [selectedComboProductIds, setSelectedComboProductIds] = useState([]);
     const [categoryOptions, setCategoryOptions] = useState([]);
     const [subCategoryOptions, setSubCategoryOptions] = useState([]);
     const [grandChildOptions, setGrandChildOptions] = useState([]);
@@ -340,12 +343,13 @@ export default function EditProduct() {
             setIsOptionsLoading(true);
 
             try {
-                const [colors, sizes, categories, subCategories, grandChilds] = await Promise.all([
+                const [colors, sizes, categories, subCategories, grandChilds, products] = await Promise.all([
                     fetchColors(),
                     fetchSizes(),
                     fetchCategories(),
                     fetchSubCategories(),
                     fetchGrandChilds(),
+                    fetchProducts(),
                 ]);
                 if (!ignore) {
                     setColorOptions(Array.isArray(colors) ? colors : []);
@@ -353,6 +357,9 @@ export default function EditProduct() {
                     setCategoryOptions(Array.isArray(categories) ? categories : []);
                     setSubCategoryOptions(Array.isArray(subCategories) ? subCategories : []);
                     setGrandChildOptions(Array.isArray(grandChilds) ? grandChilds : []);
+                    setComboProductOptions(
+                        (Array.isArray(products) ? products : []).filter((item) => String(item?.id) !== String(id)),
+                    );
                 }
             } catch {
                 if (!ignore) {
@@ -361,6 +368,7 @@ export default function EditProduct() {
                     setCategoryOptions([]);
                     setSubCategoryOptions([]);
                     setGrandChildOptions([]);
+                    setComboProductOptions([]);
                 }
             } finally {
                 if (!ignore) {
@@ -477,6 +485,11 @@ export default function EditProduct() {
                         data?.color_variant_size_charts && typeof data.color_variant_size_charts === 'object'
                             ? data.color_variant_size_charts
                             : {},
+                    );
+                    setSelectedComboProductIds(
+                        Array.isArray(data?.combo_product_ids)
+                            ? [...new Set(data.combo_product_ids.map((comboId) => String(comboId)))]
+                            : [],
                     );
 
                     if (backendVariants.length > 0) {
@@ -955,6 +968,21 @@ export default function EditProduct() {
         });
     };
 
+    const handleAddComboProduct = () => {
+        if (!comboProductSelectValue) {
+            return;
+        }
+
+        setSelectedComboProductIds((previous) => (
+            previous.includes(comboProductSelectValue) ? previous : [...previous, comboProductSelectValue]
+        ));
+        setComboProductSelectValue('');
+    };
+
+    const handleRemoveComboProduct = (productIdToRemove) => {
+        setSelectedComboProductIds((previous) => previous.filter((productId) => productId !== productIdToRemove));
+    };
+
     const handleGalleryFilesChange = (event) => {
         const files = Array.from(event.target.files || []);
         setNewGalleryImageFiles(files);
@@ -1174,6 +1202,7 @@ export default function EditProduct() {
                     variantRows.length > 0
                         ? [...new Set(variantRows.map((row) => row.size).filter(Boolean))].join(', ')
                         : form.size,
+                combo_product_ids: selectedComboProductIds,
                 variant_rows: variantRows,
                 color_variant_images: colorVariantImageMap,
                 color_variant_videos: colorVariantVideoMap,
@@ -1241,6 +1270,7 @@ export default function EditProduct() {
                     form={form}
                     colorOptions={colorOptions}
                     sizeOptions={sizeOptions}
+                    comboProductOptions={comboProductOptions}
                     categoryOptions={categoryOptions}
                     subCategoryOptions={filteredSubCategoryOptions}
                     grandChildOptions={filteredGrandChildOptions}
@@ -1249,6 +1279,11 @@ export default function EditProduct() {
                     sizeSelectValue={sizeSelectValue}
                     selectedColors={selectedColors}
                     selectedSizes={selectedSizes}
+                    comboProductSelectValue={comboProductSelectValue}
+                    selectedComboProductIds={selectedComboProductIds}
+                    onComboProductSelectChange={setComboProductSelectValue}
+                    onAddComboProduct={handleAddComboProduct}
+                    onRemoveComboProduct={handleRemoveComboProduct}
                     colorTrendingMap={colorTrendingMap}
                     colorFabricMap={colorFabricMap}
                     variantRows={variantRows}

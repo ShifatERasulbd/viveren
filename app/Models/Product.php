@@ -44,6 +44,7 @@ class Product extends Model
         'stock',
         'position',
         'show_on_best_sellers',
+        'combo_product_ids',
     ];
 
     protected function casts(): array
@@ -59,6 +60,7 @@ class Product extends Model
             'color_variant_images' => 'array',
             'color_variant_videos' => 'array',
             'color_variant_size_charts' => 'array',
+            'combo_product_ids' => 'array',
             'price' => 'decimal:2',
             'stock' => 'integer',
             'position' => 'integer',

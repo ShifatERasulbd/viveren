@@ -218,6 +218,10 @@ class ProductController extends Controller
             $columns[] = 'slug';
         }
 
+        if (Schema::hasColumn('products', 'combo_product_ids')) {
+            $columns[] = 'combo_product_ids';
+        }
+
         $products = Product::query()
             ->select($columns)
             ->orderByRaw('position IS NULL')
@@ -244,7 +248,7 @@ class ProductController extends Controller
     public function store(Request $request): JsonResponse
     {
         $this->normalizeBooleanFields($request, ['show_on_best_sellers']);
-        $this->normalizeJsonFields($request, ['variant_rows', 'color_variant_images', 'color_variant_videos', 'color_variant_size_charts', 'size_chart_images', 'product_features']);
+        $this->normalizeJsonFields($request, ['variant_rows', 'color_variant_images', 'color_variant_videos', 'color_variant_size_charts', 'size_chart_images', 'product_features', 'combo_product_ids']);
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -280,6 +284,8 @@ class ProductController extends Controller
             'stock' => 'required|integer',
             'position' => 'nullable|integer|min:1',
             'show_on_best_sellers' => 'nullable|boolean',
+            'combo_product_ids' => 'nullable|array',
+            'combo_product_ids.*' => 'integer',
             'variant_rows' => 'nullable|array',
             'variant_rows.*.key' => 'nullable|string|max:255',
             'variant_rows.*.color' => 'nullable|string|max:255',
@@ -337,6 +343,7 @@ class ProductController extends Controller
         $validated['variant_rows'] = $this->normalizeVariantRows($validated['variant_rows'] ?? []);
         $validated['product_features'] = $this->normalizeProductFeatures($validated['product_features'] ?? []);
         $validated['show_on_best_sellers'] = $request->boolean('show_on_best_sellers');
+        $validated['combo_product_ids'] = $this->normalizeComboProductIds($validated['combo_product_ids'] ?? [], null);
         $validated['fit'] = trim((string) ($validated['fit'] ?? ($validated['long_description'] ?? '')));
         $validated['fabric_and_care'] = trim((string) ($validated['fabric_and_care'] ?? ($validated['additional_information'] ?? '')));
         $validated['long_description'] = $validated['fit'];
@@ -421,7 +428,7 @@ class ProductController extends Controller
         }
 
         $this->normalizeBooleanFields($request, ['show_on_best_sellers', 'clear_gallery', 'clear_videos', 'clear_size_charts']);
-        $this->normalizeJsonFields($request, ['variant_rows', 'color_variant_images', 'color_variant_videos', 'color_variant_size_charts', 'size_chart_images', 'product_features', 'image_gallery_existing', 'product_videos_existing', 'size_chart_images_existing']);
+        $this->normalizeJsonFields($request, ['variant_rows', 'color_variant_images', 'color_variant_videos', 'color_variant_size_charts', 'size_chart_images', 'product_features', 'image_gallery_existing', 'product_videos_existing', 'size_chart_images_existing', 'combo_product_ids']);
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -470,6 +477,8 @@ class ProductController extends Controller
             'stock' => 'required|integer',
             'position' => 'nullable|integer|min:1',
             'show_on_best_sellers' => 'nullable|boolean',
+            'combo_product_ids' => 'nullable|array',
+            'combo_product_ids.*' => 'integer',
             'variant_rows' => 'nullable|array',
             'variant_rows.*.key' => 'nullable|string|max:255',
             'variant_rows.*.color' => 'nullable|string|max:255',
@@ -570,6 +579,9 @@ class ProductController extends Controller
         $validated['variant_rows'] = $this->normalizeVariantRows($validated['variant_rows'] ?? ($productModel->variant_rows ?? []));
         $validated['product_features'] = $this->normalizeProductFeatures($validated['product_features'] ?? ($productModel->product_features ?? []));
         $validated['show_on_best_sellers'] = $request->boolean('show_on_best_sellers');
+        $validated['combo_product_ids'] = $request->has('combo_product_ids')
+            ? $this->normalizeComboProductIds($validated['combo_product_ids'] ?? [], $productModel->id)
+            : $this->normalizeComboProductIds($productModel->combo_product_ids ?? [], $productModel->id);
         $validated['fit'] = trim((string) ($validated['fit'] ?? ($validated['long_description'] ?? ($productModel->fit ?? ''))));
         $validated['fabric_and_care'] = trim((string) ($validated['fabric_and_care'] ?? ($validated['additional_information'] ?? ($productModel->fabric_and_care ?? ''))));
         $validated['long_description'] = $validated['fit'];
@@ -970,6 +982,23 @@ class ProductController extends Controller
                 $field => filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE),
             ]);
         }
+    }
+
+    private function normalizeComboProductIds(mixed $value, ?int $excludeProductId): array
+    {
+        if (! is_array($value)) {
+            return [];
+        }
+
+        $ids = array_map('intval', $value);
+
+        if ($excludeProductId !== null) {
+            $ids = array_filter($ids, static fn (int $id): bool => $id !== $excludeProductId);
+        }
+
+        $ids = array_filter($ids, static fn (int $id): bool => $id > 0);
+
+        return array_values(array_unique($ids));
     }
 
     private function normalizeVariantRows($variantRows): array

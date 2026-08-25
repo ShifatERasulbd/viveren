@@ -226,7 +226,7 @@ function resolveInitialColor(preferredColor, availableColors, colorRecords = [],
     return allowFallback ? (availableColors[0] || '') : '';
 }
 
-export default function SingleProductMainSection({ product, initialColor = '' }) {
+export default function SingleProductMainSection({ product, initialColor = '', comboProducts = [] }) {
     const { addToCart, openCartDrawer } = useCart();
     const [colorLookup, setColorLookup] = useState({});
     const [colorRecords, setColorRecords] = useState([]);
@@ -549,6 +549,7 @@ export default function SingleProductMainSection({ product, initialColor = '' })
                                 colors: colors.map((color) => ({ label: color, value: color })),
                                 sizes,
                             }}
+                            comboProducts={comboProducts}
                             colorLookup={colorLookup}
                             colorRecords={colorRecords}
                             selectedColor={selectedColor}

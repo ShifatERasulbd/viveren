@@ -10,7 +10,7 @@ import { fetchGrandChilds } from '@/pages/GrandChild/api';
 import { fetchSizes } from '@/pages/Size/api';
 import { fetchSubCategories } from '@/pages/SubCategory/api';
 
-import { createProduct } from './api';
+import { createProduct, fetchProducts } from './api';
 
 const initialForm = {
     name: '',
@@ -104,6 +104,9 @@ export default function AddProduct() {
     const [colorVariantSizeChartMap, setColorVariantSizeChartMap] = useState({});
     const [colorOptions, setColorOptions] = useState([]);
     const [sizeOptions, setSizeOptions] = useState([]);
+    const [comboProductOptions, setComboProductOptions] = useState([]);
+    const [comboProductSelectValue, setComboProductSelectValue] = useState('');
+    const [selectedComboProductIds, setSelectedComboProductIds] = useState([]);
     const [categoryOptions, setCategoryOptions] = useState([]);
     const [subCategoryOptions, setSubCategoryOptions] = useState([]);
     const [grandChildOptions, setGrandChildOptions] = useState([]);
@@ -153,12 +156,13 @@ export default function AddProduct() {
             setIsOptionsLoading(true);
 
             try {
-                const [colors, sizes, categories, subCategories, grandChilds] = await Promise.all([
+                const [colors, sizes, categories, subCategories, grandChilds, products] = await Promise.all([
                     fetchColors(),
                     fetchSizes(),
                     fetchCategories(),
                     fetchSubCategories(),
                     fetchGrandChilds(),
+                    fetchProducts(),
                 ]);
                 if (!ignore) {
                     setColorOptions(Array.isArray(colors) ? colors : []);
@@ -166,6 +170,7 @@ export default function AddProduct() {
                     setCategoryOptions(Array.isArray(categories) ? categories : []);
                     setSubCategoryOptions(Array.isArray(subCategories) ? subCategories : []);
                     setGrandChildOptions(Array.isArray(grandChilds) ? grandChilds : []);
+                    setComboProductOptions(Array.isArray(products) ? products : []);
                 }
             } catch {
                 if (!ignore) {
@@ -174,6 +179,7 @@ export default function AddProduct() {
                     setCategoryOptions([]);
                     setSubCategoryOptions([]);
                     setGrandChildOptions([]);
+                    setComboProductOptions([]);
                 }
             } finally {
                 if (!ignore) {
@@ -505,6 +511,21 @@ export default function AddProduct() {
         setSelectedSizes((previous) => previous.filter((size) => size !== sizeToRemove));
     };
 
+    const handleAddComboProduct = () => {
+        if (!comboProductSelectValue) {
+            return;
+        }
+
+        setSelectedComboProductIds((previous) => (
+            previous.includes(comboProductSelectValue) ? previous : [...previous, comboProductSelectValue]
+        ));
+        setComboProductSelectValue('');
+    };
+
+    const handleRemoveComboProduct = (productIdToRemove) => {
+        setSelectedComboProductIds((previous) => previous.filter((id) => id !== productIdToRemove));
+    };
+
     const handleReorderSizes = (fromSize, toSize) => {
         if (!fromSize || !toSize || fromSize === toSize) {
             return;
@@ -608,6 +629,7 @@ export default function AddProduct() {
                 additional_information: form.fabric_and_care,
                 color: selectedColors.length > 0 ? selectedColors.join(', ') : form.color,
                 size: selectedSizes.length > 0 ? selectedSizes.join(', ') : form.size,
+                combo_product_ids: selectedComboProductIds,
                 variant_rows: variantRows,
                 color_variant_images: colorVariantImageMap,
                 color_variant_videos: colorVariantVideoMap,
@@ -667,6 +689,7 @@ export default function AddProduct() {
                     onChange={handleChange}
                     colorOptions={colorOptions}
                     sizeOptions={sizeOptions}
+                    comboProductOptions={comboProductOptions}
                     categoryOptions={categoryOptions}
                     subCategoryOptions={filteredSubCategoryOptions}
                     grandChildOptions={filteredGrandChildOptions}
@@ -675,6 +698,11 @@ export default function AddProduct() {
                     sizeSelectValue={sizeSelectValue}
                     selectedColors={selectedColors}
                     selectedSizes={selectedSizes}
+                    comboProductSelectValue={comboProductSelectValue}
+                    selectedComboProductIds={selectedComboProductIds}
+                    onComboProductSelectChange={setComboProductSelectValue}
+                    onAddComboProduct={handleAddComboProduct}
+                    onRemoveComboProduct={handleRemoveComboProduct}
                     colorTrendingMap={colorTrendingMap}
                     colorFabricMap={colorFabricMap}
                     variantRows={variantRows}

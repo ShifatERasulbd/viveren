@@ -198,6 +198,44 @@ export default function SingleProductPage() {
         return (sameGroup.length > 0 ? sameGroup : fallback).slice(0, 8);
     }, [products, currentProduct]);
 
+    const comboProducts = useMemo(() => {
+        const currentId = Number(currentProduct?.id);
+        if (!Number.isInteger(currentId) || currentId <= 0) {
+            return [];
+        }
+
+        const forwardIds = Array.isArray(currentProduct?.combo_product_ids)
+            ? currentProduct.combo_product_ids.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0)
+            : [];
+
+        const matched = new Map();
+
+        forwardIds.forEach((id) => {
+            const match = products.find((item) => Number(item?.id) === id);
+            if (match) {
+                matched.set(id, match);
+            }
+        });
+
+        // Reciprocal: also show this product on the page of any product that listed it as a combo.
+        products.forEach((item) => {
+            const itemId = Number(item?.id);
+            if (itemId === currentId) {
+                return;
+            }
+
+            const itemComboIds = Array.isArray(item?.combo_product_ids)
+                ? item.combo_product_ids.map((id) => Number(id))
+                : [];
+
+            if (itemComboIds.includes(currentId) && !matched.has(itemId)) {
+                matched.set(itemId, item);
+            }
+        });
+
+        return [...matched.values()];
+    }, [products, currentProduct]);
+
     if (isLoading) {
         return (
             <div className="bg-background">
@@ -219,7 +257,7 @@ export default function SingleProductPage() {
     return (
         <div className="bg-background">
             <LazySection heightClass="h-[760px]" variant="product">
-                <SingleProductMainSection product={currentProduct} initialColor={initialColor} />
+                <SingleProductMainSection product={currentProduct} initialColor={initialColor} comboProducts={comboProducts} />
             </LazySection>
             <LazySection heightClass="h-[320px]" variant="generic">
                 {/* <SingleProductInfoTabs product={currentProduct} /> */}

@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import { resolveProductFeatureIcon } from '../../shared/productFeatureIcons';
+
+const PLACEHOLDER_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300'%3E%3Crect width='100%25' height='100%25' fill='%23eef0f3'/%3E%3C/svg%3E";
 
 function RulerIcon() {
     return (
@@ -33,6 +36,28 @@ function resolveSwatchColor(value, colorLookup = {}) {
     }
 
     return '#d4d4d8';
+}
+
+function parseColorTokens(value) {
+    if (Array.isArray(value)) {
+        return value.map((item) => String(item ?? '').trim()).filter(Boolean);
+    }
+
+    if (typeof value === 'string') {
+        return value.split(',').map((item) => item.trim()).filter(Boolean);
+    }
+
+    return [];
+}
+
+function resolveComboColors(comboProduct, colorRecords = [], colorLookup = {}) {
+    return parseColorTokens(comboProduct?.color).map((token) => {
+        const record = colorRecords.find((item) => String(item?.id ?? '').trim() === token)
+            || colorRecords.find((item) => String(item?.name ?? '').trim().toLowerCase() === token.toLowerCase());
+        const label = record?.name || token;
+
+        return { label, swatch: resolveSwatchColor(label, colorLookup) };
+    });
 }
 
 function toOptionalImageUrl(path) {
@@ -94,6 +119,7 @@ export default function SingleProductDetailsPanel({
     onDecreaseQuantity,
     onIncreaseQuantity,
     onAddToCart,
+    comboProducts = [],
 }) {
     const [openAccordionKey, setOpenAccordionKey] = useState('description');
     const [isSizeChartModalOpen, setIsSizeChartModalOpen] = useState(false);
@@ -270,6 +296,62 @@ export default function SingleProductDetailsPanel({
                         SIZE Chart <RulerIcon />
                     </button>
                 </div>
+
+                {comboProducts.length > 0 && (
+                    <div>
+                        <h2 className="text-[0.78rem] uppercase tracking-[0.08em] text-zinc-700">Combo Products</h2>
+                        <div className="mt-2.5 flex flex-wrap gap-3">
+                            {comboProducts.map((comboProduct) => {
+                                const comboSlug = String(comboProduct?.slug || '').trim();
+                                const comboName = String(comboProduct?.name || '').trim() || 'Product';
+                                const comboGalleryImage = Array.isArray(comboProduct?.image_gallery)
+                                    ? comboProduct.image_gallery.find((image) => typeof image === 'string' && image.trim())
+                                    : '';
+                                const comboImage = toOptionalImageUrl(comboProduct?.cover_image)
+                                    || toOptionalImageUrl(comboGalleryImage)
+                                    || PLACEHOLDER_IMAGE;
+                                const comboLink = comboSlug
+                                    ? `/product-details/${encodeURIComponent(comboSlug)}`
+                                    : `/product-details/${encodeURIComponent(comboName)}`;
+                                const comboColors = resolveComboColors(comboProduct, colorRecords, colorLookup);
+
+                                return (
+                                    <Link
+                                        key={comboProduct?.id ?? comboName}
+                                        to={comboLink}
+                                        className="flex w-[140px] flex-col gap-1.5 border border-zinc-200 p-2 transition-colors hover:border-zinc-400"
+                                    >
+                                        <span className="aspect-[3/4] w-full overflow-hidden bg-zinc-100">
+                                            <img
+                                                src={comboImage}
+                                                alt={comboName}
+                                                className="h-full w-full object-contain"
+                                            />
+                                        </span>
+                                        {comboColors.length > 0 && (
+                                            <span className="flex flex-wrap items-center gap-1">
+                                                {comboColors.map((color, index) => (
+                                                    <span
+                                                        key={`${color.label}-${index}`}
+                                                        title={color.label}
+                                                        className="size-3.5 rounded-full border border-zinc-300"
+                                                        style={{ backgroundColor: color.swatch }}
+                                                    />
+                                                ))}
+                                            </span>
+                                        )}
+                                        <span className="line-clamp-2 text-[0.8rem] font-medium leading-tight text-zinc-900">
+                                            {comboName}
+                                        </span>
+                                        <span className="text-[0.8rem] font-semibold text-zinc-700">
+                                            ${Number(comboProduct?.price || 0).toFixed(2)}
+                                        </span>
+                                    </Link>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
 
                 <div className="flex items-center gap-2.5">
                     <div className="inline-flex h-[52px] border border-zinc-300">

@@ -20,6 +20,7 @@ export default function EditForm({
     form = {},
     colorOptions = [],
     sizeOptions = [],
+    comboProductOptions = [],
     categoryOptions = [],
     subCategoryOptions = [],
     grandChildOptions = [],
@@ -28,6 +29,8 @@ export default function EditForm({
     sizeSelectValue = '',
     selectedColors = [],
     selectedSizes = [],
+    comboProductSelectValue = '',
+    selectedComboProductIds = [],
     colorTrendingMap = {},
     colorFabricMap = {},
     variantRows = [],
@@ -46,6 +49,9 @@ export default function EditForm({
     onAddSize,
     onRemoveSize,
     onReorderSizes,
+    onComboProductSelectChange,
+    onAddComboProduct,
+    onRemoveComboProduct,
     onVariantRowChange,
     onColorTrendingChange,
     onColorFabricChange,
@@ -104,8 +110,22 @@ export default function EditForm({
         return map;
     }, [sizeOptions]);
 
+    const comboProductLabelById = useMemo(() => {
+        const map = {};
+        comboProductOptions.forEach((product) => {
+            const id = String(product?.id ?? '').trim();
+            if (!id) {
+                return;
+            }
+
+            map[id] = product?.name || id;
+        });
+        return map;
+    }, [comboProductOptions]);
+
     const getColorLabel = (value) => colorLabelById[String(value ?? '').trim()] || String(value ?? '').trim();
     const getSizeLabel = (value) => sizeLabelById[String(value ?? '').trim()] || String(value ?? '').trim();
+    const getComboProductLabel = (value) => comboProductLabelById[String(value ?? '').trim()] || String(value ?? '').trim();
 
     const firstColorRowKeys = useMemo(() => {
         const seenColors = new Set();
@@ -874,6 +894,62 @@ export default function EditForm({
                                         {errors.discount_price && <p className="text-xs text-destructive">{errors.discount_price[0]}</p>}
                                     </div>
                                 </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="product-combo">Combo Products</Label>
+                                <p className="text-xs text-muted-foreground">
+                                    Bundle this product with other existing products to sell as a combo.
+                                </p>
+                                <div className="flex items-center gap-2">
+                                    <select
+                                        id="product-combo"
+                                        value={comboProductSelectValue}
+                                        onChange={(event) => onComboProductSelectChange?.(event.target.value)}
+                                        disabled={isSubmitting || isOptionsLoading}
+                                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-xs outline-none ring-offset-background focus-visible:ring-1 focus-visible:ring-ring"
+                                    >
+                                        <option value="">{isOptionsLoading ? 'Loading products...' : 'Select a product'}</option>
+                                        {comboProductOptions
+                                            .filter((product) => !selectedComboProductIds.includes(String(product?.id ?? '')))
+                                            .map((product) => (
+                                                <option key={product.id} value={String(product.id)}>
+                                                    {product.name}
+                                                </option>
+                                            ))}
+                                    </select>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={onAddComboProduct}
+                                        disabled={isSubmitting || isOptionsLoading || !comboProductSelectValue}
+                                    >
+                                        Add
+                                    </Button>
+                                </div>
+                                {selectedComboProductIds.length > 0 && (
+                                    <div className="flex flex-wrap gap-2 pt-1">
+                                        {selectedComboProductIds.map((productId) => (
+                                            <div
+                                                key={productId}
+                                                className="inline-flex items-center gap-2 rounded-md border bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground"
+                                            >
+                                                <span>{getComboProductLabel(productId)}</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => onRemoveComboProduct?.(productId)}
+                                                    disabled={isSubmitting}
+                                                    className="text-[11px] leading-none opacity-70 transition-opacity hover:opacity-100"
+                                                    aria-label={`Remove ${getComboProductLabel(productId)}`}
+                                                >
+                                                    x
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                                {errors.combo_product_ids && <p className="text-xs text-destructive">{errors.combo_product_ids[0]}</p>}
                             </div>
 
                             {variantRows.length > 0 && (

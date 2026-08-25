@@ -27,6 +27,11 @@ function buildProductPayload(data = {}) {
         height: data.height === '' ? 0 : Number(data.height),        
         stock: data.stock === '' ? 0 : Number(data.stock),
         show_on_best_sellers: Boolean(data.show_on_best_sellers),
+        combo_product_ids: Array.isArray(data.combo_product_ids)
+            ? data.combo_product_ids
+                .map((id) => Number(id))
+                .filter((id) => Number.isInteger(id) && id > 0)
+            : [],
         variant_rows: Array.isArray(data.variant_rows) ? data.variant_rows : [],
         color_variant_images:
             data.color_variant_images && typeof data.color_variant_images === 'object'
