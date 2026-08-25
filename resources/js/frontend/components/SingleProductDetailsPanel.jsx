@@ -56,8 +56,28 @@ function resolveComboColors(comboProduct, colorRecords = [], colorLookup = {}) {
             || colorRecords.find((item) => String(item?.name ?? '').trim().toLowerCase() === token.toLowerCase());
         const label = record?.name || token;
 
-        return { label, swatch: resolveSwatchColor(label, colorLookup) };
+        return { id: token, label, swatch: resolveSwatchColor(label, colorLookup) };
     });
+}
+
+function resolveComboVariantImage(comboProduct, matchedColor) {
+    const mapping = comboProduct?.color_variant_images && typeof comboProduct.color_variant_images === 'object'
+        ? comboProduct.color_variant_images
+        : {};
+
+    if (!matchedColor) {
+        return '';
+    }
+
+    const candidateKeys = [matchedColor.id, matchedColor.label, matchedColor.label.toLowerCase()];
+    for (const key of candidateKeys) {
+        const images = mapping[key];
+        if (Array.isArray(images) && images.length > 0) {
+            return images[0];
+        }
+    }
+
+    return '';
 }
 
 function toOptionalImageUrl(path) {
@@ -307,13 +327,18 @@ export default function SingleProductDetailsPanel({
                                 const comboGalleryImage = Array.isArray(comboProduct?.image_gallery)
                                     ? comboProduct.image_gallery.find((image) => typeof image === 'string' && image.trim())
                                     : '';
-                                const comboImage = toOptionalImageUrl(comboProduct?.cover_image)
+                                const comboColors = resolveComboColors(comboProduct, colorRecords, colorLookup);
+                                const matchedComboColor = comboColors.find(
+                                    (color) => color.label.trim().toLowerCase() === selectedColorLabel.trim().toLowerCase(),
+                                );
+                                const matchedVariantImage = resolveComboVariantImage(comboProduct, matchedComboColor);
+                                const comboImage = toOptionalImageUrl(matchedVariantImage)
+                                    || toOptionalImageUrl(comboProduct?.cover_image)
                                     || toOptionalImageUrl(comboGalleryImage)
                                     || PLACEHOLDER_IMAGE;
                                 const comboLink = comboSlug
                                     ? `/product-details/${encodeURIComponent(comboSlug)}`
                                     : `/product-details/${encodeURIComponent(comboName)}`;
-                                const comboColors = resolveComboColors(comboProduct, colorRecords, colorLookup);
 
                                 return (
                                     <Link
@@ -334,7 +359,11 @@ export default function SingleProductDetailsPanel({
                                                     <span
                                                         key={`${color.label}-${index}`}
                                                         title={color.label}
-                                                        className="size-3.5 rounded-full border border-zinc-300"
+                                                        className={`size-3.5 rounded-full border ${
+                                                            matchedComboColor && matchedComboColor.id === color.id
+                                                                ? 'border-zinc-900 ring-1 ring-zinc-900/40'
+                                                                : 'border-zinc-300'
+                                                        }`}
                                                         style={{ backgroundColor: color.swatch }}
                                                     />
                                                 ))}
