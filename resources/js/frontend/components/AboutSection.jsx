@@ -90,23 +90,25 @@ export default function About1971Section() {
                 <article className="grid items-center gap-8 lg:grid-cols-2 lg:gap-16 xl:gap-20">
                     
                     {/* Image Container with Background and Overlay */}
-                    <div className="relative h-[400px] w-full overflow-hidden rounded-none sm:h-[500px] lg:h-[650px]">
+                    <div className="relative w-full overflow-hidden rounded-none bg-black/5">
                         <img
                             src={displayStoryData.background_image}
                             alt="1971 story visual"
-                            className="absolute inset-0 h-full w-full object-cover object-center"
+                            className="w-full h-auto max-h-[80vh] object-contain object-center mx-auto block"
                             loading="lazy"
                             decoding="async"
                         />
-                        {/* Black Overlay Layer */}
-                        <div className="absolute inset-0 bg-black/40" />
+                        {/* Black Overlay Layer (Optional if image contains text overlay, but kept for consistency) */}
+                        {displayStoryData.title && <div className="absolute inset-0 bg-black/40 pointer-events-none" />}
                         
                         {/* Title positioned over the image */}
-                        <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center">
-                            <h2 className="font-serif text-[1.5rem] font-bold leading-tight text-white sm:text-[2.2rem]">
-                                {displayStoryData.title}
-                            </h2>
-                        </div>
+                        {displayStoryData.title && (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center pointer-events-none">
+                                <h2 className="font-serif text-[1.5rem] font-bold leading-tight text-white sm:text-[2.2rem]">
+                                    {displayStoryData.title}
+                                </h2>
+                            </div>
+                        )}
                     </div>
 
                     {/* Text Content */}

@@ -78,38 +78,52 @@ export default function SustainabilitySection() {
 
     return (
         <section
-            className="relative flex min-h-[500px] w-full items-center bg-cover bg-center py-20"
-            style={{ backgroundImage: `url(${displayData.image})` }}
+            className="relative w-full overflow-hidden bg-black/5 py-8 sm:py-12"
             onClick={handleSectionClick}
             role={isBuilderPreview ? 'button' : undefined}
             tabIndex={isBuilderPreview ? 0 : undefined}
         >
-            {/* Dark overlay for text readability */}
-            <div className="absolute inset-0 bg-black/40" />
-
+            {/* Wrapper container to match your page layout width */}
             <div className="relative mx-auto w-full max-w-[1540px] px-5 sm:px-8 lg:px-12">
-                <div className="max-w-2xl">
-                    <p className="text-[0.75rem] uppercase tracking-[0.2em] text-white/90">
-                        {displayData.section_title}
-                    </p>
+                <div className="relative overflow-hidden">
+                    {/* Full Image Display */}
+                    <img
+                        src={displayData.image}
+                        alt={displayData.title || "Sustainability background"}
+                        className="w-full h-auto max-h-[85vh] object-contain object-center mx-auto block"
+                        loading="lazy"
+                        decoding="async"
+                    />
 
-                    <h2 className="mt-4 font-serif text-[clamp(2.5rem,6vw,4rem)] leading-[1.1] text-white">
-                        {displayData.title}
-                    </h2>
+                    {/* Dark overlay for text readability */}
+                    <div className="absolute inset-0 bg-black/40 pointer-events-none" />
 
-                    <div className="mt-6 space-y-6 text-[1.1rem] leading-[1.8] text-white/90">
-                        {String(displayData.description || '').split('\n\n').map((para, i) => (
-                            <p key={i}>{para}</p>
-                        ))}
+                    {/* Content Layer Over the Image */}
+                    <div className="absolute inset-0 flex items-center p-8 sm:p-12 lg:p-16">
+                        <div className="max-w-2xl">
+                            <p className="text-[0.75rem] uppercase tracking-[0.2em] text-white/90">
+                                {displayData.section_title}
+                            </p>
+
+                            <h2 className="mt-4 font-serif text-[clamp(2rem,5vw,3.8rem)] leading-[1.1] text-white">
+                                {displayData.title}
+                            </h2>
+
+                            <div className="mt-6 space-y-6 text-[1.05rem] leading-[1.8] text-white/90 sm:text-[1.1rem]">
+                                {String(displayData.description || '').split('\n\n').map((para, i) => (
+                                    <p key={i}>{para}</p>
+                                ))}
+                            </div>
+
+                            <a
+                                href={displayData.button_link || '#'}
+                                className="mt-8 inline-block border-b border-white pb-1 text-sm font-medium uppercase tracking-widest text-white transition-opacity hover:opacity-70 pointer-events-auto"
+                                style={{ display: displayData.button_enabled === false ? 'none' : 'inline-block' }}
+                            >
+                                {displayData.button_title || 'Explore Our Sustainability Approach'} →
+                            </a>
+                        </div>
                     </div>
-
-                    <a
-                        href={displayData.button_link || '#'}
-                        className="mt-8 inline-block border-b border-white pb-1 text-sm font-medium uppercase tracking-widest text-white transition-opacity hover:opacity-70"
-                        style={{ display: displayData.button_enabled === false ? 'none' : 'inline-block' }}
-                    >
-                        {displayData.button_title || 'Explore Our Sustainability Approach'} →
-                    </a>
                 </div>
             </div>
         </section>

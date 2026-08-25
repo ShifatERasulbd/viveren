@@ -107,7 +107,7 @@ export default function AboutHeroSection() {
                     <img
                         src={backgroundImage}
                         alt="About hero background"
-                        className="h-[280px] w-full object-cover object-center sm:h-[420px] lg:h-[560px]"
+                        className="w-full h-auto max-h-[75vh] object-contain object-center"
                         fetchPriority="high"
                         loading="eager"
                     />
