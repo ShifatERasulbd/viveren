@@ -42,10 +42,12 @@ class TrendingSectionController extends Controller
             : [];
 
         $image = is_string($trending['image'] ?? null) ? trim((string) $trending['image']) : '';
+        $productIds = $this->normalizeProductIds($trending['product_ids'] ?? []);
 
         return response()->json([
             'trending_section' => [
                 'image' => $image !== '' ? $image : self::DEFAULT_IMAGE,
+                'product_ids' => $productIds,
             ],
         ]);
     }
@@ -55,6 +57,8 @@ class TrendingSectionController extends Controller
         $validated = $request->validate([
             'trending_image_existing' => 'nullable|string|max:2048',
             'trending_image_file' => 'nullable|file|mimes:jpeg,jpg,png,webp,svg,avif,gif|max:8192',
+            'trending_product_ids' => 'nullable|array',
+            'trending_product_ids.*' => 'integer',
         ]);
 
         $settings = $this->ensureSettings();
@@ -77,8 +81,13 @@ class TrendingSectionController extends Controller
             $image = $this->storeUploadedImageToPublic($file, 'uploads/trending', 'trending_');
         }
 
+        $productIds = $request->has('trending_product_ids')
+            ? $this->normalizeProductIds($validated['trending_product_ids'] ?? [])
+            : $this->normalizeProductIds($existingTrending['product_ids'] ?? []);
+
         $frontendUtils['trending_section'] = [
             'image' => $image !== '' ? $image : self::DEFAULT_IMAGE,
+            'product_ids' => $productIds,
         ];
 
         $payload = is_array($settings->payload) ? $settings->payload : [];
@@ -88,6 +97,18 @@ class TrendingSectionController extends Controller
         return response()->json([
             'trending_section' => $frontendUtils['trending_section'],
         ]);
+    }
+
+    private function normalizeProductIds(mixed $value): array
+    {
+        if (! is_array($value)) {
+            return [];
+        }
+
+        return array_values(array_unique(array_filter(
+            array_map('intval', $value),
+            static fn (int $id): bool => $id > 0,
+        )));
     }
 
     private function storeUploadedImageToPublic(UploadedFile $file, string $relativeDirectory, string $prefix): string

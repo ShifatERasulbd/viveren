@@ -175,6 +175,25 @@ function getProductStock(product) {
     return variantStock;
 }
 
+function collectProductSkus(product) {
+    const skus = new Set();
+
+    const mainSku = String(product?.sku || '').trim();
+    if (mainSku) {
+        skus.add(mainSku);
+    }
+
+    const variants = Array.isArray(product?.variant_rows) ? product.variant_rows : [];
+    variants.forEach((row) => {
+        const rowSku = String(row?.sku || '').trim();
+        if (rowSku) {
+            skus.add(rowSku);
+        }
+    });
+
+    return [...skus];
+}
+
 function collectVariantImages(product) {
     const images = [];
 
@@ -372,10 +391,12 @@ function expandProductsByColorVariants(products) {
     });
 }
 
-function normalizeProducts(payload, colorNameLookup = {}, sizeNameLookup = {}, sizeIdByNameLookup = {}) {
+function normalizeProducts(payload, colorNameLookup = {}, sizeNameLookup = {}, sizeIdByNameLookup = {}, options = {}) {
     if (!Array.isArray(payload)) {
         return [];
     }
+
+    const { skipVariantExpansion = false } = options;
 
     const normalized = payload.map((item, index) => {
         const normalizedColorVariantImages =
@@ -410,6 +431,15 @@ function normalizeProducts(payload, colorNameLookup = {}, sizeNameLookup = {}, s
             tag: null,
         };
     });
+
+    if (skipVariantExpansion) {
+        // Preserve the exact list/order provided by the backend (e.g. manually attached New Arrivals products).
+        return normalized.map((product) => ({
+            ...product,
+            variant_seed_color: null,
+            tag: isVariantTrending(product) ? 'Trending' : null,
+        }));
+    }
 
     return expandProductsByColorVariants(
         groupProductsByName(normalized, {
@@ -475,6 +505,15 @@ function normalizeGrandChildOptions(payload) {
 
 function normalizeQueryValue(value) {
     return String(value || '').trim().toLowerCase();
+}
+
+function normalizeSearchText(value) {
+    return String(value || '')
+        .toLowerCase()
+        .replace(/['']/g, '')
+        .replace(/[^a-z0-9\s-]+/g, ' ')
+        .replace(/[\s-]+/g, ' ')
+        .trim();
 }
 
 function resolveEntityByQuery(items, rawValue) {
@@ -628,13 +667,15 @@ function matchesCategoryFilter(product, selectedIds, categoryById, newArrivalPro
             return isBestSellerProduct(product);
         }
 
+        const ids = Array.isArray(option?.ids) ? option.ids : [selectedId];
+        const matchesGrandChild = ids.includes(String(product.grand_child_id || ''));
+
         const fabricValue = FABRIC_SLUG_MAP[optionValue];
         if (fabricValue) {
-            return isFabricProduct(product, fabricValue);
+            return matchesGrandChild || isFabricProduct(product, fabricValue);
         }
 
-        const ids = Array.isArray(option?.ids) ? option.ids : [selectedId];
-        return ids.includes(String(product.grand_child_id || ''));
+        return matchesGrandChild;
     });
 }
 
@@ -1006,10 +1047,14 @@ function ShopProductsGrid({
     onPageChange,
     onAddToCart,
     onOpenFilters,
+    showGenderFilter = false,
+    selectedGenders = [],
+    onGenderFilterChange,
 }) {
     const visibleProducts = Array.isArray(products) ? products : [];
     const start = visibleProducts.length > 0 ? (currentPage - 1) * PRODUCTS_PER_PAGE + 1 : 0;
     const end = visibleProducts.length > 0 ? start + visibleProducts.length - 1 : 0;
+    const genderFilterValue = selectedGenders.length === 1 ? selectedGenders[0] : 'All';
 
     return (
         <div className="min-w-0 max-w-full">
@@ -1018,14 +1063,29 @@ function ShopProductsGrid({
                     Showing {start}-{end} of {totalResults} results
                 </p>
 
-                <button
-                    type="button"
-                    onClick={() => onOpenFilters?.()}
-                    className="inline-flex items-center gap-2 bg-zinc-950 px-3.5 py-2 text-[0.72rem] font-medium uppercase tracking-[0.14em] text-white lg:hidden"
-                >
-                    <SlidersHorizontal className="size-4" strokeWidth={1.7} />
-                    Filters
-                </button>
+                <div className="flex items-center gap-3">
+                    {showGenderFilter ? (
+                        <select
+                            aria-label="Filter by gender"
+                            value={genderFilterValue}
+                            onChange={(event) => onGenderFilterChange?.(event.target.value)}
+                            className="h-10 border border-zinc-300 bg-white px-3 text-[0.72rem] font-medium uppercase tracking-[0.14em] text-zinc-700 focus:border-zinc-900 focus:outline-none"
+                        >
+                            <option value="All">All</option>
+                            <option value="Women">Women</option>
+                            <option value="Men">Men</option>
+                        </select>
+                    ) : null}
+
+                    <button
+                        type="button"
+                        onClick={() => onOpenFilters?.()}
+                        className="inline-flex items-center gap-2 bg-zinc-950 px-3.5 py-2 text-[0.72rem] font-medium uppercase tracking-[0.14em] text-white lg:hidden"
+                    >
+                        <SlidersHorizontal className="size-4" strokeWidth={1.7} />
+                        Filters
+                    </button>
+                </div>
             </div>
 
             {visibleProducts.length > 0 ? (
@@ -1149,6 +1209,28 @@ export default function ShopCatalogSection() {
 
     const isFabricCollectionView = Boolean(activeFabricValue);
 
+    const isGrandChildCollectionSlug = useMemo(() => {
+        if (!isCollectionView || isFabricCollectionView) {
+            return false;
+        }
+
+        return allGrandChilds.some(
+            (item) => normalizeQueryValue(item?.slug) === normalizeQueryValue(collectionSlug),
+        );
+    }, [isCollectionView, isFabricCollectionView, collectionSlug, allGrandChilds]);
+
+    const activeFabricGrandChildIds = useMemo(() => {
+        if (!activeFabricValue) {
+            return [];
+        }
+
+        const match = categoryOptions.find(
+            (option) => normalizeQueryValue(option?.name) === normalizeQueryValue(activeFabricValue),
+        );
+
+        return Array.isArray(match?.ids) ? match.ids : [];
+    }, [activeFabricValue, categoryOptions]);
+
     const isNewArrivalsView = useMemo(() => {
         const pathName = String(location.pathname || '').toLowerCase();
         return pathName === '/new-arrivals'
@@ -1243,6 +1325,7 @@ export default function ShopCatalogSection() {
                     nextColorNameLookup,
                     nextSizeNameLookup,
                     nextSizeIdByNameLookup,
+                    { skipVariantExpansion: isNewArrivalsView },
                 );
 
                 setSizeOptions(nextSizeOptions);
@@ -1447,6 +1530,11 @@ export default function ShopCatalogSection() {
 
         setSearchTerm(rawSearch.trim());
 
+        if (isSearchPath) {
+            setSelectedGenders([]);
+            setSelectedAvailability([]);
+        }
+
         if (sizeValue.trim()) {
             const requestedSizes = sizeValue
                 .split(',')
@@ -1458,8 +1546,20 @@ export default function ShopCatalogSection() {
         }
 
         const selectedGrandChildIds = new Set();
+        const isNewArrivalsPath = pathName === '/new-arrivals';
+        const collectionsGrandChildSlug = pathSegments.length === 2 && pathSegments[0] === 'collections' ? pathSegments[1] : '';
 
-        if (grandChildValue) {
+        if (isNewArrivalsPath) {
+            const matchedGrandChild = resolveEntityByQuery(allGrandChilds, 'new-arrivals');
+            if (matchedGrandChild?.id != null) {
+                selectedGrandChildIds.add(String(matchedGrandChild.id));
+            }
+        } else if (collectionsGrandChildSlug) {
+            const matchedGrandChild = resolveEntityByQuery(allGrandChilds, collectionsGrandChildSlug);
+            if (matchedGrandChild?.id != null) {
+                selectedGrandChildIds.add(String(matchedGrandChild.id));
+            }
+        } else if (grandChildValue) {
             const matchedGrandChild = resolveEntityByQuery(allGrandChilds, grandChildValue);
             if (matchedGrandChild?.id != null) {
                 selectedGrandChildIds.add(String(matchedGrandChild.id));
@@ -1502,6 +1602,11 @@ export default function ShopCatalogSection() {
         setCurrentPage(1);
     }
 
+    function handleGenderFilterChange(value) {
+        setSelectedGenders(value === 'All' ? [] : [value]);
+        setCurrentPage(1);
+    }
+
     const filteredProducts = useMemo(() => {
         const min = Number(minPrice);
         const max = Number(maxPrice);
@@ -1514,10 +1619,11 @@ export default function ShopCatalogSection() {
             }
 
             if (isFabricCollectionView) {
-                if (!isFabricProduct(product, activeFabricValue)) {
+                const matchesGrandChild = activeFabricGrandChildIds.includes(String(product.grand_child_id || ''));
+                if (!matchesGrandChild && !isFabricProduct(product, activeFabricValue)) {
                     return false;
                 }
-            } else if (isCollectionView && !isBestSellersView) {
+            } else if (isCollectionView && !isBestSellersView && !isGrandChildCollectionSlug) {
                 if (effectiveCollectionProductIdSet.size === 0) {
                     return false;
                 }
@@ -1568,8 +1674,9 @@ export default function ShopCatalogSection() {
             }
 
             if (searchTerm) {
-                const haystack = `${product.name} ${product.sku || ''}`.toLowerCase();
-                if (!haystack.includes(searchTerm.toLowerCase())) {
+                const haystack = normalizeSearchText(`${product.name} ${collectProductSkus(product).join(' ')}`);
+                const needle = normalizeSearchText(searchTerm);
+                if (needle && !haystack.includes(needle)) {
                     return false;
                 }
             }
@@ -1600,7 +1707,9 @@ export default function ShopCatalogSection() {
         isCollectionView,
         isNewArrivalsView,
         isFabricCollectionView,
+        isGrandChildCollectionSlug,
         activeFabricValue,
+        activeFabricGrandChildIds,
         activeCollection,
         effectiveCollectionProductIdSet,
         isBestSellersView,
@@ -1747,6 +1856,9 @@ export default function ShopCatalogSection() {
                     onPageChange={handlePageChange}
                     onAddToCart={handleAddToCart}
                     onOpenFilters={() => setIsMobileFiltersOpen(true)}
+                    showGenderFilter={isFabricCollectionView}
+                    selectedGenders={selectedGenders}
+                    onGenderFilterChange={handleGenderFilterChange}
                 />
 
                 <ProductVariantModal

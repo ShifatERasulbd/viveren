@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Color;
 use App\Models\Product;
+use App\Models\Settings;
 use App\Models\Size;
 use App\Services\JoorService;
 use Illuminate\Http\Request;
@@ -146,13 +147,38 @@ class ProductController extends Controller
             $columns[] = 'slug';
         }
 
-        $products = Product::select($columns)
-            ->orderByDesc('id')
-            ->take(24)
-            ->get();
+        $attachedProductIds = $this->getNewArrivalsProductIds();
+
+        if (! empty($attachedProductIds)) {
+            $products = Product::select($columns)
+                ->whereIn('id', $attachedProductIds)
+                ->get()
+                ->sortBy(static fn (Product $product): int => array_search($product->id, $attachedProductIds, true))
+                ->values();
+        } else {
+            $products = Product::select($columns)
+                ->orderByDesc('id')
+                ->take(24)
+                ->get();
+        }
 
         return response()->json($products);
     }
+
+    private function getNewArrivalsProductIds(): array
+    {
+        $settings = Settings::orderBy('id', 'desc')->first();
+        $payload = $settings && is_array($settings->payload) ? $settings->payload : [];
+        $frontendUtils = is_array($payload['frontend_utils'] ?? null) ? $payload['frontend_utils'] : [];
+        $trendingSection = is_array($frontendUtils['trending_section'] ?? null) ? $frontendUtils['trending_section'] : [];
+        $productIds = is_array($trendingSection['product_ids'] ?? null) ? $trendingSection['product_ids'] : [];
+
+        return array_values(array_unique(array_filter(
+            array_map('intval', $productIds),
+            static fn (int $id): bool => $id > 0,
+        )));
+    }
+
 
     public function publicShopIndex(): JsonResponse
     {

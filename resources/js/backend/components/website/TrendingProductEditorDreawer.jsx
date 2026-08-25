@@ -20,6 +20,7 @@ export default function TrendingProductEditorDrawer({
     section,
     onChangeField,
     onSave,
+    productOptions = [],
 }) {
     // Backward compatible: accept the old prop name used by HomePageBuilder.
     const _noop = onChangeField;
@@ -28,6 +29,7 @@ export default function TrendingProductEditorDrawer({
     const [selectedFile, setSelectedFile] = useState(null);
     const [previewUrl, setPreviewUrl] = useState('');
     const [currentImage, setCurrentImage] = useState('');
+    const [selectedProductIds, setSelectedProductIds] = useState([]);
 
     const canEdit = useMemo(() => Boolean(section?.key === 'trending'), [section]);
 
@@ -44,10 +46,16 @@ export default function TrendingProductEditorDrawer({
                 if (!res.ok) return;
                 const payload = await res.json();
                 const image = payload?.trending_section?.image;
+                const productIds = payload?.trending_section?.product_ids;
                 if (!ignore && typeof image === 'string') {
                     setCurrentImage(image);
                     setPreviewUrl('');
                     setSelectedFile(null);
+                }
+                if (!ignore && Array.isArray(productIds)) {
+                    setSelectedProductIds(
+                        productIds.map((value) => Number(value)).filter((value) => Number.isInteger(value) && value > 0),
+                    );
                 }
             } catch {
                 // keep whatever is already there
@@ -59,6 +67,14 @@ export default function TrendingProductEditorDrawer({
             ignore = true;
         };
     }, [open]);
+
+    function toggleProductId(productId) {
+        setSelectedProductIds((previous) =>
+            previous.includes(productId)
+                ? previous.filter((id) => id !== productId)
+                : [...previous, productId],
+        );
+    }
 
     const handleFileChange = (event) => {
         const file = event.target.files?.[0];
@@ -77,16 +93,17 @@ export default function TrendingProductEditorDrawer({
 
     const handleSave = async () => {
         if (!canEdit) return;
-        if (!selectedFile) {
-            toast.error('Please choose an image');
-            return;
-        }
 
         const formData = new FormData();
-        formData.append('trending_image_file', selectedFile);
+        if (selectedFile) {
+            formData.append('trending_image_file', selectedFile);
+        }
         if (currentImage) {
             formData.append('trending_image_existing', currentImage);
         }
+        selectedProductIds.forEach((productId) => {
+            formData.append('trending_product_ids[]', productId);
+        });
 
         try {
             setIsSaving(true);
@@ -101,7 +118,7 @@ export default function TrendingProductEditorDrawer({
             });
 
             if (!res.ok) {
-                throw new Error('Failed to save trending image');
+                throw new Error('Failed to save New Arrivals section');
             }
 
             const payload = await res.json();
@@ -111,13 +128,13 @@ export default function TrendingProductEditorDrawer({
                 setCurrentImage(image);
                 setPreviewUrl('');
                 setSelectedFile(null);
-                toast.success('Trending image saved');
             }
 
+            toast.success('New Arrivals section saved');
             onChangeField?.('trendingImage', image);
             onSave?.(image);
         } catch (e) {
-            toast.error(e?.message || 'Failed to save trending image');
+            toast.error(e?.message || 'Failed to save New Arrivals section');
         } finally {
             setIsSaving(false);
         }
@@ -132,14 +149,14 @@ export default function TrendingProductEditorDrawer({
                 <SheetHeader>
                     <SheetTitle className="flex items-center gap-2">
                         <Settings2 className="size-4" />
-                        Trending Personalization
+                        New Arrivals Personalization
                     </SheetTitle>
-                    <SheetDescription>Upload the image used as the Trending section background.</SheetDescription>
+                    <SheetDescription>Upload the background image and choose which products appear in the New Arrivals section.</SheetDescription>
                 </SheetHeader>
 
                 <div className="space-y-5 px-4 pb-4 pt-2">
                     <div className="space-y-2">
-                        <Label htmlFor="trending-image">Trending Background Image</Label>
+                        <Label htmlFor="trending-image">New Arrivals Background Image</Label>
                         <Input
                             id="trending-image"
                             type="file"
@@ -151,7 +168,7 @@ export default function TrendingProductEditorDrawer({
                         {(previewUrl || currentImage) && (
                             <img
                                 src={previewUrl || currentImage}
-                                alt="Trending background preview"
+                                alt="New Arrivals background preview"
                                 className="h-36 w-full rounded-md border border-border bg-background object-cover"
                             />
                         )}
@@ -165,14 +182,47 @@ export default function TrendingProductEditorDrawer({
                         </p>
                     </div>
 
+                    <div className="space-y-1">
+                        <Label>Attached products</Label>
+                        <div className="max-h-56 space-y-1 overflow-y-auto rounded-md border border-input bg-background p-2">
+                            {productOptions.length > 0 ? (
+                                productOptions.map((product) => {
+                                    const productId = Number(product.id);
+                                    const checked = selectedProductIds.includes(productId);
+
+                                    return (
+                                        <label
+                                            key={`trending-product-${productId}`}
+                                            className="flex cursor-pointer items-center gap-2 rounded px-1 py-1 text-xs hover:bg-muted/40"
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={checked}
+                                                onChange={() => toggleProductId(productId)}
+                                                disabled={!canEdit || isSaving}
+                                                className="size-3.5 rounded border-zinc-300 text-zinc-900"
+                                            />
+                                            <span className="line-clamp-1">{product.name}</span>
+                                        </label>
+                                    );
+                                })
+                            ) : (
+                                <p className="text-xs text-muted-foreground">No products found.</p>
+                            )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                            Leave empty to automatically show the most recently added products.
+                        </p>
+                    </div>
+
                     <div className="rounded-md border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-                        Only the section background changes. The heading remains “Trending Products”.
+                        Only the section background changes. The heading remains “New Arrivals”.
                     </div>
                 </div>
 
                 <SheetFooter>
-                    <Button onClick={handleSave} disabled={!canEdit || isSaving || !selectedFile}>
-                        {isSaving ? 'Saving...' : 'Save Trending Image'}
+                    <Button onClick={handleSave} disabled={!canEdit || isSaving}>
+                        {isSaving ? 'Saving...' : 'Save New Arrivals Section'}
                     </Button>
                     <Button variant="outline" onClick={() => onOpenChange(false)}>
                         Close
@@ -182,4 +232,5 @@ export default function TrendingProductEditorDrawer({
         </Sheet>
     );
 }
+
 

@@ -1627,6 +1627,7 @@ export default function HomePageBuilder() {
                 section={{ key: 'trending' }}
                 onChangeField={() => {}}
                 onSave={() => {}}
+                productOptions={collectionProductOptions}
             />
 
         </DndProvider>

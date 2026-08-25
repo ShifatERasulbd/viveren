@@ -44,10 +44,6 @@ function parseList(value) {
     return [];
 }
 
-function normalizeQueryValue(value) {
-    return String(value || '').trim().toLowerCase();
-}
-
 function normalizeColorLookupEntry(record) {
     if (!record || typeof record !== 'object') return null;
     const name = String(record.name || '').trim();
@@ -93,131 +89,16 @@ function getProductStock(product) {
     }, 0);
 }
 
-function collectVariantImages(product) {
-    const images = [];
-    if (product?.cover_image) images.push(product.cover_image);
-    if (Array.isArray(product?.image_gallery)) images.push(...product.image_gallery.filter(Boolean));
-    if (product?.color_variant_images && typeof product.color_variant_images === 'object') {
-        Object.values(product.color_variant_images).forEach((items) => {
-            if (Array.isArray(items)) images.push(...items.filter(Boolean));
-        });
-    }
-    return images;
-}
-
-function buildVariantRowKey(row = {}) {
-    const color = String(row?.color || '').trim().toLowerCase();
-    const size = String(row?.size || '').trim().toLowerCase();
-    const sku = String(row?.sku || '').trim().toLowerCase();
-    if (sku) return `sku:${sku}`;
-    return `${color}__${size}`;
-}
-
-function isBundleLikeProduct(product) {
-    const name = String(product?.name || '').trim().toLowerCase();
-    const sku = String(product?.sku || '').trim().toLowerCase();
-    return name.includes('bundle') || sku.includes('bundle');
-}
-
-function isVariantTrending(product, seedColor = '') {
+function isVariantTrending(product) {
     if (!product || typeof product !== 'object') return false;
     const rows = Array.isArray(product.variant_rows) ? product.variant_rows : [];
     if (rows.length === 0) return false;
-    const normalizedSeed = normalizeQueryValue(String(seedColor || ''));
-    if (normalizedSeed) {
-        return rows.some((row) =>
-            normalizeQueryValue(String(row?.color || '')) === normalizedSeed &&
-            (row?.show_on_best_sellers === true || Number(row?.show_on_best_sellers) === 1)
-        );
-    }
     return rows.some((row) => row?.show_on_best_sellers === true || Number(row?.show_on_best_sellers) === 1);
-}
-
-function groupProductsByName(products, colorNameLookup = {}) {
-    const grouped = new Map();
-    products.forEach((product, index) => {
-        const name = String(product?.name || '').trim();
-        const key = name.toLowerCase() || `unnamed-${product?.id ?? index}`;
-        const existing = grouped.get(key);
-        const productColors = normalizeProductColors(product?.color, colorNameLookup);
-        const productImages = collectVariantImages(product);
-        const directVariantImages =
-            product?.color_variant_images && typeof product.color_variant_images === 'object'
-                ? Object.fromEntries(
-                    Object.entries(product.color_variant_images).map(([k, images]) => [resolveColorDisplayName(k, colorNameLookup), images])
-                )
-                : {};
-        const productVariants = Array.isArray(product?.variant_rows) ? product.variant_rows : [];
-
-        if (!existing) {
-            grouped.set(key, {
-                ...product,
-                color: [...new Set(productColors)],
-                image_gallery: [...new Set(Array.isArray(product?.image_gallery) ? product.image_gallery.filter(Boolean) : [])],
-                color_variant_images: {},
-                variant_rows: [...productVariants],
-            });
-        }
-        const target = grouped.get(key);
-        const mergedColors = new Set(normalizeProductColors(target.color, colorNameLookup));
-        productColors.forEach((c) => mergedColors.add(c));
-        target.color = [...mergedColors];
-        const mergedGallery = new Set(Array.isArray(target.image_gallery) ? target.image_gallery.filter(Boolean) : []);
-        productImages.forEach((img) => mergedGallery.add(img));
-        target.image_gallery = [...mergedGallery];
-        if (!target.cover_image && product?.cover_image) target.cover_image = product.cover_image;
-        const variantMap = { ...(target.color_variant_images && typeof target.color_variant_images === 'object' ? target.color_variant_images : {}) };
-        productColors.forEach((color) => {
-            const mappedImages = Array.isArray(directVariantImages[color]) ? directVariantImages[color].filter(Boolean) : [];
-            const fallbackImages = mappedImages.length > 0 ? mappedImages : productImages;
-            const merged = new Set(Array.isArray(variantMap[color]) ? variantMap[color].filter(Boolean) : []);
-            fallbackImages.forEach((img) => merged.add(img));
-            if (merged.size > 0) variantMap[color] = [...merged];
-        });
-        target.color_variant_images = variantMap;
-        const mergedVariants = new Map(
-            (Array.isArray(target.variant_rows) ? target.variant_rows : []).map((row) => [buildVariantRowKey(row), row])
-        );
-        productVariants.forEach((row) => {
-            const rowKey = buildVariantRowKey(row);
-            if (!mergedVariants.has(rowKey)) mergedVariants.set(rowKey, row);
-        });
-        target.variant_rows = [...mergedVariants.values()];
-        target.stockValue = getProductStock(target);
-    });
-    return [...grouped.values()];
-}
-
-function createVariantCardId(product, color, index) {
-    const baseId = String(product?.id ?? `product-${index}`).trim();
-    const colorSlug = String(color || 'default').trim().toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-    return `${baseId}__${colorSlug || 'default'}__${index}`;
-}
-
-function expandProductsByColorVariants(products) {
-    if (!Array.isArray(products)) return [];
-    return products.flatMap((product, productIndex) => {
-        if (isBundleLikeProduct(product)) {
-            return [{ ...product, variant_seed_color: null, base_product_id: product?.id ?? productIndex, tag: isVariantTrending(product) ? 'Trending' : null }];
-        }
-        const colors = normalizeProductColors(product?.color);
-        if (colors.length === 0) {
-            return [{ ...product, variant_seed_color: null, tag: isVariantTrending(product) ? 'Trending' : null }];
-        }
-        return colors.map((color, colorIndex) => ({
-            ...product,
-            id: createVariantCardId(product, color, colorIndex),
-            variant_seed_color: color,
-            base_product_id: product?.id ?? productIndex,
-            tag: isVariantTrending(product, color) ? 'Trending' : null,
-        }));
-    });
 }
 
 function normalizeProducts(payload, colorNameLookup = {}) {
     if (!Array.isArray(payload)) return [];
-    const normalized = payload.map((item, index) => {
+    return payload.map((item, index) => {
         const normalizedColorVariantImages =
             item?.color_variant_images && typeof item.color_variant_images === 'object'
                 ? Object.fromEntries(
@@ -239,10 +120,11 @@ function normalizeProducts(payload, colorNameLookup = {}) {
             color_variant_images: normalizedColorVariantImages,
             variant_rows: normalizedVariantRows,
             stockValue: getProductStock(item),
-            tag: null,
+            // Always show the main product card/image; never split into per-color variant cards here.
+            variant_seed_color: null,
+            tag: isVariantTrending(item) ? 'Trending' : null,
         };
     });
-    return expandProductsByColorVariants(groupProductsByName(normalized, colorNameLookup));
 }
 
 /* ─── Fallback data ─── */

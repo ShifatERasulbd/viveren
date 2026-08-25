@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { X } from 'lucide-react';
 
 const availabilityFilters = ['In stock', 'Out of stock'];
 const genderFilters = ['Men', 'Women'];
@@ -39,6 +40,22 @@ function SidebarFilterRow({ title, open = false, onToggle, children }) {
 
             {open && children ? <div className="pt-4">{children}</div> : null}
         </div>
+    );
+}
+
+function ActiveFilterChip({ label, onRemove }) {
+    return (
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-300 bg-white px-3 py-1.5 text-[0.72rem] font-medium text-zinc-700">
+            {label}
+            <button
+                type="button"
+                onClick={onRemove}
+                aria-label={`Remove ${label} filter`}
+                className="text-zinc-400 transition-colors hover:text-zinc-900"
+            >
+                <X className="size-3" strokeWidth={2.2} />
+            </button>
+        </span>
     );
 }
 
@@ -109,11 +126,113 @@ export default function ShopSidebar({
         }));
     }
 
+    const hasPriceFilter = Number(minPrice) > 0
+        || (highestPrice !== '' && Number(maxPrice) < Number(highestPrice));
+
+    const activeFilters = useMemo(() => {
+        const filters = [];
+
+        selectedAvailability.forEach((value) => {
+            filters.push({
+                key: `availability-${value}`,
+                label: value,
+                onRemove: () => onToggleAvailability?.(value),
+            });
+        });
+
+        selectedGenders.forEach((value) => {
+            filters.push({
+                key: `gender-${value}`,
+                label: value,
+                onRemove: () => onToggleGender?.(value),
+            });
+        });
+
+        selectedCategories.forEach((id) => {
+            const option = categoryOptions.find((item) => String(item.id) === String(id));
+            filters.push({
+                key: `category-${id}`,
+                label: option?.name || 'Category',
+                onRemove: () => onToggleCategory?.(id),
+            });
+        });
+
+        selectedSizes.forEach((id) => {
+            const option = sizeOptions.find((item) => String(item.id) === String(id));
+            filters.push({
+                key: `size-${id}`,
+                label: option?.name || 'Size',
+                onRemove: () => onToggleSize?.(id),
+            });
+        });
+
+        if (hasPriceFilter) {
+            filters.push({
+                key: 'price',
+                label: `$${minPrice || '0'} - $${maxPrice || highestPrice || '0'}`,
+                onRemove: () => {
+                    onMinPriceChange?.('0');
+                    onMaxPriceChange?.(highestPrice || '0');
+                },
+            });
+        }
+
+        return filters;
+    }, [
+        selectedAvailability,
+        selectedGenders,
+        selectedCategories,
+        selectedSizes,
+        categoryOptions,
+        sizeOptions,
+        hasPriceFilter,
+        minPrice,
+        maxPrice,
+        highestPrice,
+        onToggleAvailability,
+        onToggleGender,
+        onToggleCategory,
+        onToggleSize,
+        onMinPriceChange,
+        onMaxPriceChange,
+    ]);
+
+    function clearAllFilters() {
+        selectedAvailability.forEach((value) => onToggleAvailability?.(value));
+        selectedGenders.forEach((value) => onToggleGender?.(value));
+        selectedCategories.forEach((id) => onToggleCategory?.(id));
+        selectedSizes.forEach((id) => onToggleSize?.(id));
+        onMinPriceChange?.('0');
+        onMaxPriceChange?.(highestPrice || '0');
+    }
+
     return (
         <aside className="font-monstrate px-6 py-7 sm:px-7 sm:py-8">
             <div className="space-y-6">
                 {!hideTitle ? (
                     <h2 className="text-[1.5rem] font-semibold uppercase tracking-[0.03em] text-zinc-800">Filters</h2>
+                ) : null}
+
+                {activeFilters.length > 0 ? (
+                    <div className="space-y-3 border-b border-zinc-200 pb-5">
+                        <div className="flex items-center justify-between gap-2">
+                            <span className="text-[0.75rem] font-medium uppercase tracking-[0.08em] text-zinc-500">
+                                Applied Filters
+                            </span>
+                            <button
+                                type="button"
+                                onClick={clearAllFilters}
+                                className="text-[0.72rem] font-medium uppercase tracking-[0.06em] text-zinc-500 underline-offset-2 hover:text-zinc-900 hover:underline"
+                            >
+                                Clear all
+                            </button>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            {activeFilters.map((filter) => (
+                                <ActiveFilterChip key={filter.key} label={filter.label} onRemove={filter.onRemove} />
+                            ))}
+                        </div>
+                    </div>
                 ) : null}
 
                 <SidebarFilterRow

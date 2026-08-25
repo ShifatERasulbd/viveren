@@ -30,7 +30,7 @@ export default function SearchProducts({
                     type="search"
                     value={searchQuery}
                     onChange={(event) => setSearchQuery(event.target.value)}
-                    placeholder="Search products by name, category, or keyword"
+                    placeholder="Search products by name or SKU"
                     className="h-11 min-w-0 flex-1 rounded-md border border-zinc-300 px-3 text-[0.95rem] text-zinc-900 outline-none ring-0 placeholder:text-zinc-400 focus:border-zinc-500"
                 />
                 <button
