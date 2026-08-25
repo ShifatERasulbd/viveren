@@ -96,18 +96,19 @@ export default function AboutHeroSection() {
             role={isBuilderPreview ? 'button' : undefined}
             tabIndex={isBuilderPreview ? 0 : undefined}
         >
-            <div className="mx-auto w-full"> 
+            <div className="mx-auto w-full text-center"> 
                 <AboutHeader 
                     sectionTitle={sectionTitle} 
                     heroTitle={heroTitle} 
                     description={description} 
                 />
 
-                <div className="mx-auto mt-6 max-w-[1640px] overflow-hidden border border-[#ddd4c8] bg-[#e9dfd2]/20 sm:mt-8">
+                {/* Border and placeholder background removed completely */}
+                <div className="mx-auto mt-6 w-full max-w-[1800px] overflow-hidden sm:mt-8">
                     <img
                         src={backgroundImage}
                         alt="About hero background"
-                        className="w-full h-auto max-h-[75vh] object-contain object-center"
+                        className="w-full h-auto max-h-[90vh] object-contain object-center block"
                         fetchPriority="high"
                         loading="eager"
                     />

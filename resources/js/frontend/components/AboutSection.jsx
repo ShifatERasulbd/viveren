@@ -89,18 +89,18 @@ export default function About1971Section() {
             <div className="mx-auto w-full max-w-[1540px] px-5 sm:px-8 lg:px-12">
                 <article className="grid items-center gap-8 lg:grid-cols-2 lg:gap-16 xl:gap-20">
                     
-                    {/* Image Container with Background and Overlay */}
-                    <div className="relative w-full overflow-hidden rounded-none bg-black/5">
+                    {/* Image Container with Decreased Max Width */}
+                    <div className="relative mx-auto w-fit max-w-full overflow-hidden rounded-none bg-transparent">
                         <img
                             src={displayStoryData.background_image}
                             alt="1971 story visual"
-                            className="w-full h-auto max-h-[80vh] object-contain object-center mx-auto block"
+                            className="w-auto h-auto max-w-full max-h-[85vh] object-contain object-center mx-auto block"
                             loading="lazy"
                             decoding="async"
                         />
-                        {/* Black Overlay Layer (Optional if image contains text overlay, but kept for consistency) */}
+                        {/* Black Overlay Layer */}
                         {displayStoryData.title && <div className="absolute inset-0 bg-black/40 pointer-events-none" />}
-                        
+
                         {/* Title positioned over the image */}
                         {displayStoryData.title && (
                             <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center pointer-events-none">
