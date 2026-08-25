@@ -317,71 +317,7 @@ export default function SingleProductDetailsPanel({
                     </button>
                 </div>
 
-                {comboProducts.length > 0 && (
-                    <div>
-                        <h2 className="text-[0.78rem] uppercase tracking-[0.08em] text-zinc-700">Combo Products</h2>
-                        <div className="mt-2.5 flex flex-wrap gap-3">
-                            {comboProducts.map((comboProduct) => {
-                                const comboSlug = String(comboProduct?.slug || '').trim();
-                                const comboName = String(comboProduct?.name || '').trim() || 'Product';
-                                const comboGalleryImage = Array.isArray(comboProduct?.image_gallery)
-                                    ? comboProduct.image_gallery.find((image) => typeof image === 'string' && image.trim())
-                                    : '';
-                                const comboColors = resolveComboColors(comboProduct, colorRecords, colorLookup);
-                                const matchedComboColor = comboColors.find(
-                                    (color) => color.label.trim().toLowerCase() === selectedColorLabel.trim().toLowerCase(),
-                                );
-                                const matchedVariantImage = resolveComboVariantImage(comboProduct, matchedComboColor);
-                                const comboImage = toOptionalImageUrl(matchedVariantImage)
-                                    || toOptionalImageUrl(comboProduct?.cover_image)
-                                    || toOptionalImageUrl(comboGalleryImage)
-                                    || PLACEHOLDER_IMAGE;
-                                const comboLink = comboSlug
-                                    ? `/product-details/${encodeURIComponent(comboSlug)}`
-                                    : `/product-details/${encodeURIComponent(comboName)}`;
-
-                                return (
-                                    <Link
-                                        key={comboProduct?.id ?? comboName}
-                                        to={comboLink}
-                                        className="flex w-[140px] flex-col gap-1.5 border border-zinc-200 p-2 transition-colors hover:border-zinc-400"
-                                    >
-                                        <span className="aspect-[3/4] w-full overflow-hidden bg-zinc-100">
-                                            <img
-                                                src={comboImage}
-                                                alt={comboName}
-                                                className="h-full w-full object-contain"
-                                            />
-                                        </span>
-                                        {comboColors.length > 0 && (
-                                            <span className="flex flex-wrap items-center gap-1">
-                                                {comboColors.map((color, index) => (
-                                                    <span
-                                                        key={`${color.label}-${index}`}
-                                                        title={color.label}
-                                                        className={`size-3.5 rounded-full border ${
-                                                            matchedComboColor && matchedComboColor.id === color.id
-                                                                ? 'border-zinc-900 ring-1 ring-zinc-900/40'
-                                                                : 'border-zinc-300'
-                                                        }`}
-                                                        style={{ backgroundColor: color.swatch }}
-                                                    />
-                                                ))}
-                                            </span>
-                                        )}
-                                        <span className="line-clamp-2 text-[0.8rem] font-medium leading-tight text-zinc-900">
-                                            {comboName}
-                                        </span>
-                                        <span className="text-[0.8rem] font-semibold text-zinc-700">
-                                            ${Number(comboProduct?.price || 0).toFixed(2)}
-                                        </span>
-                                    </Link>
-                                );
-                            })}
-                        </div>
-                    </div>
-                )}
-
+               
                 <div className="flex items-center gap-2.5">
                     <div className="inline-flex h-[52px] border border-zinc-300">
                         <button
