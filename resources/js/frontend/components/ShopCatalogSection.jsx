@@ -1614,7 +1614,7 @@ export default function ShopCatalogSection() {
         const hasMin = Number.isFinite(min);
         const hasMax = Number.isFinite(max);
 
-        return products.filter((product) => {
+        const matched = products.filter((product) => {
             if (isNewArrivalsView) {
                 return true;
             }
@@ -1692,6 +1692,33 @@ export default function ShopCatalogSection() {
 
             return true;
         });
+
+        // When "New Arrivals" is the only active category filter, mirror /collections/new-arrivals:
+        // one card per product (no color-variant splitting), showing the main product image, in the same order.
+        const isOnlyNewArrivalsCategory = selectedCategories.length === 1
+            && normalizeQueryValue(categoryById[selectedCategories[0]]?.slug || categoryById[selectedCategories[0]]?.name) === 'new-arrivals';
+
+        if (isOnlyNewArrivalsCategory) {
+            const seenBaseIds = new Set();
+            const deduped = [];
+
+            newArrivalsProductIds.forEach((rawId) => {
+                const baseId = Number(rawId);
+                if (seenBaseIds.has(baseId)) {
+                    return;
+                }
+
+                const match = matched.find((product) => Number(product.base_product_id ?? product.id) === baseId);
+                if (match) {
+                    seenBaseIds.add(baseId);
+                    deduped.push({ ...match, id: `new-arrivals-${baseId}`, variant_seed_color: null });
+                }
+            });
+
+            return deduped;
+        }
+
+        return matched;
     }, [
         products,
         selectedAvailability,
@@ -1700,6 +1727,7 @@ export default function ShopCatalogSection() {
         selectedGenders,
         categoryById,
         newArrivalProductIdSet,
+        newArrivalsProductIds,
         minPrice,
         maxPrice,
         searchTerm,
@@ -1715,6 +1743,7 @@ export default function ShopCatalogSection() {
         effectiveCollectionProductIdSet,
         isBestSellersView,
     ]);
+
 
     const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE));
     const safeCurrentPage = Math.min(currentPage, totalPages);

@@ -120,22 +120,11 @@ function normalizeProducts(payload, colorNameLookup = {}) {
             color_variant_images: normalizedColorVariantImages,
             variant_rows: normalizedVariantRows,
             stockValue: getProductStock(item),
-            // Always show the main product card/image; never split into per-color variant cards here.
             variant_seed_color: null,
             tag: isVariantTrending(item) ? 'Trending' : null,
         };
     });
 }
-
-/* ─── Fallback data ─── */
-
-const FALLBACK_PRODUCTS = [
-    { id: 1, name: 'Timeless Piece 1', priceValue: 59, slug: 'timeless-piece-1' },
-    { id: 2, name: 'Timeless Piece 2', priceValue: 69, slug: 'timeless-piece-2' },
-    { id: 3, name: 'Timeless Piece 3', priceValue: 79, slug: 'timeless-piece-3' },
-    { id: 4, name: 'Timeless Piece 4', priceValue: 89, slug: 'timeless-piece-4' },
-    { id: 5, name: 'Timeless Piece 5', priceValue: 99, slug: 'timeless-piece-5' },
-];
 
 /* ─── ColorSwatch ─── */
 
@@ -154,7 +143,7 @@ function ColorSwatch({ color, active, onClick, colorLookup, colorNameLookup = {}
     );
 }
 
-/* ─── ProductCard (enhanced with swatches, image nav, hover CTAs) ─── */
+/* ─── ProductCard ─── */
 
 function ProductCard({ product, colorLookup = {}, colorNameLookup = {}, onAddToCart }) {
     const navigate = useNavigate();
@@ -162,7 +151,6 @@ function ProductCard({ product, colorLookup = {}, colorNameLookup = {}, onAddToC
         const normalized = normalizeProductColors(product.color);
         const seededColor = String(product?.variant_seed_color || '').trim();
         if (!seededColor) return normalized;
-        // Show all available colors while using variant_seed_color as the initial/default
         return normalized.includes(seededColor) ? normalized : [seededColor, ...normalized];
     }, [product.color, product?.variant_seed_color]);
 
@@ -268,8 +256,6 @@ function ProductCard({ product, colorLookup = {}, colorNameLookup = {}, onAddToC
         navigate(productLink);
     }
 
-    
-
     return (
         <article className="group w-full overflow-hidden border border-zinc-200">
             <Link to={productLink} className="block">
@@ -280,7 +266,6 @@ function ProductCard({ product, colorLookup = {}, colorNameLookup = {}, onAddToC
                         className="h-full w-full object-contain object-center transition-transform duration-500 group-hover:scale-105 sm:object-cover"
                     />
 
-                    {/* Hover action buttons */}
                     <div className="product-hover-cta absolute inset-x-3 bottom-3 flex translate-y-3 items-center justify-center gap-2 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
                         <button
                             type="button"
@@ -300,14 +285,12 @@ function ProductCard({ product, colorLookup = {}, colorNameLookup = {}, onAddToC
                         </button>
                     </div>
 
-                    {/* Trending badge */}
                     {product.tag ? (
                         <span className="absolute left-3 top-3 bg-zinc-950 px-2.5 py-1 text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-white">
                             {product.tag}
                         </span>
                     ) : null}
 
-                    {/* Image nav arrows */}
                     {galleryImages.length > 1 ? (
                         <>
                             <button
@@ -332,7 +315,6 @@ function ProductCard({ product, colorLookup = {}, colorNameLookup = {}, onAddToC
             </Link>
 
             <div className="space-y-1 p-4 pt-3.5">
-                {/* Color swatches */}
                 {colors.length > 0 && (
                     <div className="flex flex-wrap items-center gap-2">
                         {colors.slice(0, 6).map((c, i) => (
@@ -366,7 +348,7 @@ function ProductCard({ product, colorLookup = {}, colorNameLookup = {}, onAddToC
 
 export default function TrendingProduct() {
     const { addToCart, openCartDrawer } = useCart();
-    const [products, setProducts] = useState(() => FALLBACK_PRODUCTS);
+    const [products, setProducts] = useState([]);
     const [colorLookup, setColorLookup] = useState({});
     const [colorNameLookup, setColorNameLookup] = useState({});
     const [variantModalState, setVariantModalState] = useState(null);
@@ -402,22 +384,6 @@ export default function TrendingProduct() {
                     setProducts(normalized);
                     setColorLookup(nextColorLookup);
                     setColorNameLookup(nextColorNameLookup);
-                } else if (!ignore && list.length > 0) {
-                    // fallback: simple mapping if normalization yields nothing
-                    const mapped = list.map((p) => ({
-                        id: p?.id ?? Math.random(),
-                        name: String(p?.name || '').trim() || 'Product',
-                        priceValue: Number(p?.price) || 0,
-                        slug: String(p?.slug || '').trim(),
-                        cover_image: p?.cover_image || null,
-                        image_gallery: Array.isArray(p?.image_gallery) ? p.image_gallery : [],
-                        color: normalizeProductColors(p?.color, nextColorNameLookup),
-                        variant_seed_color: null,
-                        tag: null,
-                    }));
-                    setProducts(mapped);
-                    setColorLookup(nextColorLookup);
-                    setColorNameLookup(nextColorNameLookup);
                 }
             } catch {}
         }
@@ -435,6 +401,10 @@ export default function TrendingProduct() {
         setVariantModalState(null);
         toast.success(`${nextItem.name} added to cart`);
         openCartDrawer();
+    }
+
+    if (products.length === 0) {
+        return null;
     }
 
     return (
@@ -479,7 +449,6 @@ export default function TrendingProduct() {
                 </Swiper>
             </div>
 
-            {/* Variant modal for add-to-cart */}
             <ProductVariantModal
                 isOpen={Boolean(variantModalState?.product)}
                 product={variantModalState?.product || null}
