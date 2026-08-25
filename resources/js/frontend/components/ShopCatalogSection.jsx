@@ -1531,6 +1531,7 @@ export default function ShopCatalogSection() {
         setSearchTerm(rawSearch.trim());
 
         if (isSearchPath) {
+            // Don't let the default gender/availability filters hide search matches.
             setSelectedGenders([]);
             setSelectedAvailability([]);
         }
