@@ -60,6 +60,26 @@ function resolveComboColors(comboProduct, colorRecords = [], colorLookup = {}) {
     });
 }
 
+function resolveComboVariantImage(comboProduct, matchedColor) {
+    if (!matchedColor) {
+        return '';
+    }
+
+    const mapping = comboProduct?.color_variant_images && typeof comboProduct.color_variant_images === 'object'
+        ? comboProduct.color_variant_images
+        : {};
+
+    const candidateKeys = [matchedColor.id, matchedColor.label, matchedColor.label.toLowerCase()];
+    for (const key of candidateKeys) {
+        const images = mapping[key];
+        if (Array.isArray(images) && images.length > 0) {
+            return images[0];
+        }
+    }
+
+    return '';
+}
+
 function toOptionalImageUrl(path) {
     if (!path || typeof path !== 'string') {
         return '';
@@ -308,7 +328,12 @@ export default function SingleProductDetailsPanel({
                                     ? comboProduct.image_gallery.find((image) => typeof image === 'string' && image.trim())
                                     : '';
                                 const comboColors = resolveComboColors(comboProduct, colorRecords, colorLookup);
-                                const comboImage = toOptionalImageUrl(comboProduct?.cover_image)
+                                const matchedComboColor = comboColors.find(
+                                    (color) => color.label.trim().toLowerCase() === selectedColorLabel.trim().toLowerCase(),
+                                );
+                                const matchedVariantImage = resolveComboVariantImage(comboProduct, matchedComboColor);
+                                const comboImage = toOptionalImageUrl(matchedVariantImage)
+                                    || toOptionalImageUrl(comboProduct?.cover_image)
                                     || toOptionalImageUrl(comboGalleryImage)
                                     || PLACEHOLDER_IMAGE;
                                 const comboLink = comboSlug
@@ -334,7 +359,11 @@ export default function SingleProductDetailsPanel({
                                                     <span
                                                         key={`${color.label}-${index}`}
                                                         title={color.label}
-                                                        className="size-3.5 rounded-full border border-zinc-300"
+                                                        className={`size-3.5 rounded-full border ${
+                                                            matchedComboColor && matchedComboColor.id === color.id
+                                                                ? 'border-zinc-900 ring-1 ring-zinc-900/40'
+                                                                : 'border-zinc-300'
+                                                        }`}
                                                         style={{ backgroundColor: color.swatch }}
                                                     />
                                                 ))}
