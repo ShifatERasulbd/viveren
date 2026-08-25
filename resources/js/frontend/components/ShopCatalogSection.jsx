@@ -17,6 +17,10 @@ const FABRIC_SLUG_MAP = Object.fromEntries(
     FABRIC_OPTIONS.map((fabric) => [fabric.toLowerCase().replace(/\s+/g, '-'), fabric]),
 );
 
+function toFabricSlug(value) {
+    return String(value || '').trim().toLowerCase().replace(/\s+/g, '-');
+}
+
 function getProductGender(product) {
     const name = String(product?.name || '').trim().toLowerCase();
     if (name.startsWith('women')) {
@@ -657,7 +661,8 @@ function isFabricProduct(product, fabricValue) {
 function matchesCategoryFilter(product, selectedIds, categoryById, newArrivalProductIdSet) {
     return selectedIds.some((selectedId) => {
         const option = categoryById[selectedId];
-        const optionValue = normalizeQueryValue(option?.slug || option?.name);
+        // Fall back to a slugified name so this still matches even when the DB slug column is empty/mismatched.
+        const optionValue = toFabricSlug(option?.slug) || toFabricSlug(option?.name);
 
         if (optionValue === 'new-arrivals') {
             return newArrivalProductIdSet.has(Number(product.base_product_id ?? product.id));
@@ -1456,6 +1461,14 @@ export default function ShopCatalogSection() {
         [categoryOptions],
     );
 
+    const isFabricCategorySelected = useMemo(() => {
+        return selectedCategories.some((selectedId) => {
+            const option = categoryById[selectedId];
+            const optionValue = toFabricSlug(option?.slug) || toFabricSlug(option?.name);
+            return Boolean(FABRIC_SLUG_MAP[optionValue]);
+        });
+    }, [selectedCategories, categoryById]);
+
     const grandChildIdToGroupKey = useMemo(() => {
         const map = {};
         categoryOptions.forEach((option) => {
@@ -1696,7 +1709,7 @@ export default function ShopCatalogSection() {
         // When "New Arrivals" is the only active category filter, mirror /collections/new-arrivals:
         // one card per product (no color-variant splitting), showing the main product image, in the same order.
         const isOnlyNewArrivalsCategory = selectedCategories.length === 1
-            && normalizeQueryValue(categoryById[selectedCategories[0]]?.slug || categoryById[selectedCategories[0]]?.name) === 'new-arrivals';
+            && (toFabricSlug(categoryById[selectedCategories[0]]?.slug) || toFabricSlug(categoryById[selectedCategories[0]]?.name)) === 'new-arrivals';
 
         if (isOnlyNewArrivalsCategory) {
             const seenBaseIds = new Set();
@@ -1886,7 +1899,7 @@ export default function ShopCatalogSection() {
                     onPageChange={handlePageChange}
                     onAddToCart={handleAddToCart}
                     onOpenFilters={() => setIsMobileFiltersOpen(true)}
-                    showGenderFilter={isFabricCollectionView}
+                    showGenderFilter={isFabricCollectionView || isFabricCategorySelected}
                     selectedGenders={selectedGenders}
                     onGenderFilterChange={handleGenderFilterChange}
                 />
