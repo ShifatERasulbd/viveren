@@ -1,11 +1,36 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { getSettingsPayload, onSettingsUpdated } from '../../utils/siteSettings';
 
 const BACKGROUND_IMAGE =
   'https://viveren.com/uploads/about/hero/1784550617_about_hero_6a5e14d953fcb5.37550518.png';
 
+function resolveMediaUrl(value = '') {
+  const raw = String(value || '').trim();
+
+  if (!raw) {
+    return '';
+  }
+
+  if (raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('/')) {
+    return raw;
+  }
+
+  return `/${raw.replace(/^\/+/, '')}`;
+}
+
 export default function ComingSoonPage() {
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [siteSettings, setSiteSettings] = useState(() => getSettingsPayload() || {});
+
+  useEffect(() => {
+    const unsubscribe = onSettingsUpdated((payload) => {
+      setSiteSettings(payload || {});
+    });
+
+    setSiteSettings(getSettingsPayload() || {});
+    return unsubscribe;
+  }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -19,62 +44,79 @@ export default function ComingSoonPage() {
     }
   };
 
+  const headerLogo = resolveMediaUrl(siteSettings?.header_logo || '');
+  const siteName = siteSettings?.site_name || 'Viveren';
+
   return (
-    <div className="relative w-full h-screen overflow-hidden font-sans text-white">
-      {/* Top Announcement Bar */}
-      <div className="w-full bg-[#1a1a1a] py-2 text-center text-xs tracking-widest uppercase z-20 relative">
+    <div className="relative h-screen w-full overflow-hidden font-sans text-white">
+      <div className="relative z-20 w-full bg-[#1a1a1a] py-2 text-center text-xs tracking-[0.22em] uppercase text-white/90">
         Subscribe and save 10% on your first order
       </div>
 
-      {/* Hero Section with Background Image */}
-      <div 
-        className="relative w-full h-[calc(100vh-32px)] bg-cover bg-center flex flex-col items-center justify-center px-4"
+      <div
+        className="relative flex h-[calc(100vh-32px)] w-full items-end justify-center bg-cover bg-center px-4 md:px-8"
         style={{
-          backgroundImage: `url('${BACKGROUND_IMAGE}')`
+          backgroundImage: `url('${BACKGROUND_IMAGE}')`,
         }}
       >
-        {/* Dark Translucent Overlay */}
-        <div className="absolute inset-0 bg-black/40 backdrop-brightness-90 z-0"></div>
+        <div className="absolute inset-0 z-0 bg-black/40 backdrop-brightness-90"></div>
 
-        {/* Content Box */}
-        <div className="relative z-10 max-w-2xl text-center px-6 py-12 bg-black/20 backdrop-blur-xs rounded-lg flex flex-col items-center">
-          
-          {/* Main Headline */}
-          <h1 className="text-4xl md:text-6xl font-serif tracking-wide mb-6 font-normal">
-            Something Worth Wearing.
-          </h1>
-
-          {/* Subtitle description */}
-          <p className="text-xs md:text-sm text-gray-200 leading-relaxed max-w-lg mb-8 tracking-wide font-light">
-            At Viveren, we believe the clothes you wear every day should never feel ordinary. 
-            Inspired by the Latin word <i>vivere</i>—to live—we create elevated essentials that 
-            combine timeless design, premium craftsmanship, and lasting comfort.
-          </p>
-
-          {/* Subscription Form */}
-          {submitted ? (
-            <div className="text-sm tracking-wide bg-white/10 px-6 py-3 rounded border border-white/20">
-              Thank you for subscribing! We'll keep you updated.
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row w-full max-w-md gap-0">
-              <input
-                type="email"
-                required
-                placeholder="Email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="flex-1 bg-transparent border-b border-white text-white placeholder-gray-300 px-3 py-3 text-sm focus:outline-none focus:border-gray-100"
+        <div className="relative z-10 w-full max-w-[1280px] pb-10 md:pb-12">
+          <div className="ml-0 flex justify-start pt-0 md:ml-6 lg:ml-8">
+            {headerLogo ? (
+              <img
+                src={headerLogo}
+                alt={siteName}
+                className="h-10 w-auto object-contain md:h-12"
               />
-              <button
-                type="submit"
-                className="mt-4 sm:mt-0 bg-[#262626] hover:bg-[#383838] transition-colors text-white uppercase text-xs tracking-widest px-8 py-3 cursor-pointer font-medium"
-              >
-                Login
-              </button>
-            </form>
-          )}
+            ) : (
+              <div className="text-xl font-medium uppercase tracking-[0.2em] text-white/90">
+                {siteName}
+              </div>
+            )}
+          </div>
 
+          <div className="mt-6 flex justify-center md:mt-10 md:justify-start">
+            <div className="w-full max-w-[360px] rounded-[2px] border border-white/20 bg-black/15 px-5 py-6 shadow-[0_0_30px_rgba(0,0,0,0.18)] backdrop-blur-[2px] md:px-8 md:py-10 lg:px-12">
+              <h5 className="mb-6 text-left font-serif text-5xl font-normal leading-[0.95] tracking-[-0.04em] text-white md:text-[2.2rem]">
+                Comming Soon
+              </h5>
+
+              <p className="mb-8 text-left text-sm leading-relaxed text-gray-200 md:text-[1.05rem]">
+                At spring 2027
+              </p>
+
+              {submitted ? (
+                <div className="max-w-md rounded border border-white/20 bg-white/10 px-6 py-3 text-sm tracking-wide text-white">
+                  Thank you for subscribing! We'll keep you updated.
+                </div>
+              ) : (
+                <form onSubmit={handleSubmit} className="flex w-full max-w-[520px] flex-col gap-3 sm:flex-row sm:items-end">
+                  <div className="flex-1">
+                    <label htmlFor="email" className="mb-2 block text-xs uppercase tracking-[0.2em] text-white/80">
+                      Email address
+                    </label>
+                    <input
+                      id="email"
+                      type="email"
+                      required
+                      placeholder="Email address"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full border-0 border-b border-white/80 bg-transparent px-0 py-3 text-sm text-white placeholder:text-gray-300 focus:border-white focus:outline-none"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="mt-4 inline-flex items-center justify-center bg-[#262626] px-8 py-3 text-xs font-medium uppercase tracking-[0.2em] text-white transition-colors hover:bg-[#383838] sm:mt-0"
+                  >
+                    Login
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
