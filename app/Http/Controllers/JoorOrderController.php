@@ -36,7 +36,7 @@ class JoorOrderController extends Controller
             $result = $this->joorService->getOrders($filters);
 
             return response()->json([
-                'orders' => data_get($result, 'body.data', []),
+                'orders' => $this->attachPortalUrls(data_get($result, 'body.data', [])),
                 'errors' => data_get($result, 'body.errors', []),
                 'ok' => $result['ok'] ?? false,
             ], $result['ok'] ?? false ? 200 : 502);
@@ -47,6 +47,45 @@ class JoorOrderController extends Controller
                 'message' => $exception->getMessage(),
             ], 500);
         }
+    }
+
+    // GET /orders/sku_line_items — the per-order product/color/size breakdown.
+    public function items(string $id): JsonResponse
+    {
+        try {
+            $result = $this->joorService->getOrderItems($id);
+
+            return response()->json([
+                'order' => data_get($result, 'body'),
+                'errors' => data_get($result, 'body.errors', []),
+                'ok' => $result['ok'] ?? false,
+            ], $result['ok'] ?? false ? 200 : 502);
+        } catch (Throwable $exception) {
+            Log::warning('Failed to fetch order items from JOOR.', ['order_id' => $id, 'error' => $exception->getMessage()]);
+
+            return response()->json([
+                'message' => $exception->getMessage(),
+            ], 500);
+        }
+    }
+
+    // JOOR's GET /orders response doesn't include per-order product/color/size line
+    // items (see items()/getOrderItems() for that) — link to the portal as a backup view.
+    private function attachPortalUrls(mixed $orders): array
+    {
+        if (! is_array($orders)) {
+            return [];
+        }
+
+        $baseUrl = rtrim((string) config('services.joor.portal_base_url', ''), '/');
+
+        return array_map(function ($order) use ($baseUrl) {
+            if (is_array($order) && isset($order['id']) && $baseUrl !== '') {
+                $order['portal_url'] = "{$baseUrl}/ra/orders/review/{$order['id']}?tab=overview";
+            }
+
+            return $order;
+        }, $orders);
     }
 
     public function store(Request $request): JsonResponse

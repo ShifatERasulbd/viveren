@@ -159,6 +159,31 @@ class JoorService
         ];
     }
 
+    /**
+     * GET /orders/sku_line_items — fetch the product/color/size line items for a
+     * single order. Unlike GET /orders, this endpoint returns per-SKU rows.
+     */
+    public function getOrderItems(string $orderId): array
+    {
+        $query = $this->resolveBaseQuery();
+        $query['order_ids'] = $orderId;
+        $url = $this->apiUrl('/orders/sku_line_items');
+
+        $response = $this->request()->get($url . '?' . http_build_query($query));
+        $body = $response->json() ?? ['raw' => $response->body()];
+        $hasErrors = is_array($body) && is_array($body['errors'] ?? null) && count($body['errors']) > 0;
+
+        return [
+            'status' => $response->status(),
+            'body' => $body,
+            'ok' => $response->successful() && ! $hasErrors,
+            'request' => [
+                'url' => $url,
+                'query' => $query,
+            ],
+        ];
+    }
+
     private function resolveBaseQuery(): array
     {
         $accountId = trim((string) $this->config('joor_id', ''));

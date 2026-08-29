@@ -87,6 +87,8 @@ export function buildNestedOrderPayload(form, { includeDoor = false } = {}) {
     const payload = {};
 
     CORE_FLAT_FIELDS.forEach((key) => {
+        if (form.useCustomShippingAddress && (key === 'shipping_address_id' || key === 'shipping_address_code')) return;
+        if (form.useCustomBillingAddress && (key === 'billing_address_id' || key === 'billing_address_code')) return;
         if (form[key] !== '' && form[key] !== null && form[key] !== undefined) {
             payload[key] = form[key];
         }
@@ -142,6 +144,11 @@ export function buildNestedOrderPayload(form, { includeDoor = false } = {}) {
 // The GET /orders response nests references (customer, price_type, etc.) while
 // create/update expect flat fields — map the former into the latter for the edit form.
 export function mapOrderToForm(order) {
+    const shippingAddress = order.shipping_address || {};
+    const billingAddress = order.billing_address || {};
+    const hasAddressText = (address) => ['name', 'company', 'line1', 'line2', 'city', 'state', 'zip', 'country', 'phone', 'fax', 'email']
+        .some((key) => typeof address[key] === 'string' && address[key].trim() !== '');
+
     return {
         ...emptyOrderForm,
         status: order.status || 'IN_PROGRESS',
@@ -158,14 +165,40 @@ export function mapOrderToForm(order) {
         company_number_name: order.company_number?.name || '',
         company_number_code: order.company_number?.code || '',
 
-        shipping_address_id: order.shipping_address?.id || '',
-        shipping_address_code: order.shipping_address?.code || '',
-        shipping_price: order.shipping_address?.price || '',
-        billing_address_id: order.billing_address?.id || '',
-        billing_address_code: order.billing_address?.code || '',
+        shipping_address_id: shippingAddress.id || '',
+        shipping_address_code: shippingAddress.code || '',
+        shipping_price: shippingAddress.price || '',
+        billing_address_id: billingAddress.id || '',
+        billing_address_code: billingAddress.code || '',
         shipping_method_id: order.shipping_method?.id || '',
         shipping_method_code: order.shipping_method?.code || '',
         tracking_number: order.tracking_number || '',
+
+        // JOOR returns the full inline address alongside id/code; prefill the custom-address
+        // fields with it so an admin can review/edit it instead of only seeing an opaque ID.
+        useCustomShippingAddress: hasAddressText(shippingAddress),
+        custom_shipping_name: shippingAddress.name || '',
+        custom_shipping_company: shippingAddress.company || '',
+        custom_shipping_line1: shippingAddress.line1 || '',
+        custom_shipping_line2: shippingAddress.line2 || '',
+        custom_shipping_city: shippingAddress.city || '',
+        custom_shipping_state: shippingAddress.state || '',
+        custom_shipping_zip: shippingAddress.zip || '',
+        custom_shipping_country: shippingAddress.country || '',
+        custom_shipping_phone: shippingAddress.phone || '',
+        custom_shipping_fax: shippingAddress.fax || '',
+        custom_shipping_email: shippingAddress.email || '',
+
+        useCustomBillingAddress: hasAddressText(billingAddress),
+        custom_billing_name: billingAddress.name || '',
+        custom_billing_company: billingAddress.company || '',
+        custom_billing_line1: billingAddress.line1 || '',
+        custom_billing_line2: billingAddress.line2 || '',
+        custom_billing_city: billingAddress.city || '',
+        custom_billing_state: billingAddress.state || '',
+        custom_billing_zip: billingAddress.zip || '',
+        custom_billing_country: billingAddress.country || '',
+        custom_billing_phone: billingAddress.phone || '',
 
         sales_rep_id: order.sales_representative?.id || '',
         sales_rep_code: order.sales_representative?.code || '',

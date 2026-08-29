@@ -178,6 +178,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
 	// JOOR Order Management
 	Route::get('/joor-orders', [JoorOrderController::class, 'index']);
+	Route::get('/joor-orders/{id}/items', [JoorOrderController::class, 'items']);
 	Route::post('/joor-orders', [JoorOrderController::class, 'store']);
 	Route::put('/joor-orders/{id}', [JoorOrderController::class, 'update']);
 

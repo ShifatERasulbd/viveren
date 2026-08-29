@@ -12,6 +12,10 @@ export async function fetchJoorOrders(filters = {}) {
     return requestJson(`/api/joor-orders${query ? `?${query}` : ''}`);
 }
 
+export async function fetchJoorOrderItems(id) {
+    return requestJson(`/api/joor-orders/${id}/items`);
+}
+
 export async function createJoorOrder(data) {
     return requestJson('/api/joor-orders', {
         method: 'POST',

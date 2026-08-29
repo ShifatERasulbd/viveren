@@ -4,9 +4,10 @@ import { toast } from 'sonner';
 
 import { useAppContext } from '@/context/AppContext';
 
-import { fetchJoorOrders, updateJoorOrder } from './api';
+import { fetchJoorOrderItems, fetchJoorOrders, updateJoorOrder } from './api';
 import JoorOrderForm from './JoorOrderForm';
 import { buildNestedOrderPayload, emptyOrderForm, mapOrderToForm } from './nestedPayload';
+import { resolveOrderItemsFromDetails } from './orderDisplay';
 import { validateJoorOrderForm } from './validation';
 
 export default function EditJoorOrder() {
@@ -17,9 +18,13 @@ export default function EditJoorOrder() {
     const [isLoading, setIsLoading] = useState(true);
     const [loadError, setLoadError] = useState('');
     const [form, setForm] = useState(emptyOrderForm);
+    const [order, setOrder] = useState(null);
     const [errors, setErrors] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [requestError, setRequestError] = useState('');
+    const [orderItems, setOrderItems] = useState([]);
+    const [orderItemsError, setOrderItemsError] = useState('');
+    const [isLoadingOrderItems, setIsLoadingOrderItems] = useState(true);
 
     useEffect(() => {
         setPageTitle('Edit JOOR Order');
@@ -37,6 +42,7 @@ export default function EditJoorOrder() {
                     setLoadError('Order not found in JOOR.');
                     return;
                 }
+                setOrder(order);
                 setForm(mapOrderToForm(order));
             })
             .catch((err) => {
@@ -45,6 +51,28 @@ export default function EditJoorOrder() {
             })
             .finally(() => {
                 if (!cancelled) setIsLoading(false);
+            });
+
+        return () => { cancelled = true; };
+    }, [id]);
+
+    useEffect(() => {
+        let cancelled = false;
+        setIsLoadingOrderItems(true);
+        setOrderItemsError('');
+
+        fetchJoorOrderItems(id)
+            .then((data) => {
+                if (cancelled) return;
+                setOrderItems(resolveOrderItemsFromDetails(data?.order));
+            })
+            .catch((err) => {
+                if (cancelled) return;
+                setOrderItemsError(err.payload?.message || err.message || 'Failed to load order items from JOOR.');
+                setOrderItems([]);
+            })
+            .finally(() => {
+                if (!cancelled) setIsLoadingOrderItems(false);
             });
 
         return () => { cancelled = true; };
@@ -109,6 +137,10 @@ export default function EditJoorOrder() {
             {requestError && <p className="text-sm text-destructive">{requestError}</p>}
             <JoorOrderForm
                 form={form}
+                order={order}
+                orderItems={orderItems}
+                orderItemsError={orderItemsError}
+                isLoadingOrderItems={isLoadingOrderItems}
                 onChange={handleChange}
                 onSubmit={handleSubmit}
                 onCancel={() => navigate('/admin/joor-orders')}

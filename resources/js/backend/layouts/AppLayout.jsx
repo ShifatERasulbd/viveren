@@ -63,7 +63,7 @@ export default function AppLayout() {
         }
     }, [location.pathname, navigate, user]);
 
-    const warehouseName = user?.warehouse?.name || 'No Warehouse Assigned';
+  
     const isHomePageBuilder = location.pathname.startsWith('/admin/website/home-page');
     const isAboutPageBuilder = location.pathname.startsWith('/admin/website/about-page');
     const isSustainabilityPageBuilder = location.pathname.startsWith('/admin/website/sustainability-page');
@@ -81,9 +81,7 @@ export default function AppLayout() {
                     <h1 className="text-sm font-semibold md:text-base">{pageTitle}</h1>
                 </div>
 
-                <div className="inline-flex items-center rounded-lg bg-foreground px-3 py-1.5 text-xs font-semibold text-background md:text-sm">
-                    {warehouseName}
-                </div>
+               
             </header>
 
             <div className="p-4 md:p-6">
@@ -119,9 +117,7 @@ export default function AppLayout() {
                         <h1 className="text-sm font-semibold md:text-base">{pageTitle}</h1>
                     </div>
 
-                    <div className="inline-flex items-center rounded-lg bg-foreground px-3 py-1.5 text-xs font-semibold text-background md:text-sm">
-                        {warehouseName}
-                    </div>
+                    
                 </header>
 
                 <div className="p-4 md:p-6">

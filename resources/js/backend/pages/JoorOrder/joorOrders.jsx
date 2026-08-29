@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -14,6 +14,7 @@ import {
 import { useAppContext } from '@/context/AppContext';
 
 import { fetchJoorOrders } from './api';
+import { formatAddress, formatTotal, resolveRetailerName } from './orderDisplay';
 
 const STATUS_OPTIONS = ['', 'IN_PROGRESS', 'NOTES', 'PENDING', 'APPROVED', 'SHIPPED', 'CANCELLED'];
 
@@ -45,6 +46,7 @@ export default function JoorOrders() {
     const [loadError, setLoadError] = useState('');
     const [status, setStatus] = useState('');
     const [page, setPage] = useState(1);
+    const [expandedOrderId, setExpandedOrderId] = useState(null);
 
     useEffect(() => {
         setPageTitle('JOOR Orders');
@@ -110,11 +112,11 @@ export default function JoorOrders() {
                     <TableHeader>
                         <TableRow>
                             <TableHead>JOOR ID</TableHead>
-                            <TableHead>Customer</TableHead>
+                            <TableHead>Retailer</TableHead>
                             <TableHead>Status</TableHead>
+                            <TableHead>Shipping Address</TableHead>
                             <TableHead>Total</TableHead>
                             <TableHead>PO Number</TableHead>
-                            <TableHead>Tracking #</TableHead>
                             <TableHead>Date Created</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
@@ -133,26 +135,73 @@ export default function JoorOrders() {
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            orders.map((order) => (
-                                <TableRow key={order.id}>
-                                    <TableCell className="font-mono text-xs">{order.id}</TableCell>
-                                    <TableCell>{order.customer?.name || order.customer?.code || order.customer?.id || '-'}</TableCell>
-                                    <TableCell><StatusBadge status={order.status} /></TableCell>
-                                    <TableCell>{order.total ?? '-'}</TableCell>
-                                    <TableCell>{order.po_number || '-'}</TableCell>
-                                    <TableCell>{order.tracking_number || '-'}</TableCell>
-                                    <TableCell>{order.date_created ? new Date(order.date_created).toLocaleDateString() : '-'}</TableCell>
-                                    <TableCell className="text-right">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => navigate(`/admin/joor-orders/${order.id}/edit`)}
-                                        >
-                                            Edit
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
-                            ))
+                            orders.map((order) => {
+                                const shippingAddress = formatAddress(order.shipping_address) || formatAddress(order.custom_shipping_address);
+                                const isExpanded = expandedOrderId === order.id;
+
+                                return (
+                                    <Fragment key={order.id}>
+                                        <TableRow>
+                                            <TableCell className="font-mono text-xs">
+                                                <button
+                                                    type="button"
+                                                    className="underline decoration-dotted"
+                                                    onClick={() => setExpandedOrderId(isExpanded ? null : order.id)}
+                                                >
+                                                    {order.id}
+                                                </button>
+                                            </TableCell>
+                                            <TableCell>{resolveRetailerName(order)}</TableCell>
+                                            <TableCell><StatusBadge status={order.status} /></TableCell>
+                                            <TableCell className="max-w-[240px] truncate" title={shippingAddress || undefined}>
+                                                {shippingAddress || '-'}
+                                            </TableCell>
+                                            <TableCell>{formatTotal(order)}</TableCell>
+                                            <TableCell>{order.po_number || '-'}</TableCell>
+                                            <TableCell>{order.date_created ? new Date(order.date_created).toLocaleDateString() : '-'}</TableCell>
+                                            <TableCell className="text-right">
+                                                <div className="flex justify-end gap-2">
+                                                    {order.portal_url && (
+                                                        <Button variant="outline" size="sm" asChild>
+                                                            <a href={order.portal_url} target="_blank" rel="noreferrer">
+                                                                Products
+                                                            </a>
+                                                        </Button>
+                                                    )}
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => navigate(`/admin/joor-orders/${order.id}/edit`)}
+                                                    >
+                                                        Edit
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                        {isExpanded && (
+                                            <TableRow>
+                                                <TableCell colSpan={8} className="bg-zinc-50 text-sm text-zinc-600">
+                                                    <div className="grid grid-cols-1 gap-3 py-2 sm:grid-cols-3">
+                                                        <div>
+                                                            <p className="font-medium text-zinc-900">Retailer</p>
+                                                            <p>{resolveRetailerName(order)}</p>
+                                                            {order.customer?.id && <p className="text-xs text-zinc-400">ID: {order.customer.id}</p>}
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-medium text-zinc-900">Shipping Address</p>
+                                                            <p>{shippingAddress || 'Not provided by JOOR for this order.'}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-medium text-zinc-900">Total Cost</p>
+                                                            <p>{formatTotal(order)} {order.quantity ? `(${order.quantity} units)` : ''}</p>
+                                                        </div>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                    </Fragment>
+                                );
+                            })
                         )}
                     </TableBody>
                 </Table>
