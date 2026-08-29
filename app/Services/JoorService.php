@@ -331,7 +331,23 @@ class JoorService
             return $trimmed;
         }
 
-        return rtrim((string) config('app.url'), '/') . '/' . ltrim($trimmed, '/');
+        return rtrim($this->resolvePublicBaseUrl(), '/') . '/' . ltrim($trimmed, '/');
+    }
+
+    /**
+     * Prefers the host of the current inbound request over APP_URL so image URLs sent to JOOR
+     * reflect the real public domain even when APP_URL in .env is stale (e.g. left as localhost).
+     */
+    private function resolvePublicBaseUrl(): string
+    {
+        if (app()->bound('request')) {
+            $host = rtrim((string) app('request')->getSchemeAndHttpHost(), '/');
+            if ($host !== '' && ! str_contains($host, 'localhost') && ! str_contains($host, '127.0.0.1')) {
+                return $host;
+            }
+        }
+
+        return (string) config('app.url');
     }
 
     private function buildAssetFilename(string $sku, int $index, string $extension): string
