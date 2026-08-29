@@ -253,13 +253,71 @@ class JoorService
 
         $urls = [];
         foreach (array_unique($paths) as $path) {
-            $url = $this->resolveAbsoluteMediaUrl($path);
+            // The uploader saves large images as WebP, which JOOR's assets endpoint rejects,
+            // so convert those to a JPEG copy before building the URL JOOR will fetch.
+            $compatiblePath = $this->resolveJoorCompatibleImagePath($path);
+            if ($compatiblePath === null) {
+                continue;
+            }
+
+            $url = $this->resolveAbsoluteMediaUrl($compatiblePath);
             if ($url !== null) {
                 $urls[] = $url;
             }
         }
 
         return array_values(array_unique($urls));
+    }
+
+    /**
+     * Returns a locally-stored path using an extension JOOR's assets endpoint accepts
+     * (gif, jpeg, jpg, png), converting WebP files to JPEG on demand. Returns null when the
+     * path is remote/unreadable or its format can't be converted.
+     */
+    private function resolveJoorCompatibleImagePath(string $path): ?string
+    {
+        $extension = strtolower((string) pathinfo(parse_url($path, PHP_URL_PATH) ?: $path, PATHINFO_EXTENSION));
+
+        if (in_array($extension, ['gif', 'jpeg', 'jpg', 'png'], true)) {
+            return $path;
+        }
+
+        if ($extension !== 'webp' || str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return null;
+        }
+
+        if (! function_exists('imagecreatefromwebp')) {
+            return null;
+        }
+
+        $sourceAbsolutePath = public_path(ltrim($path, '/'));
+        if (! is_file($sourceAbsolutePath)) {
+            return null;
+        }
+
+        $convertedRelativePath = preg_replace('/\.webp$/i', '', $path) . '.joor.jpg';
+        $convertedAbsolutePath = public_path(ltrim($convertedRelativePath, '/'));
+
+        if (! is_file($convertedAbsolutePath) || filemtime($convertedAbsolutePath) < filemtime($sourceAbsolutePath)) {
+            $image = @imagecreatefromwebp($sourceAbsolutePath);
+            if ($image === false) {
+                return null;
+            }
+
+            $targetDirectory = dirname($convertedAbsolutePath);
+            if (! is_dir($targetDirectory)) {
+                mkdir($targetDirectory, 0755, true);
+            }
+
+            $saved = imagejpeg($image, $convertedAbsolutePath, 90);
+            imagedestroy($image);
+
+            if (! $saved) {
+                return null;
+            }
+        }
+
+        return $convertedRelativePath;
     }
 
     private function resolveAbsoluteMediaUrl(mixed $path): ?string
