@@ -36,6 +36,18 @@ function toSearchSlug(value = '') {
         .replace(/^-+|-+$/g, '');
 }
 
+// Men/Women/Collections mega-menu columns route to the shop page with the matching gender filter
+// instead of their own subcategory page.
+function resolveShopColumnHref(name, slug) {
+    const normalized = String(name || '').trim().toLowerCase();
+
+    if (normalized === 'men') return '/shop?gender=Men';
+    if (normalized === 'women') return '/shop?gender=Women';
+    if (normalized === 'collections') return '/shop';
+
+    return `/${encodeURIComponent(slug)}`;
+}
+
 const utilityIcons = [
     { label: 'Account', icon: UserRound, href: '/login' },
     { label: 'Search', icon: Search, href: '#search' },
@@ -368,7 +380,7 @@ export default function Header() {
 
         return shopSubCategories.map((subCategory) => {
             const subCategorySlug = String(subCategory?.slug || '').trim() || String(subCategory?.id || '');
-            const childHref = `/${encodeURIComponent(subCategorySlug)}`;
+            const childHref = resolveShopColumnHref(subCategory?.name, subCategorySlug);
 
             const children = grandChildsBySubCategory
                 .get(Number(subCategory?.id))
@@ -424,7 +436,7 @@ export default function Header() {
                         id: subCategory?.id,
                         key: subCategoryKey,
                         label: String(subCategory?.name || '').trim() || 'Subcategory',
-                        href: `/${encodeURIComponent(subCategoryKey)}`,
+                        href: resolveShopColumnHref(subCategory?.name, subCategoryKey),
                         grandChildItems,
                     };
                 });

@@ -1146,7 +1146,7 @@ export default function ShopCatalogSection() {
     const [selectedAvailability, setSelectedAvailability] = useState([]);
     const [selectedSizes, setSelectedSizes] = useState([]);
     const [selectedCategories, setSelectedCategories] = useState([]);
-    const [selectedGenders, setSelectedGenders] = useState(['Women']);
+    const [selectedGenders, setSelectedGenders] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [minPrice, setMinPrice] = useState('0');
     const [maxPrice, setMaxPrice] = useState('59.99');
@@ -1547,6 +1547,16 @@ export default function ShopCatalogSection() {
             // Don't let the default gender/availability filters hide search matches.
             setSelectedGenders([]);
             setSelectedAvailability([]);
+        } else if (pathName === '/shop') {
+            // Mega-menu Men/Women links carry ?gender=, Collections/plain Shop links show everything.
+            const genderValue = String(params.get('gender') || '').trim().toLowerCase();
+            if (genderValue === 'men') {
+                setSelectedGenders(['Men']);
+            } else if (genderValue === 'women') {
+                setSelectedGenders(['Women']);
+            } else {
+                setSelectedGenders([]);
+            }
         }
 
         if (sizeValue.trim()) {
