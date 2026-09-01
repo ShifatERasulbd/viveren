@@ -1,5 +1,37 @@
 import { useEffect, useRef, useState } from 'react';
-import ProductZoomModal from './ProductZoomModal'; 
+
+function ZoomableGalleryImage({ image, index, isActive, isZoomed, zoomPosition, onSelect, onZoomMove }) {
+    return (
+        <div
+            role="button"
+            tabIndex={0}
+            onClick={onSelect}
+            onMouseMove={(event) => {
+                if (isZoomed) onZoomMove(event);
+            }}
+            className={`relative w-full overflow-hidden border-b border-zinc-200 bg-white transition-all duration-200 ${
+                isZoomed ? 'cursor-zoom-out' : 'cursor-zoom-in'
+            } ${isActive ? 'ring-1 ring-inset ring-zinc-900' : 'hover:opacity-95'}`}
+        >
+            <img
+                src={image}
+                alt={`Product ${index + 1}`}
+                className="pointer-events-none block h-auto w-full object-cover object-center"
+            />
+            {isZoomed ? (
+                <div
+                    className="absolute inset-0 pointer-events-none bg-no-repeat"
+                    style={{
+                        backgroundImage: `url(${image})`,
+                        backgroundSize: '200%',
+                        backgroundPosition: `${zoomPosition.x}% ${zoomPosition.y}%`,
+                    }}
+                />
+            ) : null}
+        </div>
+    );
+}
+
 
 export default function SingleProductMediaGallery({
     images,
@@ -13,9 +45,9 @@ export default function SingleProductMediaGallery({
     const [isVideoReady, setIsVideoReady] = useState(false);
     const videoRef = useRef(null);
 
-    // Modal Control State
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [modalImage, setModalImage] = useState('');
+    // Tracks which single image box currently has in-place zoom enabled, plus its focus point.
+    const [zoomedKey, setZoomedKey] = useState(null);
+    const [zoomPosition, setZoomPosition] = useState({ x: 50, y: 50 });
 
     useEffect(() => {
         setIsVideoReady(false);
@@ -36,10 +68,20 @@ export default function SingleProductMediaGallery({
     const leftColumnItems = galleryItems.filter((_, index) => index % 2 === 0);
     const rightColumnItems = galleryItems.filter((_, index) => index % 2 !== 0);
 
-    const handleImageClick = (image) => {
-        onSelectImage(image);
-        setModalImage(image);  
-        setIsModalOpen(true);  
+    const handleImageClick = (item) => {
+        onSelectImage(item.image);
+        setZoomedKey((current) => {
+            if (current === item.key) return null;
+            setZoomPosition({ x: 50, y: 50 });
+            return item.key;
+        });
+    };
+
+    const handleZoomMove = (event) => {
+        const { left, top, width, height } = event.currentTarget.getBoundingClientRect();
+        const xPercent = Math.max(0, Math.min(100, ((event.clientX - left) / width) * 100));
+        const yPercent = Math.max(0, Math.min(100, ((event.clientY - top) / height) * 100));
+        setZoomPosition({ x: xPercent, y: yPercent });
     };
 
     const handleVideoCanPlay = () => {
@@ -90,32 +132,23 @@ export default function SingleProductMediaGallery({
                             );
                         }
 
-                        const isCurrentlyActive = activeImage === item.image;
                         return (
-                            <button
+                            <ZoomableGalleryImage
                                 key={item.key}
-                                type="button"
-                                onClick={() => handleImageClick(item.image)}
-                                className={`w-full cursor-zoom-in overflow-hidden border-b border-zinc-200 bg-white transition-all duration-200 ${
-                                    isCurrentlyActive
-                                        ? 'ring-1 ring-inset ring-zinc-900'
-                                        : 'hover:opacity-95'
-                                }`}
-                            >
-                                <img
-                                    src={item.image}
-                                    alt={`Product ${item.index + 1}`}
-                                    className="pointer-events-none block h-auto w-full object-cover object-center"
-                                />
-                            </button>
+                                image={item.image}
+                                index={item.index}
+                                isActive={activeImage === item.image}
+                                isZoomed={zoomedKey === item.key}
+                                zoomPosition={zoomPosition}
+                                onSelect={() => handleImageClick(item)}
+                                onZoomMove={handleZoomMove}
+                            />
                         );
                     })}
                 </div>
 
                 <div>
                     {rightColumnItems.map((item) => {
-                        const isCurrentlyActive = item.type === 'image' && activeImage === item.image;
-
                         if (item.type === 'video') {
                             return (
                                 <div key={item.key} className="relative overflow-hidden border-b border-zinc-200 bg-white">
@@ -144,33 +177,20 @@ export default function SingleProductMediaGallery({
                         }
 
                         return (
-                            <button
+                            <ZoomableGalleryImage
                                 key={item.key}
-                                type="button"
-                                onClick={() => handleImageClick(item.image)}
-                                className={`w-full cursor-zoom-in overflow-hidden border-b border-zinc-200 bg-white transition-all duration-200 ${
-                                    isCurrentlyActive
-                                        ? 'ring-1 ring-inset ring-zinc-900'
-                                        : 'hover:opacity-95'
-                                }`}
-                            >
-                                <img
-                                    src={item.image}
-                                    alt={`Product ${item.index + 1}`}
-                                    className="pointer-events-none block h-auto w-full object-cover object-center"
-                                />
-                            </button>
+                                image={item.image}
+                                index={item.index}
+                                isActive={activeImage === item.image}
+                                isZoomed={zoomedKey === item.key}
+                                zoomPosition={zoomPosition}
+                                onSelect={() => handleImageClick(item)}
+                                onZoomMove={handleZoomMove}
+                            />
                         );
                     })}
                 </div>
             </div>
-
-            {/* Modal Lightbox Viewport Component */}
-            <ProductZoomModal 
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                imageSrc={modalImage}
-            />
         </div>
     );
 }
