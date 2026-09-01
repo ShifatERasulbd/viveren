@@ -10,7 +10,9 @@ import PageSkeleton from './frontend/components/PageSkeleton.jsx';
 import { CartProvider } from './frontend/context/CartContext.jsx';
 import { bootstrapPublicSettings, getSettingsPayload, onSettingsUpdated } from './utils/siteSettings';
 import { initializeGoogleAnalytics, trackPageView } from './utils/googleAnalytics';
+import { hasSiteAccess, onSiteAccessChanged } from './utils/siteAccess';
 
+const ComingSoonPage = lazy(() => import('./frontend/pages/comming-soon.jsx'));
 const HomePage = lazy(() => import('./frontend/pages/HomePage.jsx'));
 const ShopPage = lazy(() => import('./frontend/pages/ShopPage.jsx'));
 const SingleProductPage = lazy(() => import('./frontend/pages/singleProduct.jsx'));
@@ -133,6 +135,21 @@ function withPageFallback(Component) {
     );
 }
 
+// Gates the whole site behind the coming-soon page until the authorized email unlocks it.
+function SiteAccessGate({ children }) {
+    const [allowed, setAllowed] = React.useState(() => hasSiteAccess());
+
+    useEffect(() => {
+        return onSiteAccessChanged(() => setAllowed(hasSiteAccess()));
+    }, []);
+
+    if (!allowed) {
+        return withPageFallback(ComingSoonPage);
+    }
+
+    return children;
+}
+
 function FrontendLayout() {
     return (
         <div className="min-h-screen bg-background text-zinc-950">
@@ -156,30 +173,32 @@ function AppRouter() {
         <CartProvider>
             <BrowserRouter>
                 <DocumentBrandingManager />
-                <Routes>
-                    <Route path="/" element={<FrontendLayout />}>
-                        <Route index element={withPageFallback(HomePage)} />
-                        <Route path="shop" element={withPageFallback(ShopPage)} />
-                        <Route path="search/:productSlug" element={withPageFallback(ShopPage)} />
-                        <Route path="collection/:slug" element={withPageFallback(ShopPage)} />
-                        <Route path="new-arrivals" element={withPageFallback(ShopPage)} />
-                        <Route path="trending" element={withPageFallback(ShopPage)} />
-                        <Route path="best-sellers" element={withPageFallback(ShopPage)} />
-                        <Route path=":subCategorySlug/:grandChildSlug?" element={withPageFallback(ShopPage)} />
-                        <Route path="product-details/:slug/:color?" element={withPageFallback(SingleProductPage)} />
-                        <Route path="singleProduct" element={withPageFallback(SingleProductPage)} />
-                        <Route path="about" element={withPageFallback(AboutPage)} />
-                        <Route path="contact" element={withPageFallback(ContactPage)} />
+                <SiteAccessGate>
+                    <Routes>
+                        <Route path="/" element={<FrontendLayout />}>
+                            <Route index element={withPageFallback(HomePage)} />
+                            <Route path="shop" element={withPageFallback(ShopPage)} />
+                            <Route path="search/:productSlug" element={withPageFallback(ShopPage)} />
+                            <Route path="collection/:slug" element={withPageFallback(ShopPage)} />
+                            <Route path="new-arrivals" element={withPageFallback(ShopPage)} />
+                            <Route path="trending" element={withPageFallback(ShopPage)} />
+                            <Route path="best-sellers" element={withPageFallback(ShopPage)} />
+                            <Route path=":subCategorySlug/:grandChildSlug?" element={withPageFallback(ShopPage)} />
+                            <Route path="product-details/:slug/:color?" element={withPageFallback(SingleProductPage)} />
+                            <Route path="singleProduct" element={withPageFallback(SingleProductPage)} />
+                            <Route path="about" element={withPageFallback(AboutPage)} />
+                            <Route path="contact" element={withPageFallback(ContactPage)} />
 
-                        <Route path="sustainability" element={withPageFallback(SustainabilityPage)} />
-                        <Route path="checkout" element={withPageFallback(CheckoutPage)} />
-                        <Route path="order-confirmation" element={withPageFallback(OrderConfirmationPage)} />
-                        <Route path="login" element={withPageFallback(AuthPage)} />
-                        <Route path="register" element={withPageFallback(AuthPage)} />
-                        <Route path="reset-password/:token" element={withPageFallback(ResetPasswordPage)} />
-                    </Route>
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
+                            <Route path="sustainability" element={withPageFallback(SustainabilityPage)} />
+                            <Route path="checkout" element={withPageFallback(CheckoutPage)} />
+                            <Route path="order-confirmation" element={withPageFallback(OrderConfirmationPage)} />
+                            <Route path="login" element={withPageFallback(AuthPage)} />
+                            <Route path="register" element={withPageFallback(AuthPage)} />
+                            <Route path="reset-password/:token" element={withPageFallback(ResetPasswordPage)} />
+                        </Route>
+                        <Route path="*" element={<Navigate to="/" replace />} />
+                    </Routes>
+                </SiteAccessGate>
             </BrowserRouter>
         </CartProvider>
     );

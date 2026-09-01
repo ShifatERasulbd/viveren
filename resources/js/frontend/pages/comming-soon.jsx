@@ -40,7 +40,7 @@ export default function ComingSoonPage() {
     if (email.trim().toLowerCase() === 'it1@arbellafashion.com') {
       setError('');
       grantSiteAccess();
-      navigate('/home', { replace: true });
+      navigate('/', { replace: true });
       return;
     }
     setError('This email is not authorized to access the site.');
