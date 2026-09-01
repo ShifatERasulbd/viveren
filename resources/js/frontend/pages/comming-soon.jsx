@@ -49,9 +49,7 @@ export default function ComingSoonPage() {
 
   return (
     <div className="relative h-screen w-full overflow-hidden font-sans text-white">
-      <div className="relative z-20 w-full bg-[#1a1a1a] py-2 text-center text-xs tracking-[0.22em] uppercase text-white/90">
-        Subscribe and save 10% on your first order
-      </div>
+      
 
       <div
         className="relative flex h-[calc(100vh-32px)] w-full items-end justify-start bg-cover bg-center px-4 md:px-12 lg:px-16"
