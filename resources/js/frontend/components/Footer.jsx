@@ -148,8 +148,8 @@ export default function Footer() {
     ], []);
 
     const houseLinks = useMemo(() => [
-        { label: 'Mission', href: '#!' },
-        { label: 'Sustainability', modalKey: '/sustainability' },
+     
+        { label: 'Sustainability', href: '/sustainability' },
     ], []);
 
     const footerLogo = useMemo(() => resolveAssetUrl(siteSettings?.footer_logo || ''), [siteSettings]);
@@ -222,8 +222,8 @@ export default function Footer() {
                     </div>
 
                     <FooterCol heading="Shop" links={shopLinks} />
-                    <FooterCol heading="Help" links={helpLinks} onOpenModal={openModal} />
-                    <FooterCol heading="House" links={houseLinks} onOpenModal={openModal} />
+                    <FooterCol heading="Customer Service" links={helpLinks}  />
+                    <FooterCol heading="Other" links={houseLinks}  />
                 </div>
             </div>
 

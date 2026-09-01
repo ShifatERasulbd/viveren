@@ -98,17 +98,6 @@ export default function About1971Section() {
                             loading="lazy"
                             decoding="async"
                         />
-                        {/* Black Overlay Layer */}
-                        {displayStoryData.title && <div className="absolute inset-0 bg-black/40 pointer-events-none" />}
-
-                        {/* Title positioned over the image */}
-                        {displayStoryData.title && (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center pointer-events-none">
-                                <h2 className="font-serif text-[1.5rem] font-bold leading-tight text-white sm:text-[2.2rem]">
-                                    {displayStoryData.title}
-                                </h2>
-                            </div>
-                        )}
                     </div>
 
                     {/* Text Content */}
