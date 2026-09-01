@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getSettingsPayload, onSettingsUpdated } from '../../utils/siteSettings';
+import { grantSiteAccess } from '../../utils/siteAccess';
 
 const BACKGROUND_IMAGE =
   'https://viveren.com/uploads/about/hero/1784550617_about_hero_6a5e14d953fcb5.37550518.png';
@@ -20,8 +22,9 @@ function resolveMediaUrl(value = '') {
 
 export default function ComingSoonPage() {
   const [email, setEmail] = useState('');
-  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState('');
   const [siteSettings, setSiteSettings] = useState(() => getSettingsPayload() || {});
+  const navigate = useNavigate();
 
   useEffect(() => {
     const unsubscribe = onSettingsUpdated((payload) => {
@@ -34,14 +37,13 @@ export default function ComingSoonPage() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (email === 'it1@arbellafashion.com') {
-      window.location.href = '/home';
+    if (email.trim().toLowerCase() === 'it1@arbellafashion.com') {
+      setError('');
+      grantSiteAccess();
+      navigate('/home', { replace: true });
       return;
     }
-    if (email) {
-      setSubmitted(true);
-      // Handle your newsletter subscription logic here
-    }
+    setError('This email is not authorized to access the site.');
   };
 
   const footerLogo = resolveMediaUrl(siteSettings?.footer_logo || '');
@@ -84,36 +86,34 @@ export default function ComingSoonPage() {
               At spring 2027
             </p>
 
-            {submitted ? (
-              <div className="max-w-md rounded border border-white/20 bg-white/10 px-6 py-3 text-sm tracking-wide text-white">
-                Thank you for subscribing! We'll keep you updated.
+            {/* Shortened form width from max-w-[520px] to max-w-[360px] */}
+            <form onSubmit={handleSubmit} className="flex w-full max-w-[360px] flex-col gap-3 sm:flex-row sm:items-end">
+              <div className="flex-1">
+                <label htmlFor="email" className="mb-2 block text-xs uppercase tracking-[0.2em] text-white/80">
+                  Email address
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  required
+                  placeholder="Email address"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full border-0 border-b border-white/80 bg-transparent px-0 py-3 text-sm text-white placeholder:text-gray-300 focus:border-white focus:outline-none"
+                />
               </div>
-            ) : (
-              /* Shortened form width from max-w-[520px] to max-w-[360px] */
-              <form onSubmit={handleSubmit} className="flex w-full max-w-[360px] flex-col gap-3 sm:flex-row sm:items-end">
-                <div className="flex-1">
-                  <label htmlFor="email" className="mb-2 block text-xs uppercase tracking-[0.2em] text-white/80">
-                    Email address
-                  </label>
-                  <input
-                    id="email"
-                    type="email"
-                    required
-                    placeholder="Email address"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full border-0 border-b border-white/80 bg-transparent px-0 py-3 text-sm text-white placeholder:text-gray-300 focus:border-white focus:outline-none"
-                  />
-                </div>
 
-                <button
-                  type="submit"
-                  className="mt-4 inline-flex items-center justify-center bg-[#262626] px-8 py-3 text-xs font-medium uppercase tracking-[0.2em] text-white transition-colors hover:bg-[#383838] sm:mt-0"
-                >
-                  Login
-                </button>
-              </form>
-            )}
+              <button
+                type="submit"
+                className="mt-4 inline-flex items-center justify-center bg-[#262626] px-8 py-3 text-xs font-medium uppercase tracking-[0.2em] text-white transition-colors hover:bg-[#383838] sm:mt-0"
+              >
+                Login
+              </button>
+            </form>
+
+            {error ? (
+              <p className="mt-3 text-left text-xs text-red-300">{error}</p>
+            ) : null}
 
           </div>
         </div>

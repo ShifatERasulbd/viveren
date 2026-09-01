@@ -1,6 +1,6 @@
 import React, { Suspense, lazy, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter, Outlet, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { Toaster } from 'sonner';
 
 import CartDrawer from './frontend/components/CartDrawer.jsx';
@@ -10,6 +10,7 @@ import PageSkeleton from './frontend/components/PageSkeleton.jsx';
 import { CartProvider } from './frontend/context/CartContext.jsx';
 import { bootstrapPublicSettings, getSettingsPayload, onSettingsUpdated } from './utils/siteSettings.js';
 import { initializeGoogleAnalytics, trackPageView } from './utils/googleAnalytics.js';
+import { hasSiteAccess } from './utils/siteAccess.js';
 
 const HomePage = lazy(() => import('./frontend/pages/HomePage.jsx'));
 const ComingSoonPage = lazy(() => import('./frontend/pages/comming-soon.jsx'));
@@ -144,6 +145,14 @@ function withPageFallback(Component) {
     );
 }
 
+function RequireSiteAccess() {
+    if (!hasSiteAccess()) {
+        return <Navigate to="/" replace />;
+    }
+
+    return <Outlet />;
+}
+
 function FrontendLayout() {
     const { pathname } = useLocation();
     const isComingSoon = pathname === '/';
@@ -173,31 +182,33 @@ function AppRouter() {
                 <Routes>
                     <Route path="/" element={<FrontendLayout />}>
                         <Route index element={withPageFallback(ComingSoonPage)} />
-                        <Route path="home" element={withPageFallback(HomePage)} />
-                        <Route path="shop" element={withPageFallback(ShopPage)} />
-                        <Route path="search/:productSlug" element={withPageFallback(ShopPage)} />
-                        <Route path="collection/:slug" element={withPageFallback(ShopPage)} />
-                        <Route path="collections/:slug" element={withPageFallback(ShopPage)} />
-                        <Route path="new-arrivals" element={withPageFallback(ShopPage)} />
-                        <Route path="trending" element={withPageFallback(ShopPage)} />
-                        <Route path="collections/trending-products" element={withPageFallback(ShopPage)} />
-                        <Route path="best-sellers" element={withPageFallback(ShopPage)} />
-                        <Route path=":subCategorySlug/:grandChildSlug?" element={withPageFallback(ShopPage)} />
-                        <Route path="product-details/:slug/:color?" element={withPageFallback(SingleProductPage)} />
-                        <Route path="singleProduct" element={withPageFallback(SingleProductPage)} />
-                        <Route path="about" element={withPageFallback(AboutPage)} />
-                        <Route path="contact" element={withPageFallback(ContactPage)} />
-                        <Route path="terms" element={withPageFallback(TermsPage)} />
-                        <Route path="privacy" element={withPageFallback(PrivacyPage)} />
-                        <Route path="shipping" element={withPageFallback(ShippingPage)} />
+                        <Route element={<RequireSiteAccess />}>
+                            <Route path="home" element={withPageFallback(HomePage)} />
+                            <Route path="shop" element={withPageFallback(ShopPage)} />
+                            <Route path="search/:productSlug" element={withPageFallback(ShopPage)} />
+                            <Route path="collection/:slug" element={withPageFallback(ShopPage)} />
+                            <Route path="collections/:slug" element={withPageFallback(ShopPage)} />
+                            <Route path="new-arrivals" element={withPageFallback(ShopPage)} />
+                            <Route path="trending" element={withPageFallback(ShopPage)} />
+                            <Route path="collections/trending-products" element={withPageFallback(ShopPage)} />
+                            <Route path="best-sellers" element={withPageFallback(ShopPage)} />
+                            <Route path=":subCategorySlug/:grandChildSlug?" element={withPageFallback(ShopPage)} />
+                            <Route path="product-details/:slug/:color?" element={withPageFallback(SingleProductPage)} />
+                            <Route path="singleProduct" element={withPageFallback(SingleProductPage)} />
+                            <Route path="about" element={withPageFallback(AboutPage)} />
+                            <Route path="contact" element={withPageFallback(ContactPage)} />
+                            <Route path="terms" element={withPageFallback(TermsPage)} />
+                            <Route path="privacy" element={withPageFallback(PrivacyPage)} />
+                            <Route path="shipping" element={withPageFallback(ShippingPage)} />
 
-                        <Route path="sustainability" element={withPageFallback(SustainabilityPage)} />
-                        <Route path="checkout" element={withPageFallback(CheckoutPage)} />
-                        <Route path="order-confirmation" element={withPageFallback(OrderConfirmationPage)} />
-                        <Route path="login" element={withPageFallback(AuthPage)} />
-                        <Route path="register" element={withPageFallback(AuthPage)} />
-                        <Route path="reset-password/:token" element={withPageFallback(ResetPasswordPage)} />
-                        <Route path="*" element={withPageFallback(NotFoundPage)} />
+                            <Route path="sustainability" element={withPageFallback(SustainabilityPage)} />
+                            <Route path="checkout" element={withPageFallback(CheckoutPage)} />
+                            <Route path="order-confirmation" element={withPageFallback(OrderConfirmationPage)} />
+                            <Route path="login" element={withPageFallback(AuthPage)} />
+                            <Route path="register" element={withPageFallback(AuthPage)} />
+                            <Route path="reset-password/:token" element={withPageFallback(ResetPasswordPage)} />
+                            <Route path="*" element={withPageFallback(NotFoundPage)} />
+                        </Route>
                     </Route>
                 </Routes>
             </BrowserRouter>
