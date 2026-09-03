@@ -647,6 +647,7 @@ export default function AddProduct() {
             };
 
             console.log('JOOR response (create product):', joorPayload);
+            console.log('JOOR color swatch payload sent:', response?.joor_response?.swatch_sync?.request?.payload ?? null);
 
             try {
                 sessionStorage.setItem('latestJoorResponse', JSON.stringify({

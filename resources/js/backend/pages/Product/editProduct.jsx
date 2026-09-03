@@ -1225,6 +1225,7 @@ export default function EditProduct() {
             };
 
             console.log('JOOR response (update product):', joorPayload);
+            console.log('JOOR color swatch payload sent:', response?.joor_response?.swatch_sync?.request?.payload ?? null);
 
             try {
                 sessionStorage.setItem('latestJoorResponse', JSON.stringify({

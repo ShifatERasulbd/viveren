@@ -53,18 +53,31 @@ class JoorService
 
         $skuSync = null;
         $joorProductId = data_get($body, 'data.0.id');
+        $productOk = ! $hasErrors && is_scalar($joorProductId);
 
-        if (! $hasErrors && is_scalar($joorProductId)) {
+        if ($productOk) {
             $skuSync = $this->syncSkusForProduct($product, (string) $joorProductId, $query);
             if (! ($skuSync['ok'] ?? false)) {
                 $hasErrors = true;
             }
         }
 
+        $skuOk = $productOk && ($skuSync['ok'] ?? false);
+
         $imageSync = null;
-        if (! $hasErrors && is_scalar($joorProductId)) {
+        if ($productOk) {
             $imageSync = $this->syncProductImages($product, (string) $joorProductId, $query);
             if (! ($imageSync['ok'] ?? false) && ! ($imageSync['skipped'] ?? false)) {
+                $hasErrors = true;
+            }
+        }
+
+        // Runs off $skuOk (not the combined error flag) so a broken product image doesn't
+        // stop the color swatch from being uploaded — the two syncs are otherwise unrelated.
+        $swatchSync = null;
+        if ($skuOk) {
+            $swatchSync = $this->syncColorSwatches($product, (string) $joorProductId, $query);
+            if (! ($swatchSync['ok'] ?? false) && ! ($swatchSync['skipped'] ?? false)) {
                 $hasErrors = true;
             }
         }
@@ -75,6 +88,7 @@ class JoorService
             'ok' => $response->successful() && ! $hasErrors,
             'sku_sync' => $skuSync,
             'image_sync' => $imageSync,
+            'swatch_sync' => $swatchSync,
             'request' => [
                 'url' => $this->apiUrl($endpoint),
                 'query' => $query,
@@ -257,6 +271,137 @@ class JoorService
                 'payload' => $payload,
             ],
         ];
+    }
+
+    /**
+     * POST /assets/sku_trait_values/ — uploads a color image so JOOR fills in the color box
+     * instead of leaving it blank for names it doesn't recognize. Prefers a curated image at
+     * public/color/{color-name}.{ext} and falls back to a generated solid-fill swatch.
+     */
+    private function syncColorSwatches(Product $product, string $joorProductId, array $query): array
+    {
+        $colors = $this->resolveProductColors($product);
+
+        $payload = [];
+        foreach ($colors as $color => $colorHex) {
+            $swatch = $this->resolveColorImageAsset($color, $colorHex);
+            if ($swatch === null) {
+                continue;
+            }
+
+            $colorCode = $this->buildColorCode($color, $colorHex);
+
+            $payload[] = [
+                'product' => ['id' => $joorProductId],
+                'sku_trait_value' => [
+                    'trait' => ['name' => 'color'],
+                    'value' => ['external_id' => $colorCode],
+                ],
+                // asset.external_id is omitted: JOOR requires it to be globally unique across
+                // the account, which breaks on every re-sync of the same product/color.
+                'asset' => [
+                    'type' => 'swatch',
+                    'filename' => $colorCode . '.' . $swatch['extension'],
+                    'source_url' => $swatch['url'],
+                ],
+            ];
+        }
+
+        if ($payload === []) {
+            return [
+                'ok' => false,
+                'skipped' => true,
+                'reason' => 'Product has no colors with a swatch image (curated or hex-generated) to sync to JOOR.',
+            ];
+        }
+
+        $response = $this->request()->post($this->apiUrl('/assets/sku_trait_values/') . '?' . http_build_query($query), $payload);
+        $body = $response->json() ?? ['raw' => $response->body()];
+        $hasErrors = is_array($body) && is_array($body['errors'] ?? null) && count($body['errors']) > 0;
+
+        return [
+            'status' => $response->status(),
+            'body' => $body,
+            'ok' => $response->successful() && ! $hasErrors,
+            'request' => [
+                'url' => $this->apiUrl('/assets/sku_trait_values/'),
+                'query' => $query,
+                'payload' => $payload,
+            ],
+        ];
+    }
+
+    /**
+     * Returns ['url' => ..., 'extension' => ...] for the color's swatch image, preferring a
+     * curated file at public/color/{color-name}.{ext} (e.g. public/color/black.jpg) over the
+     * generated solid-fill fallback so brand-provided swatch art is used when available.
+     */
+    private function resolveColorImageAsset(string $color, ?string $colorHex): ?array
+    {
+        $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9]+/', '-', trim($color)) ?? trim($color), '-'));
+
+        if ($slug !== '') {
+            foreach (['jpg', 'jpeg', 'png', 'gif'] as $extension) {
+                $relativePath = 'color/' . $slug . '.' . $extension;
+                if (is_file(public_path($relativePath))) {
+                    return [
+                        'url' => $this->resolveAbsoluteMediaUrl($relativePath),
+                        'extension' => $extension,
+                    ];
+                }
+            }
+        }
+
+        if ($colorHex === null || $colorHex === '') {
+            return null;
+        }
+
+        $generatedUrl = $this->resolveColorSwatchImageUrl($colorHex);
+        if ($generatedUrl === null) {
+            return null;
+        }
+
+        return ['url' => $generatedUrl, 'extension' => 'png'];
+    }
+
+    // Generates (and caches on disk) a small solid-fill PNG for the given hex code, so JOOR has
+    // an image to use as the color swatch. Returns null when the GD extension is unavailable.
+    private function resolveColorSwatchImageUrl(string $hex): ?string
+    {
+        $normalizedHex = ltrim(trim($hex), '#');
+        if (preg_match('/^[0-9A-Fa-f]{6}$/', $normalizedHex) !== 1) {
+            return null;
+        }
+
+        if (! function_exists('imagecreatetruecolor')) {
+            return null;
+        }
+
+        $relativePath = 'uploads/joor-swatches/' . strtoupper($normalizedHex) . '.png';
+        $absolutePath = public_path($relativePath);
+
+        if (! is_file($absolutePath)) {
+            $targetDirectory = dirname($absolutePath);
+            if (! is_dir($targetDirectory)) {
+                mkdir($targetDirectory, 0755, true);
+            }
+
+            $red = (int) hexdec(substr($normalizedHex, 0, 2));
+            $green = (int) hexdec(substr($normalizedHex, 2, 2));
+            $blue = (int) hexdec(substr($normalizedHex, 4, 2));
+
+            $image = imagecreatetruecolor(100, 100);
+            $fill = imagecolorallocate($image, $red, $green, $blue);
+            imagefilledrectangle($image, 0, 0, 100, 100, $fill);
+            $saved = imagepng($image, $absolutePath);
+            imagedestroy($image);
+
+            if (! $saved) {
+                return null;
+            }
+        }
+
+        return $this->resolveAbsoluteMediaUrl($relativePath);
     }
 
     private function resolveProductImageUrls(Product $product): array
@@ -478,7 +623,7 @@ class JoorService
             'name' => $product->name,
             'external_id' => (string) $product->sku,
             'product_identifier' => (string) $product->sku,
-            'description' => $product->description,
+            'description' => $this->buildProductDescription($product),
             'order_minimum' => 0,
         ];
 
@@ -490,6 +635,39 @@ class JoorService
         }
 
         return $payload;
+    }
+
+    // JOOR's product schema only accepts a single 'description' field, so fold the fabric &
+    // care and composition content into it as clearly labeled sections instead of dropping it.
+    private function buildProductDescription(Product $product): ?string
+    {
+        $sections = [$this->htmlToPlainText($product->description)];
+
+        $fabricAndCare = $this->htmlToPlainText($product->fabric_and_care);
+        if ($fabricAndCare !== '') {
+            $sections[] = "Fabric & Care:\n" . $fabricAndCare;
+        }
+
+        $composition = $this->htmlToPlainText($product->product_composition);
+        if ($composition !== '') {
+            $sections[] = "Product Composition:\n" . $composition;
+        }
+
+        $sections = array_values(array_filter($sections, static fn (string $section): bool => $section !== ''));
+
+        return $sections === [] ? null : implode("\n\n", $sections);
+    }
+
+    private function htmlToPlainText(?string $html): string
+    {
+        if ($html === null || trim($html) === '') {
+            return '';
+        }
+
+        $text = preg_replace('/<[^>]+>/', ' ', $html) ?? $html;
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5);
+
+        return trim(preg_replace('/\s+/', ' ', $text) ?? $text);
     }
 
     private function syncSkusForProduct(Product $product, string $joorProductId, array $query): array
@@ -703,7 +881,9 @@ class JoorService
 
         $payload = [];
 
-        foreach ($colors as $color) {
+        foreach ($colors as $color => $colorHex) {
+            $colorCode = $this->buildColorCode($color, $colorHex);
+
             foreach ($sizes as $size) {
                 $externalId = $this->buildSkuExternalId((string) $product->sku, $color, $size);
 
@@ -715,10 +895,14 @@ class JoorService
                         [
                             'trait_id' => $colorTraitId,
                             'value' => $color,
+                            // JOOR requires a Color Code per trait value; this also doubles as the
+                            // lookup key when uploading the color's swatch asset below.
+                            'external_id' => $colorCode,
                         ],
                         [
                             'trait_id' => $sizeTraitId,
                             'value' => $size,
+                            'external_id' => $this->buildSizeCode($size),
                         ],
                     ],
                 ];
@@ -726,6 +910,27 @@ class JoorService
         }
 
         return $payload;
+    }
+
+    // Uses the color's hex (without '#') as its JOOR Color Code so it stays stable and unique;
+    // falls back to a slug of the name when no hex is on file.
+    private function buildColorCode(string $color, ?string $hex): string
+    {
+        $normalizedHex = $hex !== null ? ltrim(trim($hex), '#') : '';
+        if ($normalizedHex !== '' && preg_match('/^[0-9A-Fa-f]{6}$/', $normalizedHex) === 1) {
+            return strtoupper($normalizedHex);
+        }
+
+        $slug = strtoupper(preg_replace('/[^A-Za-z0-9]+/', '-', trim($color)) ?? trim($color));
+
+        return substr(trim($slug, '-'), 0, 100);
+    }
+
+    private function buildSizeCode(string $size): string
+    {
+        $slug = strtoupper(preg_replace('/[^A-Za-z0-9]+/', '-', trim($size)) ?? trim($size));
+
+        return substr(trim($slug, '-'), 0, 25);
     }
 
     private function resolveProductPrice(Product $product): ?float
@@ -1004,6 +1209,10 @@ class JoorService
         return array_values(array_unique($sizeTokens));
     }
 
+    /**
+     * Returns color name => hex code (nullable) pairs for the product. The hex is used to
+     * build the SKU trait's Color Code and to generate the swatch JOOR displays for it.
+     */
     private function resolveProductColors(Product $product): array
     {
         $rawColor = $product->getRawOriginal('color');
@@ -1015,20 +1224,29 @@ class JoorService
 
         $numericColorIds = array_values(array_filter($colorTokens, static fn (string $token): bool => ctype_digit($token)));
         if ($numericColorIds !== []) {
-            $colorNames = Color::query()
+            $colors = Color::query()
                 ->whereIn('id', $numericColorIds)
-                ->pluck('name')
-                ->filter(static fn ($name): bool => is_string($name) && trim($name) !== '')
-                ->map(static fn (string $name): string => trim($name))
-                ->values()
-                ->all();
+                ->get(['name', 'color_code'])
+                ->filter(static fn (Color $color): bool => trim((string) $color->name) !== '');
 
-            if ($colorNames !== []) {
-                return array_values(array_unique($colorNames));
+            if ($colors->isNotEmpty()) {
+                $result = [];
+                foreach ($colors as $color) {
+                    $name = trim((string) $color->name);
+                    $hex = trim((string) $color->color_code);
+                    $result[$name] = $hex !== '' ? $hex : null;
+                }
+
+                return $result;
             }
         }
 
-        return array_values(array_unique($colorTokens));
+        $result = [];
+        foreach (array_unique($colorTokens) as $token) {
+            $result[$token] = null;
+        }
+
+        return $result;
     }
 
     private function extractTokens(mixed $value): array

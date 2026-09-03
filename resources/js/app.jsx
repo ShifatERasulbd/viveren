@@ -188,7 +188,6 @@ function AppRouter() {
                             <Route path="singleProduct" element={withPageFallback(SingleProductPage)} />
                             <Route path="about" element={withPageFallback(AboutPage)} />
                             <Route path="contact" element={withPageFallback(ContactPage)} />
-
                             <Route path="sustainability" element={withPageFallback(SustainabilityPage)} />
                             <Route path="checkout" element={withPageFallback(CheckoutPage)} />
                             <Route path="order-confirmation" element={withPageFallback(OrderConfirmationPage)} />

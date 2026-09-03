@@ -58,6 +58,7 @@ export default function Products() {
 
             const parsed = JSON.parse(raw);
             console.log('JOOR response (latest product sync):', parsed);
+            console.log('JOOR color swatch payload sent:', parsed?.joor_response?.swatch_sync?.request?.payload ?? null);
             sessionStorage.removeItem('latestJoorResponse');
         } catch (error) {
             console.warn('Failed to read latest JOOR response from sessionStorage.', error);
