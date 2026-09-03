@@ -27,6 +27,7 @@ const initialForm = {
     additional_information: '',
     price: '',
     discount_price: '',
+    wholesale_price: '',
     cover_image: '',
     size_chart_image: '',
     category_id: '',

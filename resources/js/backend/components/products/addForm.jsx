@@ -794,6 +794,25 @@ export default function AddForm({
                                     </div>
 
 
+
+                                       <div className="space-y-2">
+                                        <Label htmlFor="product-discount-price">
+                                            Wholesale Price <span className="text-destructive">*</span>
+                                        </Label>
+                                        <Input
+                                            id="product-wholesale-price"
+                                            name="wholesale_price"
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            value={form.wholesale_price ?? ''}
+                                            onChange={onChange}
+                                            placeholder="0.00"
+                                        />
+                                        {errors.wholesale_price && <p className="text-xs text-destructive">{errors.wholesale_price[0]}</p>}
+                                    </div>
+
+
                                     
                                 </div>
 

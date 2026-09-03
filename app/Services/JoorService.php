@@ -724,14 +724,17 @@ class JoorService
 
     private function syncSkuPrices(Product $product, array $skuIds, array $query): array
     {
-        $price = $this->resolveProductPrice($product);
-        if ($price === null) {
+        $retailPrice = $this->resolveProductPrice($product);
+        if ($retailPrice === null) {
             return [
                 'ok' => false,
                 'skipped' => true,
                 'reason' => 'Product has no numeric price to sync to JOOR.',
             ];
         }
+
+        // Falls back to the retail price when no wholesale price is set, so SKU pricing still syncs.
+        $wholesalePrice = $this->resolveProductWholesalePrice($product) ?? $retailPrice;
 
         $priceTypeId = $this->fetchJoorPriceTypeId($query);
         if ($priceTypeId === null) {
@@ -742,13 +745,15 @@ class JoorService
             ];
         }
 
-        $priceValue = number_format($price, 2, '.', '');
+        $retailValue = number_format($retailPrice, 2, '.', '');
+        $wholesaleValue = number_format($wholesalePrice, 2, '.', '');
 
         // JOOR's /prices/bulk_create requires wholesale_value/retail_value as strings alongside price_type_id.
+        // wholesale_value comes from the product's wholesale_price; retail_value comes from its price.
         $payload = array_map(static fn (string $skuId): array => [
             'sku_id' => $skuId,
-            'wholesale_value' => $priceValue,
-            'retail_value' => $priceValue,
+            'wholesale_value' => $wholesaleValue,
+            'retail_value' => $retailValue,
             'price_type_id' => $priceTypeId,
         ], $skuIds);
 
@@ -759,7 +764,7 @@ class JoorService
         // A price already exists for this SKU/price-type when re-syncing an existing product; update it instead.
         $duplicatedSkuIds = $this->extractDuplicatedPriceSkuIds($errors);
         $updateResult = $duplicatedSkuIds !== []
-            ? $this->updateExistingSkuPrices($duplicatedSkuIds, $priceValue, $query)
+            ? $this->updateExistingSkuPrices($duplicatedSkuIds, $wholesaleValue, $retailValue, $query)
             : null;
 
         $blockingErrors = array_values(array_filter(
@@ -802,7 +807,7 @@ class JoorService
         return array_values(array_unique($skuIds));
     }
 
-    private function updateExistingSkuPrices(array $skuIds, string $priceValue, array $query): array
+    private function updateExistingSkuPrices(array $skuIds, string $wholesaleValue, string $retailValue, array $query): array
     {
         $priceIds = [];
 
@@ -826,8 +831,8 @@ class JoorService
 
         $payload = array_map(static fn (string $priceId): array => [
             'id' => $priceId,
-            'wholesale_value' => $priceValue,
-            'retail_value' => $priceValue,
+            'wholesale_value' => $wholesaleValue,
+            'retail_value' => $retailValue,
         ], $priceIds);
 
         $response = $this->request()->post($this->apiUrl('/prices/bulk_update') . '?' . http_build_query($query), $payload);
@@ -936,6 +941,13 @@ class JoorService
     private function resolveProductPrice(Product $product): ?float
     {
         $raw = $product->price;
+
+        return is_numeric($raw) ? (float) $raw : null;
+    }
+
+    private function resolveProductWholesalePrice(Product $product): ?float
+    {
+        $raw = $product->wholesale_price;
 
         return is_numeric($raw) ? (float) $raw : null;
     }

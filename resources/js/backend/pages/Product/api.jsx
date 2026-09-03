@@ -22,6 +22,7 @@ function buildProductPayload(data = {}) {
         grand_child_id: data.grand_child_id ? Number(data.grand_child_id) : null,
         price: data.price === '' ? 0 : Number(data.price),
         discount_price: data.discount_price === '' ? 0 : Number(data.discount_price),
+        wholesale_price: data.wholesale_price === '' ? 0 : Number(data.wholesale_price),
         length: data.length === '' ? 0 : Number(data.length),
         width: data.width === '' ? 0 : Number(data.width),
         height: data.height === '' ? 0 : Number(data.height),        

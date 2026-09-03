@@ -26,6 +26,7 @@ class Product extends Model
         'additional_information',
         'price',
         'discount_price',
+        'wholesale_price',
         'length',
         'width',
         'height',
