@@ -144,10 +144,6 @@ function CheckoutForm() {
     const [isFetchingShipping, setIsFetchingShipping] = useState(false);
     const [hasShippingQuote, setHasShippingQuote] = useState(false);
     const [shippingError, setShippingError] = useState('');
-    const [quotedTax, setQuotedTax] = useState(0);
-    const [quotedTaxRatePercent, setQuotedTaxRatePercent] = useState(0);
-    const [isFetchingTax, setIsFetchingTax] = useState(false);
-    const [taxError, setTaxError] = useState('');
     const [stateOptions, setStateOptions] = useState([]);
     const [cityOptions, setCityOptions] = useState([]);
     const [isLoadingStates, setIsLoadingStates] = useState(false);
@@ -245,11 +241,6 @@ function CheckoutForm() {
         && String(form.country || '').trim(),
     ), [form.state, form.city, form.postal_code, form.country]);
 
-    const isMassachusetts = useMemo(() => {
-        const value = String(form.state || '').trim().toUpperCase();
-        return value === 'MA' || value === 'MASSACHUSETTS';
-    }, [form.state]);
-
     const selectedShippingOption = useMemo(
         () => shippingOptions.find((option) => option.code === normalizeServiceCode(selectedShippingOptionCode, '02')) || null,
         [shippingOptions, selectedShippingOptionCode],
@@ -265,12 +256,7 @@ function CheckoutForm() {
         return Number.isFinite(value) && value > 0 ? value : 0;
     }, [selectedShippingOption, quotedShipping]);
 
-    const tax = useMemo(() => {
-        const value = Number(quotedTax);
-        return Number.isFinite(value) && value > 0 ? value : 0;
-    }, [quotedTax]);
-
-    const baseTotal = useMemo(() => roundCurrency(subtotal + shipping + tax), [subtotal, shipping, tax]);
+    const baseTotal = useMemo(() => roundCurrency(subtotal + shipping), [subtotal, shipping]);
     const stripeCharge = useMemo(() => calculateStripeCharge(baseTotal), [baseTotal]);
     // Total charged to the customer excludes the Stripe processing surcharge.
     const total = baseTotal;
@@ -455,9 +441,7 @@ function CheckoutForm() {
             console.log('[Shipping quote] skipped: subtotal is zero or negative', { subtotal });
             setQuotedShipping(0);
             setHasShippingQuote(false);
-            setQuotedTax(0);
             setShippingError('');
-            setTaxError('');
             return;
         }
 
@@ -468,9 +452,7 @@ function CheckoutForm() {
             });
             setQuotedShipping(0);
             setHasShippingQuote(false);
-            setQuotedTax(0);
             setShippingError('');
-            setTaxError('');
             return;
         }
 
@@ -563,67 +545,9 @@ function CheckoutForm() {
             clearTimeout(timer);
             setIsFetchingShipping(false);
         };
-    }, [form.city, form.country, form.postal_code, form.state, hasCompleteShippingAddress, normalizedItems, selectedDeliveryDate, selectedDeliveryTime, selectedShippingOptionCode, subtotal]);
-
-    // Sales tax is only calculated for the Massachusetts nexus; every other state stays untaxed.
-    useEffect(() => {
-        if (subtotal <= 0 || !hasCompleteShippingAddress || !isMassachusetts) {
-            setQuotedTax(0);
-            setQuotedTaxRatePercent(0);
-            setTaxError('');
-            return undefined;
-        }
-
-        const controller = new AbortController();
-        setIsFetchingTax(true);
-        setTaxError('');
-        const timer = setTimeout(async () => {
-            try {
-                const response = await fetch('/api/public/tax/quote', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Accept: 'application/json',
-                    },
-                    body: JSON.stringify({
-                        subtotal,
-                        shipping,
-                        city: form.city,
-                        state: form.state,
-                        postal_code: form.postal_code,
-                        country: form.country,
-                        address_line_1: form.address_line_1,
-                        items: normalizedItems,
-                    }),
-                    signal: controller.signal,
-                });
-
-                const payload = await response.json().catch(() => ({}));
-                if (!response.ok) {
-                    throw new Error(payload?.error || payload?.message || 'Unable to calculate tax');
-                }
-
-                setQuotedTax(Number(payload?.tax || 0));
-                setQuotedTaxRatePercent(Number(payload?.tax_rate_percent || 0));
-            } catch (error) {
-                if (error?.name === 'AbortError') {
-                    return;
-                }
-
-                setTaxError(error?.message || 'Unable to calculate tax');
-                setQuotedTax(0);
-                setQuotedTaxRatePercent(0);
-            } finally {
-                setIsFetchingTax(false);
-            }
-        }, 350);
-
-        return () => {
-            controller.abort();
-            clearTimeout(timer);
-            setIsFetchingTax(false);
-        };
-    }, [form.address_line_1, form.city, form.country, form.postal_code, form.state, hasCompleteShippingAddress, isMassachusetts, normalizedItems, shipping, subtotal]);
+    // Note: selectedShippingOptionCode is intentionally excluded below — Veeqo issues a new
+    // ephemeral rate code on every quote, so including it here would refetch in an infinite loop.
+    }, [form.city, form.country, form.postal_code, form.state, hasCompleteShippingAddress, normalizedItems, selectedDeliveryDate, selectedDeliveryTime, subtotal]);
 
     useEffect(() => {
         const city = String(form.city || '').trim();
@@ -817,7 +741,6 @@ function CheckoutForm() {
                     shipping,
                     total,
                     payment_intent_id: paymentResult.paymentIntent.id,
-                    tax,
                     stripe_charge: stripeCharge,
                 }),
             });
@@ -854,7 +777,6 @@ function CheckoutForm() {
                 items_count: normalizedItems.reduce((sum, item) => sum + Number(item?.quantity || 0), 0),
                 subtotal,
                 shipping,
-                tax,
                 stripe_charge: stripeCharge,
                 processing_fee: 0.5,
                 total,
@@ -1168,23 +1090,8 @@ function CheckoutForm() {
                                 {hasShippingQuote ? (shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`) : '$0.00'}
                             </span>
                         </div>
-                        {isMassachusetts ? (
-                            <div className="flex items-center justify-between">
-                                <span>Tax</span>
-                                <span>{tax === 0 ? '$0.00' : `$${tax.toFixed(2)}`}</span>
-                            </div>
-                        ) : null}
-                      
-                        
-                      
                         {!isFetchingShipping && shippingError ? (
                             <p className="text-xs text-red-600">{shippingError}</p>
-                        ) : null}
-                        {isFetchingTax ? (
-                            <p className="text-xs text-zinc-500"></p>
-                        ) : null}
-                        {!isFetchingTax && taxError ? (
-                            <p className="text-xs text-red-600">{taxError}</p>
                         ) : null}
                         <div className="flex items-center justify-between border-t border-zinc-200 pt-3 text-[1rem] font-semibold text-zinc-900">
                             <span>Total</span>
@@ -1221,7 +1128,7 @@ function CheckoutForm() {
                     <button
                         type="button"
                         onClick={handlePlaceOrder}
-                        disabled={isSubmitting || !stripe || !elements || isFetchingShipping || isFetchingTax || (subtotal > 0 && hasCompleteShippingAddress && shippingError !== '') || (subtotal > 0 && hasCompleteShippingAddress && taxError !== '')}
+                        disabled={isSubmitting || !stripe || !elements || isFetchingShipping || (subtotal > 0 && hasCompleteShippingAddress && shippingError !== '')}
                         className="mt-6 inline-flex h-11 w-full items-center justify-center bg-zinc-900 text-[0.78rem] font-semibold uppercase tracking-[0.14em] text-white transition-colors hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
                     >
                         {isSubmitting ? 'Processing Payment...' : !stripe || !elements ? 'Loading Secure Payment...' : 'Pay & Place Order'}

@@ -17,6 +17,7 @@ class CheckoutOrder extends Model
         'last_name',
         'email',
         'phone',
+        'orders_from',
         'address_line_1',
         'address_line_2',
         'city',

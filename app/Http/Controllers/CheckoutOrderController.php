@@ -50,7 +50,7 @@ class CheckoutOrderController extends Controller
             'items.*.length' => 'nullable|numeric|min:0',
             'items.*.width' => 'nullable|numeric|min:0',
             'items.*.height' => 'nullable|numeric|min:0',
-            'service_code' => 'nullable|string|max:20',
+            'service_code' => 'nullable|string|max:255',
             'delivery_date' => 'nullable|date',
             'delivery_time' => 'nullable|string|max:100',
             'subtotal' => 'required|numeric|min:0',
@@ -121,74 +121,6 @@ class CheckoutOrderController extends Controller
             'delivery_date' => $validated['delivery_date'] ?? null,
             'delivery_time' => $validated['delivery_time'] ?? null,
         ]);
-    }
-
-    public function quoteTax(Request $request): JsonResponse
-    {
-        $validated = $request->validate([
-            'country' => 'required|string|max:120',
-            'state' => 'required|string|max:120',
-            'city' => 'required|string|max:120',
-            'postal_code' => 'required|string|max:40',
-            'address_line_1' => 'nullable|string|max:255',
-            'items' => 'required|array|min:1',
-            'items.*.priceValue' => 'required|numeric|min:0',
-            'items.*.quantity' => 'required|integer|min:1|max:999',
-            'subtotal' => 'required|numeric|min:0',
-            'shipping' => 'nullable|numeric|min:0',
-        ]);
-
-        $shipping = (float) ($validated['shipping'] ?? 0);
-
-        if (! $this->isTaxableState($validated['state'] ?? '')) {
-            $tax = 0.0;
-            $taxRatePercent = 0.0;
-        } else {
-            try {
-                $taxDetails = $this->calculateStripeTaxDetails($validated);
-                $tax = $taxDetails['tax'];
-                $taxRatePercent = $taxDetails['tax_rate_percent'];
-            } catch (\Throwable $exception) {
-                return response()->json([
-                    'message' => 'Unable to calculate tax at the moment.',
-                    'error' => $exception->getMessage(),
-                ], 422);
-            }
-        }
-
-        $baseTotal = round((float) $validated['subtotal'] + $shipping + $tax, 2);
-        $stripeCharge = $this->calculateStripeCharge($baseTotal);
-        // Total charged to the customer excludes the Stripe processing surcharge.
-        $total = $baseTotal;
-
-        return response()->json([
-            'tax' => $tax,
-            'tax_rate_percent' => $taxRatePercent,
-            'shipping' => $shipping,
-            'stripe_charge' => $stripeCharge,
-            'processing_fee' => self::PROCESSING_FEE,
-            'total' => $total,
-        ]);
-    }
-
-    // Tax is only collected for the Massachusetts nexus; all other states are untaxed.
-    protected function isTaxableState(?string $state): bool
-    {
-        $normalized = strtoupper(trim((string) $state));
-
-        return $normalized === 'MASSACHUSETTS' || $normalized === 'MA';
-    }
-
-    protected function calculateStripeTaxDetails(array $payload): array
-    {
-        $tax = $this->calculateStripeTax($payload);
-        $taxableBase = round(max(0, (float) ($payload['subtotal'] ?? 0)) + max(0, (float) ($payload['shipping'] ?? 0)), 2);
-        $taxRatePercent = $taxableBase > 0 ? round(($tax / $taxableBase) * 100, 4) : 0.0;
-
-        return [
-            'tax' => $tax,
-            'tax_rate_percent' => $taxRatePercent,
-        ];
     }
 
     protected function customerScopedOrders(Request $request)
@@ -417,7 +349,6 @@ class CheckoutOrderController extends Controller
             'items.*.selectedSize' => 'nullable|string|max:100',
             'subtotal' => 'required|numeric|min:0',
             'shipping' => 'required|numeric|min:0',
-            'tax' => 'required|numeric|min:0',
             'stripe_charge' => 'nullable|numeric|min:0',
             'total' => 'required|numeric|min:0',
             'payment_intent_id' => 'required|string|max:255',
@@ -431,7 +362,8 @@ class CheckoutOrderController extends Controller
         }
 
         $shipping = round((float) $validated['shipping'], 2);
-        $tax = $this->isTaxableState($validated['state'] ?? null) ? round((float) $validated['tax'], 2) : 0.0;
+        // Stripe Tax has been removed; orders are never taxed.
+        $tax = 0.0;
         $baseTotal = round((float) $validated['subtotal'] + $shipping + $tax, 2);
         $stripeCharge = isset($validated['stripe_charge'])
             ? round((float) $validated['stripe_charge'], 2)
@@ -510,84 +442,6 @@ class CheckoutOrderController extends Controller
     {
         $safeAmount = max(0, $baseAmount);
         return round(($safeAmount * self::STRIPE_PERCENT_RATE) + self::STRIPE_FIXED_FEE, 2);
-    }
-
-    protected function calculateStripeTax(array $payload): float
-    {
-        $secretKey = (string) config('services.stripe.secret');
-        if ($secretKey === '') {
-            throw new \RuntimeException('Stripe secret key is not configured.');
-        }
-
-        $items = is_array($payload['items'] ?? null) ? $payload['items'] : [];
-        $lineItems = [];
-
-        foreach ($items as $index => $item) {
-            $priceValue = (float) ($item['priceValue'] ?? 0);
-            $quantity = max(1, (int) ($item['quantity'] ?? 1));
-            $amount = (int) round(max(0, $priceValue) * 100);
-
-            if ($amount <= 0) {
-                continue;
-            }
-
-            $lineItems[] = [
-                'amount' => $amount,
-                'quantity' => $quantity,
-                'reference' => 'line-' . ($index + 1),
-                'tax_code' => 'txcd_99999999',
-            ];
-        }
-
-        if ($lineItems === []) {
-            return 0.0;
-        }
-
-        $country = strtoupper($this->shippingRateService->normalizeCountryCode($payload['country'] ?? null));
-        $state = strtoupper(trim((string) ($payload['state'] ?? '')));
-        $city = trim((string) ($payload['city'] ?? ''));
-        $postalCode = trim((string) ($payload['postal_code'] ?? ''));
-        $line1 = trim((string) ($payload['address_line_1'] ?? 'N/A'));
-        $shippingAmount = (int) round(max(0, (float) ($payload['shipping'] ?? 0)) * 100);
-
-        $params = [
-            'currency' => 'usd',
-            'line_items' => $lineItems,
-            'customer_details' => [
-                'address_source' => 'shipping',
-                'address' => [
-                    'line1' => $line1,
-                    'city' => $city,
-                    'state' => $state,
-                    'postal_code' => $postalCode,
-                    'country' => $country !== '' ? $country : 'US',
-                ],
-            ],
-        ];
-
-        if ($shippingAmount > 0) {
-            $params['shipping_cost'] = [
-                'amount' => $shippingAmount,
-                'tax_code' => 'txcd_92010001',
-            ];
-        }
-
-        $stripe = new StripeClient($secretKey);
-        $calculation = $stripe->tax->calculations->create($params);
-
-        $taxAmount = 0;
-
-        if (isset($calculation->amount_tax)) {
-            $taxAmount = (int) $calculation->amount_tax;
-        } elseif (isset($calculation->amount_total, $calculation->amount_subtotal)) {
-            $taxAmount = (int) $calculation->amount_total - (int) $calculation->amount_subtotal;
-        } elseif (isset($calculation->tax_breakdown) && is_array($calculation->tax_breakdown)) {
-            foreach ($calculation->tax_breakdown as $row) {
-                $taxAmount += (int) ($row->amount ?? 0);
-            }
-        }
-
-        return round(max(0, $taxAmount) / 100, 2);
     }
 
     protected function resolveShippingQuoteItems(array $items): array
