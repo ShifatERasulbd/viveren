@@ -136,13 +136,13 @@ function CheckoutForm() {
     const isCartEmpty = items.length === 0;
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [fieldErrors, setFieldErrors] = useState({});
-    const selectedCourier = 'ups';
     const [quotedShipping, setQuotedShipping] = useState(0);
     const [shippingOptions, setShippingOptions] = useState([]);
     const [selectedShippingOptionCode, setSelectedShippingOptionCode] = useState('02');
     const [selectedDeliveryDate, setSelectedDeliveryDate] = useState('');
     const [selectedDeliveryTime, setSelectedDeliveryTime] = useState('');
     const [isFetchingShipping, setIsFetchingShipping] = useState(false);
+    const [hasShippingQuote, setHasShippingQuote] = useState(false);
     const [shippingError, setShippingError] = useState('');
     const [quotedTax, setQuotedTax] = useState(0);
     const [quotedTaxRatePercent, setQuotedTaxRatePercent] = useState(0);
@@ -245,6 +245,11 @@ function CheckoutForm() {
         && String(form.country || '').trim(),
     ), [form.state, form.city, form.postal_code, form.country]);
 
+    const isMassachusetts = useMemo(() => {
+        const value = String(form.state || '').trim().toUpperCase();
+        return value === 'MA' || value === 'MASSACHUSETTS';
+    }, [form.state]);
+
     const selectedShippingOption = useMemo(
         () => shippingOptions.find((option) => option.code === normalizeServiceCode(selectedShippingOptionCode, '02')) || null,
         [shippingOptions, selectedShippingOptionCode],
@@ -267,7 +272,8 @@ function CheckoutForm() {
 
     const baseTotal = useMemo(() => roundCurrency(subtotal + shipping + tax), [subtotal, shipping, tax]);
     const stripeCharge = useMemo(() => calculateStripeCharge(baseTotal), [baseTotal]);
-    const total = useMemo(() => roundCurrency(baseTotal + stripeCharge), [baseTotal, stripeCharge]);
+    // Total charged to the customer excludes the Stripe processing surcharge.
+    const total = baseTotal;
 
     const normalizedItems = useMemo(
         () =>
@@ -446,8 +452,9 @@ function CheckoutForm() {
 
     useEffect(() => {
         if (subtotal <= 0) {
-            console.log('[UPS shipping quote] skipped: subtotal is zero or negative', { subtotal });
+            console.log('[Shipping quote] skipped: subtotal is zero or negative', { subtotal });
             setQuotedShipping(0);
+            setHasShippingQuote(false);
             setQuotedTax(0);
             setShippingError('');
             setTaxError('');
@@ -455,11 +462,12 @@ function CheckoutForm() {
         }
 
         if (!hasCompleteShippingAddress) {
-            console.log('[UPS shipping quote] skipped: shipping address is incomplete', {
+            console.log('[Shipping quote] skipped: shipping address is incomplete', {
                 hasCompleteShippingAddress,
                 form,
             });
             setQuotedShipping(0);
+            setHasShippingQuote(false);
             setQuotedTax(0);
             setShippingError('');
             setTaxError('');
@@ -473,8 +481,11 @@ function CheckoutForm() {
         const requestServiceCode = normalizeServiceCode(selectedShippingOptionCode, '02');
 
         const quotePayload = {
-            courier: 'ups',
             subtotal,
+            first_name: form.first_name,
+            last_name: form.last_name,
+            phone: form.phone,
+            address_line_1: form.address_line_1,
             city: form.city,
             state: form.state,
             postal_code: form.postal_code,
@@ -485,7 +496,7 @@ function CheckoutForm() {
             items: normalizedItems,
         };
 
-        console.log('[UPS shipping quote] request', quotePayload);
+        console.log('[Shipping quote] request', quotePayload);
 
         const timer = setTimeout(async () => {
             try {
@@ -500,14 +511,14 @@ function CheckoutForm() {
                 });
 
                 const payload = await response.json().catch(() => ({}));
-                console.log('[UPS shipping quote] response', {
+                console.log('[Shipping quote] response', {
                     status: response.status,
                     ok: response.ok,
                     payload,
                 });
 
                 if (!response.ok) {
-                    throw new Error(payload?.error || payload?.message || 'Unable to fetch UPS shipping charge');
+                    throw new Error(payload?.error || payload?.message || 'Unable to fetch shipping rates');
                 }
 
                 const nextOptions = (Array.isArray(payload?.shipping_options) ? payload.shipping_options : [])
@@ -532,14 +543,16 @@ function CheckoutForm() {
                 }
 
                 setQuotedShipping(Number(payload?.shipping || 0));
+                setHasShippingQuote(true);
             } catch (error) {
-                console.error('[UPS shipping quote] request failed', error);
+                console.error('[Shipping quote] request failed', error);
                 if (error?.name === 'AbortError') {
                     return;
                 }
 
-                setShippingError(error?.message || 'Unable to fetch UPS shipping charge');
+                setShippingError(error?.message || 'Unable to fetch shipping rates');
                 setQuotedShipping(0);
+                setHasShippingQuote(false);
             } finally {
                 setIsFetchingShipping(false);
             }
@@ -552,19 +565,13 @@ function CheckoutForm() {
         };
     }, [form.city, form.country, form.postal_code, form.state, hasCompleteShippingAddress, normalizedItems, selectedDeliveryDate, selectedDeliveryTime, selectedShippingOptionCode, subtotal]);
 
+    // Sales tax is only calculated for the Massachusetts nexus; every other state stays untaxed.
     useEffect(() => {
-        if (subtotal <= 0) {
+        if (subtotal <= 0 || !hasCompleteShippingAddress || !isMassachusetts) {
             setQuotedTax(0);
             setQuotedTaxRatePercent(0);
             setTaxError('');
-            return;
-        }
-
-        if (!hasCompleteShippingAddress) {
-            setQuotedTax(0);
-            setQuotedTaxRatePercent(0);
-            setTaxError('');
-            return;
+            return undefined;
         }
 
         const controller = new AbortController();
@@ -616,7 +623,7 @@ function CheckoutForm() {
             clearTimeout(timer);
             setIsFetchingTax(false);
         };
-    }, [form.address_line_1, form.city, form.country, form.postal_code, form.state, hasCompleteShippingAddress, normalizedItems, shipping, subtotal]);
+    }, [form.address_line_1, form.city, form.country, form.postal_code, form.state, hasCompleteShippingAddress, isMassachusetts, normalizedItems, shipping, subtotal]);
 
     useEffect(() => {
         const city = String(form.city || '').trim();
@@ -805,7 +812,6 @@ function CheckoutForm() {
                 },
                 body: JSON.stringify({
                     ...form,
-                    courier: 'ups',
                     items: normalizedItems,
                     subtotal,
                     shipping,
@@ -852,8 +858,6 @@ function CheckoutForm() {
                 stripe_charge: stripeCharge,
                 processing_fee: 0.5,
                 total,
-                courier_service: 'ups',
-                courier_reference: String(payload?.courier_reference || ''),
                 created_at: new Date().toISOString(),
             };
 
@@ -1160,22 +1164,24 @@ function CheckoutForm() {
                         </div>
                         <div className="flex items-center justify-between">
                             <span>Shipping</span>
-                            <span>{shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`}</span>
+                            <span className={`transition-all duration-200 ${(!hasShippingQuote || isFetchingShipping) ? 'select-none blur-sm opacity-60' : ''}`}>
+                                {hasShippingQuote ? (shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`) : '$0.00'}
+                            </span>
                         </div>
-                        <div className="flex items-center justify-between">
-                            <span>State Tax</span>
-                            <span>{tax === 0 ? '$0.00' : `$${tax.toFixed(2)}`}</span>
-                        </div>
+                        {isMassachusetts ? (
+                            <div className="flex items-center justify-between">
+                                <span>Tax</span>
+                                <span>{tax === 0 ? '$0.00' : `$${tax.toFixed(2)}`}</span>
+                            </div>
+                        ) : null}
                       
                         
-                        {isFetchingShipping ? (
-                            <p className="text-xs text-zinc-500">Fetching UPS shipping quote...</p>
-                        ) : null}
+                      
                         {!isFetchingShipping && shippingError ? (
                             <p className="text-xs text-red-600">{shippingError}</p>
                         ) : null}
                         {isFetchingTax ? (
-                            <p className="text-xs text-zinc-500">Calculating tax with Stripe Tax...</p>
+                            <p className="text-xs text-zinc-500"></p>
                         ) : null}
                         {!isFetchingTax && taxError ? (
                             <p className="text-xs text-red-600">{taxError}</p>
@@ -1186,81 +1192,7 @@ function CheckoutForm() {
                         </div>
                     </div>
 
-                    <div className="mt-6 border-t border-zinc-200 pt-5">
-                        <div className="space-y-3">
-                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                <h2 className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-zinc-400">
-                                    Delivery options
-                                </h2>
-                                <div className="flex gap-3">
-                                    <select
-                                        value={selectedDeliveryDate}
-                                        onChange={(event) => setSelectedDeliveryDate(event.target.value)}
-                                        className="h-10 border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none focus:border-zinc-900"
-                                    >
-                                        {deliveryDates.map((day) => (
-                                            <option key={day.value} value={day.value}>{day.label}</option>
-                                        ))}
-                                    </select>
-                                    <select
-                                        value={selectedDeliveryTime}
-                                        onChange={(event) => setSelectedDeliveryTime(event.target.value)}
-                                        className="h-10 border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none focus:border-zinc-900"
-                                    >
-                                        <option value="morning">Morning</option>
-                                        <option value="afternoon">Afternoon</option>
-                                        <option value="evening">Evening</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            {shippingOptions.length > 0 ? (
-                                shippingOptions.slice(0, 3).map((option) => {
-                                    const isSelected = option.code === selectedShippingOptionCode;
-                                    const selectedPrice = Number(option.amount || 0);
-                                    const displayLabel = option.label || 'UPS Service';
-
-                                    return (
-                                        <button
-                                            type="button"
-                                            key={option.code}
-                                            onClick={() => {
-                                                setSelectedShippingOptionCode(option.code);
-                                                setQuotedShipping(selectedPrice);
-                                            }}
-                                            className={`w-full border p-4 text-left transition-colors ${isSelected ? 'border-green-500 bg-green-50' : 'border-zinc-200 bg-zinc-50 hover:border-zinc-400'}`}
-                                        >
-                                            <div className="flex items-center justify-between gap-3">
-                                                <div className="flex items-center gap-3">
-                                                    <span className={`inline-flex h-4 w-4 items-center justify-center rounded-full border ${isSelected ? 'border-green-500 bg-green-500' : 'border-zinc-300 bg-white'}`}>
-                                                        {isSelected ? <span className="h-2 w-2 rounded-full bg-white" /> : null}
-                                                    </span>
-                                                    <span className="text-sm font-medium uppercase tracking-[0.14em] text-zinc-700">{displayLabel}</span>
-                                                </div>
-                                                <span className="text-lg font-semibold text-zinc-900">${selectedPrice.toFixed(2)}</span>
-                                            </div>
-                                            <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-zinc-600">
-                                                <span>{option.estimated_delivery || `Estimated delivery: ${option.delivery_days || '1-3 business days'}`}</span>
-                                                {option.delivery_time ? (
-                                                    <>
-                                                        <span>•</span>
-                                                        <span>{option.delivery_time}</span>
-                                                    </>
-                                                ) : null}
-                                                <span>•</span>
-                                                <span>{selectedDeliveryDate ? new Date(`${selectedDeliveryDate}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Selected date'}</span>
-                                            </div>
-                                        </button>
-                                    );
-                                })
-                            ) : (
-                                <div className="rounded border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-500">
-                                    {hasCompleteShippingAddress ? 'Loading delivery options...' : 'Add your shipping address to see delivery options.'}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
+                  
                     <div className="mt-6">
                         <h2 className="text-[0.92rem] font-semibold uppercase tracking-[0.16em] text-black">Payment Details</h2>
                         <div className="mt-3">

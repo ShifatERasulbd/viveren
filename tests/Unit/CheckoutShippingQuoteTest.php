@@ -3,27 +3,10 @@
 namespace Tests\Unit;
 
 use App\Http\Controllers\CheckoutOrderController;
-use App\Services\UpsService;
 use PHPUnit\Framework\TestCase;
 
 class CheckoutShippingQuoteTest extends TestCase
 {
-    public function test_default_residential_flag_is_not_forced_for_ups_rates(): void
-    {
-        $service = new class extends UpsService {
-            public function __construct() {}
-
-            public function exposeResolveResidentialFlag(mixed $value): bool
-            {
-                return $this->resolveResidentialFlag($value);
-            }
-        };
-
-        $this->assertFalse($service->exposeResolveResidentialFlag(null));
-        $this->assertTrue($service->exposeResolveResidentialFlag(true));
-        $this->assertFalse($service->exposeResolveResidentialFlag(false));
-    }
-
     public function test_shipping_quote_uses_variant_weight_and_product_dimensions(): void
     {
         $controller = new class extends CheckoutOrderController {

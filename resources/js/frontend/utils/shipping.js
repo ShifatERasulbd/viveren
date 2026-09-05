@@ -41,14 +41,10 @@ export function normalizeCountryCode(country) {
     return COUNTRY_ALIASES[value] || 'US';
 }
 
-export function calculateShippingCost({ country, state } = {}, subtotal = 0, courier = 'shipstation') {
+export function calculateShippingCost({ country, state } = {}, subtotal = 0) {
     const subtotalValue = Number(subtotal || 0);
 
     if (subtotalValue <= 0) {
-        return 0;
-    }
-
-    if (courier === 'ups') {
         return 0;
     }
 

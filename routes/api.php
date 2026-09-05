@@ -27,7 +27,6 @@ use App\Http\Controllers\SizeController;
 use App\Http\Controllers\SubCategoryController;
 use App\Http\Controllers\Payment\StripeController;
 use App\Http\Controllers\ShipStationController;
-use App\Http\Controllers\UPSCourierController;
 use App\Http\Controllers\UsLocationController;
 use App\Http\Controllers\TrendingSectionController;
 use Illuminate\Http\Request;
@@ -83,7 +82,6 @@ Route::middleware('public-api-key')->prefix('/public/orders-feed')->group(functi
 Route::post('/create-payment-intent', [StripeController::class, 'createPaymentIntent']);
 Route::post('auth/google/callback', [GoogleAuthController::class, 'handleGoogleCallback']);
 Route::post('/shipping/orders', [ShipStationController::class, 'storeOrder']);
-Route::post('/ups/shipments', [UPSCourierController::class, 'storeShipment']);
 Route::middleware('auth:sanctum')->group(function () {
 
     // Admin: update trending personalization
