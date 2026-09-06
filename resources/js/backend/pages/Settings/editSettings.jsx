@@ -8,8 +8,9 @@ import { fetchSetting, updateSetting } from './api';
 const initialForm = {
     header_logo: '',
     footer_logo: '',
+    favicon: '',
     shop_menu_image: '',
-    shop_menu_image_2: '',
+    contact_phone: '',
     email: '',
     location: '',
     currency: '',
@@ -32,8 +33,8 @@ export default function EditSettings() {
     const [form, setForm] = useState(initialForm);
     const [headerLogoFile, setHeaderLogoFile] = useState(null);
     const [footerLogoFile, setFooterLogoFile] = useState(null);
+    const [faviconFile, setFaviconFile] = useState(null);
     const [shopMenuImageFile, setShopMenuImageFile] = useState(null);
-    const [shopMenuImage2File, setShopMenuImage2File] = useState(null);
     const [socialIconFiles, setSocialIconFiles] = useState({});
     const [errors, setErrors] = useState({});
     const [requestError, setRequestError] = useState('');
@@ -42,13 +43,10 @@ export default function EditSettings() {
 
     const headerLogoPreview = useMemo(() => (headerLogoFile ? URL.createObjectURL(headerLogoFile) : ''), [headerLogoFile]);
     const footerLogoPreview = useMemo(() => (footerLogoFile ? URL.createObjectURL(footerLogoFile) : ''), [footerLogoFile]);
+    const faviconPreview = useMemo(() => (faviconFile ? URL.createObjectURL(faviconFile) : ''), [faviconFile]);
     const shopMenuImagePreview = useMemo(
         () => (shopMenuImageFile ? URL.createObjectURL(shopMenuImageFile) : ''),
         [shopMenuImageFile],
-    );
-    const shopMenuImage2Preview = useMemo(
-        () => (shopMenuImage2File ? URL.createObjectURL(shopMenuImage2File) : ''),
-        [shopMenuImage2File],
     );
 
     const socialIconPreviews = useMemo(() => {
@@ -79,8 +77,9 @@ export default function EditSettings() {
                 setForm({
                     header_logo: setting.payload?.header_logo || '',
                     footer_logo: setting.payload?.footer_logo || '',
+                    favicon: setting.payload?.favicon || '',
                     shop_menu_image: setting.payload?.shop_menu_image || '',
-                    shop_menu_image_2: setting.payload?.shop_menu_image_2 || '',
+                    contact_phone: setting.payload?.contact_phone || '',
                     email: setting.payload?.email || '',
                     location: setting.payload?.location || '',
                     currency: setting.payload?.currency || '',
@@ -136,11 +135,11 @@ export default function EditSettings() {
         return () => {
             if (headerLogoPreview) URL.revokeObjectURL(headerLogoPreview);
             if (footerLogoPreview) URL.revokeObjectURL(footerLogoPreview);
+            if (faviconPreview) URL.revokeObjectURL(faviconPreview);
             if (shopMenuImagePreview) URL.revokeObjectURL(shopMenuImagePreview);
-            if (shopMenuImage2Preview) URL.revokeObjectURL(shopMenuImage2Preview);
             Object.values(socialIconPreviews).forEach((url) => URL.revokeObjectURL(url));
         };
-    }, [headerLogoPreview, footerLogoPreview, shopMenuImagePreview, shopMenuImage2Preview, socialIconPreviews]);
+    }, [headerLogoPreview, footerLogoPreview, faviconPreview, shopMenuImagePreview, socialIconPreviews]);
 
     const handleChange = (event) => {
         const { name, value } = event.target;
@@ -215,8 +214,8 @@ export default function EditSettings() {
                 },
                 header_logo_file: headerLogoFile,
                 footer_logo_file: footerLogoFile,
+                favicon_file: faviconFile,
                 shop_menu_image_file: shopMenuImageFile,
-                shop_menu_image_2_file: shopMenuImage2File,
                 social_icon_files: socialIconFiles,
             });
 
@@ -252,14 +251,14 @@ export default function EditSettings() {
                     isSubmitting={isSubmitting}
                     headerLogoPreview={headerLogoPreview}
                     footerLogoPreview={footerLogoPreview}
+                    faviconPreview={faviconPreview}
                     shopMenuImagePreview={shopMenuImagePreview}
-                    shopMenuImage2Preview={shopMenuImage2Preview}
                     socialIconPreviews={socialIconPreviews}
                     onChange={handleChange}
                     onHeaderLogoChange={(event) => setHeaderLogoFile(event.target.files?.[0] || null)}
                     onFooterLogoChange={(event) => setFooterLogoFile(event.target.files?.[0] || null)}
+                    onFaviconChange={(event) => setFaviconFile(event.target.files?.[0] || null)}
                     onShopMenuImageChange={(event) => setShopMenuImageFile(event.target.files?.[0] || null)}
-                    onShopMenuImage2Change={(event) => setShopMenuImage2File(event.target.files?.[0] || null)}
                     onSocialChange={handleSocialChange}
                     onSocialIconChange={(index, file) =>
                         setSocialIconFiles((previous) => {

@@ -840,6 +840,7 @@ class CheckoutOrderController extends Controller
         return [
             'id' => (int) $order->id,
             'order_number' => (string) $order->order_number,
+            'orders_from' => (string) ($order->orders_from ?: 'website'),
             'status' => (string) $order->status,
             'first_name' => (string) $order->first_name,
             'last_name' => (string) $order->last_name,

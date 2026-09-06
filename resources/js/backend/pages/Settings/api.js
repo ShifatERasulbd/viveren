@@ -24,8 +24,9 @@ function normalizeSettingRecord(record) {
         payload: {
             header_logo: payload.header_logo || '',
             footer_logo: payload.footer_logo || '',
+            favicon: payload.favicon || '',
             shop_menu_image: payload.shop_menu_image || '',
-            shop_menu_image_2: payload.shop_menu_image_2 || '',
+            contact_phone: payload.contact_phone || '',
             email: payload.email || '',
             location: payload.location || '',
             currency: payload.currency || '',
@@ -63,8 +64,9 @@ function buildSettingsPayload(data = {}) {
     return {
         header_logo: data.header_logo || '',
         footer_logo: data.footer_logo || '',
+        favicon: data.favicon || '',
         shop_menu_image: data.shop_menu_image || '',
-        shop_menu_image_2: data.shop_menu_image_2 || '',
+        contact_phone: data.contact_phone || '',
         email: data.email || '',
         location: data.location || '',
         currency: data.currency || '',
@@ -91,10 +93,11 @@ function buildSettingsFormData(data = {}) {
 
     formData.append('header_logo_existing', payload.header_logo || '');
     formData.append('footer_logo_existing', payload.footer_logo || '');
+    formData.append('favicon_existing', payload.favicon || '');
     formData.append('shop_menu_image_existing', payload.shop_menu_image || '');
-    formData.append('shop_menu_image_2_existing', payload.shop_menu_image_2 || '');
     formData.append('social_media', JSON.stringify(payload.social_media));
     formData.append('frontend_utils', JSON.stringify(payload.frontend_utils));
+    formData.append('contact_phone', payload.contact_phone);
     formData.append('email', payload.email);
     formData.append('location', payload.location);
     formData.append('currency', payload.currency);
@@ -108,12 +111,12 @@ function buildSettingsFormData(data = {}) {
         formData.append('footer_logo_file', data.footer_logo_file);
     }
 
-    if (data.shop_menu_image_file instanceof File) {
-        formData.append('shop_menu_image_file', data.shop_menu_image_file);
+    if (data.favicon_file instanceof File) {
+        formData.append('favicon_file', data.favicon_file);
     }
 
-    if (data.shop_menu_image_2_file instanceof File) {
-        formData.append('shop_menu_image_2_file', data.shop_menu_image_2_file);
+    if (data.shop_menu_image_file instanceof File) {
+        formData.append('shop_menu_image_file', data.shop_menu_image_file);
     }
 
     if (data.social_icon_files && typeof data.social_icon_files === 'object') {
@@ -131,8 +134,8 @@ function hasUploadFiles(data = {}) {
     if (
         data.header_logo_file instanceof File
         || data.footer_logo_file instanceof File
+        || data.favicon_file instanceof File
         || data.shop_menu_image_file instanceof File
-        || data.shop_menu_image_2_file instanceof File
     ) {
         return true;
     }

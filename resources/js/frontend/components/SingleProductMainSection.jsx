@@ -202,6 +202,45 @@ function resolveColorVariantItems(mapping, selectedColor, colorRecords) {
     return [];
 }
 
+function resolveVariantSku(variantRows, selectedColor, selectedSize, colorRecords, sizeNameLookup) {
+    if (!Array.isArray(variantRows) || variantRows.length === 0) {
+        return '';
+    }
+
+    const rawColor = String(selectedColor || '').trim().toLowerCase();
+    const matchedColorRecord = colorRecords.find((record) => String(record?.id).toLowerCase() === rawColor)
+        || colorRecords.find((record) => String(record?.name || '').trim().toLowerCase() === rawColor);
+    const colorCandidates = [
+        rawColor,
+        String(matchedColorRecord?.id || '').trim().toLowerCase(),
+        String(matchedColorRecord?.name || '').trim().toLowerCase(),
+    ].filter(Boolean);
+
+    const rawSize = String(selectedSize || '').trim().toLowerCase();
+    const matchedSizeId = Object.keys(sizeNameLookup).find(
+        (id) => String(sizeNameLookup[id] || '').trim().toLowerCase() === rawSize,
+    );
+    const sizeCandidates = [rawSize, String(matchedSizeId || '').trim().toLowerCase()].filter(Boolean);
+
+    const rowMatchesColor = (row) => parseOptionTokens(row?.color)
+        .map((token) => token.toLowerCase())
+        .some((token) => colorCandidates.includes(token));
+
+    const rowMatchesSize = (row) => parseOptionTokens(row?.size)
+        .map((token) => token.toLowerCase())
+        .some((token) => sizeCandidates.includes(token));
+
+    const exactMatch = variantRows.find(
+        (row) => String(row?.sku || '').trim() && rowMatchesColor(row) && rowMatchesSize(row),
+    );
+    if (exactMatch) {
+        return String(exactMatch.sku).trim();
+    }
+
+    const colorOnlyMatch = variantRows.find((row) => String(row?.sku || '').trim() && rowMatchesColor(row));
+    return colorOnlyMatch ? String(colorOnlyMatch.sku).trim() : '';
+}
+
 function resolveInitialColor(preferredColor, availableColors, colorRecords = [], allowFallback = true) {
     const requested = String(preferredColor || '').trim();
     if (!requested) {
@@ -271,6 +310,11 @@ export default function SingleProductMainSection({ product, initialColor = '', c
     });
     const [selectedSize, setSelectedSize] = useState(sizes[0] || '');
     const [quantity, setQuantity] = useState(1);
+
+    const variantSku = useMemo(
+        () => resolveVariantSku(product?.variant_rows, selectedColor, selectedSize, colorRecords, sizeNameLookup),
+        [product?.variant_rows, selectedColor, selectedSize, colorRecords, sizeNameLookup],
+    );
 
     useEffect(() => {
         if (hasRequestedColor && !isColorLookupReady) {
@@ -533,7 +577,7 @@ export default function SingleProductMainSection({ product, initialColor = '', c
                                 id: product?.id,
                                 slug: product?.slug,
                                 name: String(product?.name || 'Untitled Product'),
-                                sku: String(product?.sku || 'N/A'),
+                                sku: variantSku || String(product?.sku || 'N/A'),
                                 price: `$${Number(product?.price || 0).toFixed(2)}`,
                                 description: String(product?.description || 'No description available.'),
                                 fit: String(product?.fit || product?.long_description || ''),

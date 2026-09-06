@@ -54,12 +54,10 @@ export default function SettingsTable({
                         className="w-full pl-9"
                     />
                 </div>
-                {onAdd && (
-                    <Button className="gap-2 w-full md:w-auto" onClick={onAdd}>
-                        <Plus />
-                        Add Setting
-                    </Button>
-                )}
+                <Button className="gap-2 w-full md:w-auto" onClick={onAdd}>
+                    <Plus />
+                    Add Setting
+                </Button>
             </div>
 
             <Card className="w-full overflow-hidden border border-border/80 shadow-sm">
@@ -73,8 +71,6 @@ export default function SettingsTable({
                                 <TableHead>Currency</TableHead>
                                 <TableHead>Header Logo</TableHead>
                                 <TableHead>Footer Logo</TableHead>
-                                <TableHead>Shop Menu Img 1</TableHead>
-                                <TableHead>Shop Menu Img 2</TableHead>
                                 <TableHead>Social</TableHead>
                                 <TableHead className="text-right">Action</TableHead>
                             </TableRow>
@@ -82,7 +78,7 @@ export default function SettingsTable({
                         <TableBody>
                             {isLoading && (
                                 <TableRow>
-                                    <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
+                                    <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                                         Loading settings...
                                     </TableCell>
                                 </TableRow>
@@ -90,7 +86,7 @@ export default function SettingsTable({
 
                             {!isLoading && settings.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
+                                    <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                                         No settings found.
                                     </TableCell>
                                 </TableRow>
@@ -98,7 +94,7 @@ export default function SettingsTable({
 
                             {!isLoading && filtered.length === 0 && settings.length > 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
+                                    <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                                         No settings match your search.
                                     </TableCell>
                                 </TableRow>
@@ -125,20 +121,6 @@ export default function SettingsTable({
                                             <TableCell>
                                                 {payload.footer_logo ? (
                                                     <img src={payload.footer_logo} alt="Footer logo" className="h-10 w-10 rounded border object-contain" />
-                                                ) : (
-                                                    <span className="text-muted-foreground">-</span>
-                                                )}
-                                            </TableCell>
-                                            <TableCell>
-                                                {payload.shop_menu_image ? (
-                                                    <img src={payload.shop_menu_image} alt="Shop menu img 1" className="h-10 w-10 rounded border object-cover" />
-                                                ) : (
-                                                    <span className="text-muted-foreground">-</span>
-                                                )}
-                                            </TableCell>
-                                            <TableCell>
-                                                {payload.shop_menu_image_2 ? (
-                                                    <img src={payload.shop_menu_image_2} alt="Shop menu img 2" className="h-10 w-10 rounded border object-cover" />
                                                 ) : (
                                                     <span className="text-muted-foreground">-</span>
                                                 )}

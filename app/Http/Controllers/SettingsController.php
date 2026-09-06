@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Settings;
+use App\Support\ImageUploadOptimizer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -10,6 +11,10 @@ use Illuminate\Support\Facades\File;
 
 class SettingsController extends Controller
 {
+    public function __construct(private readonly ImageUploadOptimizer $imageUploadOptimizer)
+    {
+    }
+
     public function publicBestSellersSection(): JsonResponse
     {
         return response()->json($this->resolveBestSellersSectionConfig());
@@ -63,23 +68,24 @@ class SettingsController extends Controller
     public function store(Request $request): JsonResponse
     {
         $this->normalizeJsonFields($request, ['social_media', 'frontend_utils']);
-        $this->normalizeEmptyStringFields($request, ['email']);
+        $this->normalizeEmptyStringFields($request, ['email', 'contact_phone']);
 
         $validated = $request->validate([
             'header_logo_existing' => 'nullable|string|max:2048',
             'footer_logo_existing' => 'nullable|string|max:2048',
+            'favicon_existing' => 'nullable|string|max:2048',
             'shop_menu_image_existing' => 'nullable|string|max:2048',
-            'shop_menu_image_2_existing' => 'nullable|string|max:2048',
             'header_logo_file' => 'nullable|image|mimes:jpeg,jpg,png,webp,svg,avif|max:4096',
             'footer_logo_file' => 'nullable|image|mimes:jpeg,jpg,png,webp,svg,avif|max:4096',
+            'favicon_file' => 'nullable|image|mimes:jpeg,jpg,png,webp,svg,avif,ico|max:4096',
             'shop_menu_image_file' => 'nullable|image|mimes:jpeg,jpg,png,webp,avif|max:4096',
-            'shop_menu_image_2_file' => 'nullable|image|mimes:jpeg,jpg,png,webp,avif|max:4096',
             'social_media' => 'nullable|array',
             'social_media.*.name' => 'nullable|string|max:255',
             'social_media.*.link' => 'nullable|string|max:2048',
             'social_media.*.icon' => 'nullable|string|max:2048',
             'social_icon_files' => 'nullable|array',
             'social_icon_files.*' => 'nullable|image|mimes:jpeg,jpg,png,webp,svg,avif|max:4096',
+            'contact_phone' => 'nullable|string|max:50',
             'email' => 'nullable|email|max:255',
             'location' => 'nullable|string|max:4000',
             'currency' => 'nullable|string|max:50',
@@ -110,23 +116,24 @@ class SettingsController extends Controller
     public function update(Request $request, Settings $setting): JsonResponse
     {
         $this->normalizeJsonFields($request, ['social_media', 'frontend_utils']);
-        $this->normalizeEmptyStringFields($request, ['email']);
+        $this->normalizeEmptyStringFields($request, ['email', 'contact_phone']);
 
         $validated = $request->validate([
             'header_logo_existing' => 'nullable|string|max:2048',
             'footer_logo_existing' => 'nullable|string|max:2048',
+            'favicon_existing' => 'nullable|string|max:2048',
             'shop_menu_image_existing' => 'nullable|string|max:2048',
-            'shop_menu_image_2_existing' => 'nullable|string|max:2048',
             'header_logo_file' => 'nullable|image|mimes:jpeg,jpg,png,webp,svg,avif|max:4096',
             'footer_logo_file' => 'nullable|image|mimes:jpeg,jpg,png,webp,svg,avif|max:4096',
+            'favicon_file' => 'nullable|image|mimes:jpeg,jpg,png,webp,svg,avif,ico|max:4096',
             'shop_menu_image_file' => 'nullable|image|mimes:jpeg,jpg,png,webp,avif|max:4096',
-            'shop_menu_image_2_file' => 'nullable|image|mimes:jpeg,jpg,png,webp,avif|max:4096',
             'social_media' => 'nullable|array',
             'social_media.*.name' => 'nullable|string|max:255',
             'social_media.*.link' => 'nullable|string|max:2048',
             'social_media.*.icon' => 'nullable|string|max:2048',
             'social_icon_files' => 'nullable|array',
             'social_icon_files.*' => 'nullable|image|mimes:jpeg,jpg,png,webp,svg,avif|max:4096',
+            'contact_phone' => 'nullable|string|max:50',
             'email' => 'nullable|email|max:255',
             'location' => 'nullable|string|max:4000',
             'currency' => 'nullable|string|max:50',
@@ -156,8 +163,8 @@ class SettingsController extends Controller
         if (is_array($payload)) {
             $this->deleteUploadedFile($payload['header_logo'] ?? null);
             $this->deleteUploadedFile($payload['footer_logo'] ?? null);
+            $this->deleteUploadedFile($payload['favicon'] ?? null);
             $this->deleteUploadedFile($payload['shop_menu_image'] ?? null);
-            $this->deleteUploadedFile($payload['shop_menu_image_2'] ?? null);
 
             $socialMedia = is_array($payload['social_media'] ?? null) ? $payload['social_media'] : [];
             foreach ($socialMedia as $item) {
@@ -190,18 +197,25 @@ class SettingsController extends Controller
             $this->deleteUploadedFile($existingPayload['footer_logo'] ?? null);
         }
 
+        $favicon = $validated['favicon_existing']
+            ?? ($existingPayload['favicon'] ?? '');
+        if ($request->hasFile('favicon_file')) {
+            $favicon = $this->storeUploadedFileToPublic($request->file('favicon_file'), 'uploads/settings/favicon');
+            $this->deleteUploadedFile($existingPayload['favicon'] ?? null);
+        }
+
         $shopMenuImage = $validated['shop_menu_image_existing']
             ?? ($existingPayload['shop_menu_image'] ?? '');
         if ($request->hasFile('shop_menu_image_file')) {
-            $shopMenuImage = $this->storeUploadedFileToPublic($request->file('shop_menu_image_file'), 'uploads/category');
+            $shopMenuImage = $this->imageUploadOptimizer->storeAsWebp(
+                $request->file('shop_menu_image_file'),
+                'uploads/category',
+                'shop_menu_',
+                1400,
+                1400,
+                80
+            );
             $this->deleteUploadedFile($existingPayload['shop_menu_image'] ?? null);
-        }
-
-        $shopMenuImage2 = $validated['shop_menu_image_2_existing']
-            ?? ($existingPayload['shop_menu_image_2'] ?? '');
-        if ($request->hasFile('shop_menu_image_2_file')) {
-            $shopMenuImage2 = $this->storeUploadedFileToPublic($request->file('shop_menu_image_2_file'), 'uploads/category');
-            $this->deleteUploadedFile($existingPayload['shop_menu_image_2'] ?? null);
         }
 
         $socialMedia = is_array($validated['social_media'] ?? null) ? $validated['social_media'] : [];
@@ -228,8 +242,9 @@ class SettingsController extends Controller
         return [
             'header_logo' => $headerLogo,
             'footer_logo' => $footerLogo,
+            'favicon' => $favicon,
             'shop_menu_image' => $shopMenuImage,
-            'shop_menu_image_2' => $shopMenuImage2,
+            'contact_phone' => (string) ($validated['contact_phone'] ?? ($existingPayload['contact_phone'] ?? '')),
             'email' => (string) ($validated['email'] ?? ($existingPayload['email'] ?? '')),
             'location' => (string) ($validated['location'] ?? ($existingPayload['location'] ?? '')),
             'currency' => (string) ($validated['currency'] ?? ($existingPayload['currency'] ?? '')),

@@ -8,7 +8,9 @@ import { createSetting } from './api';
 const initialForm = {
     header_logo: '',
     footer_logo: '',
+    favicon: '',
     shop_menu_image: '',
+    contact_phone: '',
     email: '',
     location: '',
     currency: '',
@@ -17,11 +19,11 @@ const initialForm = {
     frontend_utils: {
         timeless_font_family: '',
         features_font_family: '',
-        hero_default_font_family: 'Aeonik',
+        hero_default_font_family: 'Bebas Neue',
         hero_font_family_options_json:
-            '[{"label":"Aeonik","value":"Aeonik"},{"label":"Aeonik","value":"Aeonik"},{"label":"Times New Roman","value":"times-new-roman"},{"label":"Verdana","value":"verdana"},{"label":"Trebuchet MS","value":"trebuchet-ms"},{"label":"Courier New","value":"courier-new"}]',
+            '[{"label":"Bebas Neue","value":"Bebas Neue"},{"label":"Bebas Neue","value":"Bebas Neue"},{"label":"Times New Roman","value":"times-new-roman"},{"label":"Verdana","value":"verdana"},{"label":"Trebuchet MS","value":"trebuchet-ms"},{"label":"Courier New","value":"courier-new"}]',
         hero_font_family_css_map_json:
-            '{"aeonik":"\\"Aeonik\\", ui-sans-serif, system-ui, sans-serif","georgia":"Georgia, \\"Times New Roman\\", serif","times-new-roman":"\\"Times New Roman\\", Times, serif","verdana":"Verdana, Geneva, sans-serif","trebuchet-ms":"\\"Trebuchet MS\\", Tahoma, sans-serif","courier-new":"\\"Courier New\\", Courier, monospace"}',
+            '{"instrument-sans":"\\"Instrument Sans\\", ui-sans-serif, system-ui, sans-serif","georgia":"Georgia, \\"Times New Roman\\", serif","times-new-roman":"\\"Times New Roman\\", Times, serif","verdana":"Verdana, Geneva, sans-serif","trebuchet-ms":"\\"Trebuchet MS\\", Tahoma, sans-serif","courier-new":"\\"Courier New\\", Courier, monospace"}',
     },
 };
 
@@ -32,8 +34,8 @@ export default function AddSettings() {
     const [form, setForm] = useState(initialForm);
     const [headerLogoFile, setHeaderLogoFile] = useState(null);
     const [footerLogoFile, setFooterLogoFile] = useState(null);
+    const [faviconFile, setFaviconFile] = useState(null);
     const [shopMenuImageFile, setShopMenuImageFile] = useState(null);
-    const [shopMenuImage2File, setShopMenuImage2File] = useState(null);
     const [socialIconFiles, setSocialIconFiles] = useState({});
     const [errors, setErrors] = useState({});
     const [requestError, setRequestError] = useState('');
@@ -41,13 +43,10 @@ export default function AddSettings() {
 
     const headerLogoPreview = useMemo(() => (headerLogoFile ? URL.createObjectURL(headerLogoFile) : ''), [headerLogoFile]);
     const footerLogoPreview = useMemo(() => (footerLogoFile ? URL.createObjectURL(footerLogoFile) : ''), [footerLogoFile]);
+    const faviconPreview = useMemo(() => (faviconFile ? URL.createObjectURL(faviconFile) : ''), [faviconFile]);
     const shopMenuImagePreview = useMemo(
         () => (shopMenuImageFile ? URL.createObjectURL(shopMenuImageFile) : ''),
         [shopMenuImageFile],
-    );
-    const shopMenuImage2Preview = useMemo(
-        () => (shopMenuImage2File ? URL.createObjectURL(shopMenuImage2File) : ''),
-        [shopMenuImage2File],
     );
 
     const socialIconPreviews = useMemo(() => {
@@ -68,11 +67,11 @@ export default function AddSettings() {
         return () => {
             if (headerLogoPreview) URL.revokeObjectURL(headerLogoPreview);
             if (footerLogoPreview) URL.revokeObjectURL(footerLogoPreview);
+            if (faviconPreview) URL.revokeObjectURL(faviconPreview);
             if (shopMenuImagePreview) URL.revokeObjectURL(shopMenuImagePreview);
-            if (shopMenuImage2Preview) URL.revokeObjectURL(shopMenuImage2Preview);
             Object.values(socialIconPreviews).forEach((url) => URL.revokeObjectURL(url));
         };
-    }, [headerLogoPreview, footerLogoPreview, shopMenuImagePreview, shopMenuImage2Preview, socialIconPreviews]);
+    }, [headerLogoPreview, footerLogoPreview, faviconPreview, shopMenuImagePreview, socialIconPreviews]);
 
     const handleChange = (event) => {
         const { name, value } = event.target;
@@ -147,8 +146,8 @@ export default function AddSettings() {
                 },
                 header_logo_file: headerLogoFile,
                 footer_logo_file: footerLogoFile,
+                favicon_file: faviconFile,
                 shop_menu_image_file: shopMenuImageFile,
-                shop_menu_image_2_file: shopMenuImage2File,
                 social_icon_files: socialIconFiles,
             });
 
@@ -180,14 +179,14 @@ export default function AddSettings() {
                     isSubmitting={isSubmitting}
                     headerLogoPreview={headerLogoPreview}
                     footerLogoPreview={footerLogoPreview}
+                    faviconPreview={faviconPreview}
                     shopMenuImagePreview={shopMenuImagePreview}
-                    shopMenuImage2Preview={shopMenuImage2Preview}
                     socialIconPreviews={socialIconPreviews}
                     onChange={handleChange}
                     onHeaderLogoChange={(event) => setHeaderLogoFile(event.target.files?.[0] || null)}
                     onFooterLogoChange={(event) => setFooterLogoFile(event.target.files?.[0] || null)}
+                    onFaviconChange={(event) => setFaviconFile(event.target.files?.[0] || null)}
                     onShopMenuImageChange={(event) => setShopMenuImageFile(event.target.files?.[0] || null)}
-                    onShopMenuImage2Change={(event) => setShopMenuImage2File(event.target.files?.[0] || null)}
                     onSocialChange={handleSocialChange}
                     onSocialIconChange={(index, file) =>
                         setSocialIconFiles((previous) => {
