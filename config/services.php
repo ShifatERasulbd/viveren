@@ -90,6 +90,8 @@ return [
         'sku_size_trait_id' => env('JOOR_SKU_SIZE_TRAIT_ID', 'U0tVVHJhaXQ6U2l6ZQ=='),
         'default_sku_size' => env('JOOR_DEFAULT_SKU_SIZE', 'One Size'),
         'price_type_id' => env('JOOR_PRICE_TYPE_ID'),
+        // JOOR Season Years ID required when creating a new linesheet (Collection) for a sub-category.
+        'collection_season_id' => env('JOOR_COLLECTION_SEASON_ID'),
         // Web portal used to build "view in JOOR" links, shown alongside the
         // GET /orders/sku_line_items line-item breakdown.
         'portal_base_url' => env('JOOR_PORTAL_BASE_URL', 'https://sandbox.jooraccess.com'),

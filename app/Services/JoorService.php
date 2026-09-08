@@ -16,6 +16,7 @@ use RuntimeException;
 class JoorService
 {
     private ?array $joorCategoriesCache = null;
+    private ?string $joorDefaultSeasonIdCache = null;
 
     public function syncProduct(Product $product): array
     {
@@ -196,6 +197,179 @@ class JoorService
                 'query' => $query,
             ],
         ];
+    }
+
+    /**
+     * Creates or updates a JOOR Collection ("linesheet") mirroring this sub-category's name and
+     * current products, so JOOR always reflects what's in the sub-category. Items are addressed
+     * by product SKU (external_id) rather than JOOR's product id, since we don't persist that.
+     */
+    public function syncSubCategoryLinesheet(SubCategory $subCategory): array
+    {
+        $items = $this->buildCollectionItems($subCategory);
+        $collectionId = trim((string) $subCategory->joor_collection_id);
+
+        if ($collectionId === '') {
+            return $this->createSubCategoryLinesheet($subCategory, $items);
+        }
+
+        $query = $this->resolveBaseQuery();
+        $query['action'] = 'REPLACE_ITEMS';
+        $payload = [[
+            'id' => $collectionId,
+            'name' => (string) $subCategory->name,
+            'archived' => false,
+            'items' => $items,
+        ]];
+
+        $url = $this->apiUrl('/collections/bulk_update_by_product_external_id');
+        $response = $this->request()->post($url . '?' . http_build_query($query), $payload);
+        $body = $response->json() ?? ['raw' => $response->body()];
+        $hasErrors = is_array($body) && is_array($body['errors'] ?? null) && count($body['errors']) > 0;
+
+        // The stored collection id may no longer exist on JOOR's side (e.g. removed in their
+        // portal) — fall back to (re)creating it instead of leaving the sub-category unsynced.
+        if ($hasErrors && $this->hasNotFoundCollectionError($body)) {
+            return $this->createSubCategoryLinesheet($subCategory, $items);
+        }
+
+        return [
+            'status' => $response->status(),
+            'body' => $body,
+            'ok' => $response->successful() && ! $hasErrors,
+            'request' => [
+                'url' => $url,
+                'query' => $query,
+                'payload' => $payload,
+            ],
+        ];
+    }
+
+    /**
+     * Archives the linesheet tied to this sub-category (JOOR has no hard-delete for
+     * collections), called right before the sub-category row itself is removed.
+     */
+    public function archiveSubCategoryLinesheet(SubCategory $subCategory): array
+    {
+        $collectionId = trim((string) $subCategory->joor_collection_id);
+        if ($collectionId === '') {
+            return ['ok' => true, 'skipped' => true, 'reason' => 'Sub-category has no JOOR linesheet to archive.'];
+        }
+
+        $query = $this->resolveBaseQuery();
+        $payload = [[
+            'id' => $collectionId,
+            'archived' => true,
+        ]];
+
+        $url = $this->apiUrl('/collections/bulk_update_by_product_external_id');
+        $response = $this->request()->post($url . '?' . http_build_query($query), $payload);
+        $body = $response->json() ?? ['raw' => $response->body()];
+        $hasErrors = is_array($body) && is_array($body['errors'] ?? null) && count($body['errors']) > 0;
+
+        return [
+            'status' => $response->status(),
+            'body' => $body,
+            'ok' => $response->successful() && ! $hasErrors,
+            'request' => [
+                'url' => $url,
+                'query' => $query,
+                'payload' => $payload,
+            ],
+        ];
+    }
+
+    private function createSubCategoryLinesheet(SubCategory $subCategory, array $items): array
+    {
+        $seasonId = $this->resolveCollectionSeasonId();
+        $query = $this->resolveBaseQuery();
+        $payload = [[
+            'name' => (string) $subCategory->name,
+            'external_id' => $this->buildCollectionExternalId($subCategory),
+            'season_id' => $seasonId,
+            'items' => $items,
+        ]];
+
+        $url = $this->apiUrl('/collections/bulk_create_by_product_external_id');
+        $response = $this->request()->post($url . '?' . http_build_query($query), $payload);
+        $body = $response->json() ?? ['raw' => $response->body()];
+        $hasErrors = is_array($body) && is_array($body['errors'] ?? null) && count($body['errors']) > 0;
+        $ok = $response->successful() && ! $hasErrors;
+
+        $newCollectionId = data_get($body, 'data.0.id');
+        if ($ok && is_scalar($newCollectionId) && (string) $newCollectionId !== '') {
+            $subCategory->forceFill(['joor_collection_id' => (string) $newCollectionId])->save();
+        }
+
+        return [
+            'status' => $response->status(),
+            'body' => $body,
+            'ok' => $ok,
+            'request' => [
+                'url' => $url,
+                'query' => $query,
+                'payload' => $payload,
+            ],
+        ];
+    }
+
+    private function buildCollectionItems(SubCategory $subCategory): array
+    {
+        return Product::query()
+            ->where('subcategory_id', $subCategory->id)
+            ->pluck('sku')
+            ->filter(static fn ($sku): bool => is_string($sku) && trim($sku) !== '')
+            ->map(static fn (string $sku): array => ['product_external_id' => trim($sku)])
+            ->values()
+            ->all();
+    }
+
+    private function buildCollectionExternalId(SubCategory $subCategory): string
+    {
+        return 'subcategory-' . $subCategory->id;
+    }
+
+    // Uses JOOR_COLLECTION_SEASON_ID when configured, otherwise falls back to the first season
+    // returned by GET /seasons so linesheet creation doesn't hard-fail on a missing setting.
+    private function resolveCollectionSeasonId(): string
+    {
+        $configuredSeasonId = trim((string) $this->config('collection_season_id', ''));
+        if ($configuredSeasonId !== '') {
+            return $configuredSeasonId;
+        }
+
+        if ($this->joorDefaultSeasonIdCache !== null) {
+            return $this->joorDefaultSeasonIdCache;
+        }
+
+        $query = $this->resolveBaseQuery();
+        $response = $this->request()->get($this->apiUrl('/seasons') . '?' . http_build_query($query));
+        $body = $response->json() ?? [];
+        $seasons = is_array($body['data'] ?? null) ? $body['data'] : [];
+        $firstSeasonId = data_get($seasons, '0.id');
+
+        if (! is_scalar($firstSeasonId) || trim((string) $firstSeasonId) === '') {
+            throw new RuntimeException('JOOR collection season ID is required: set JOOR_COLLECTION_SEASON_ID, or configure at least one Season in JOOR.');
+        }
+
+        $this->joorDefaultSeasonIdCache = (string) $firstSeasonId;
+
+        return $this->joorDefaultSeasonIdCache;
+    }
+
+    private function hasNotFoundCollectionError(mixed $body): bool
+    {
+        if (! is_array($body) || ! is_array($body['errors'] ?? null)) {
+            return false;
+        }
+
+        foreach ($body['errors'] as $error) {
+            if (is_array($error) && strtoupper((string) ($error['status'] ?? '')) === 'NOT_FOUND') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function resolveBaseQuery(): array

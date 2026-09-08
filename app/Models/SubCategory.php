@@ -14,6 +14,7 @@ class SubCategory extends Model
         'slug',
         'image',
         'category_id',
+        'joor_collection_id',
     ];
 
     public function category(){

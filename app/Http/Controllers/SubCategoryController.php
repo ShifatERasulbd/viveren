@@ -3,18 +3,70 @@
 namespace App\Http\Controllers;
 
 use App\Models\SubCategory;
+use App\Services\JoorService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Throwable;
 
 class SubCategoryController extends Controller
 {
+    public function __construct(private readonly JoorService $joorService)
+    {
+    }
+
     private function toResponseArray(SubCategory $subCategory): array
     {
         $data = $subCategory->toArray();
         $data['image_url'] = $subCategory->image ? Storage::url($subCategory->image) : null;
 
         return $data;
+    }
+
+    /**
+     * Best-effort create/update of the JOOR linesheet (Collection) mirroring this sub-category.
+     * Never throws — a JOOR outage must not block sub-category CRUD.
+     */
+    private function syncLinesheet(SubCategory $subCategory): array
+    {
+        $synced = false;
+        $error = null;
+
+        try {
+            $response = $this->joorService->syncSubCategoryLinesheet($subCategory);
+            $synced = (bool) ($response['ok'] ?? false);
+
+            if (! $synced) {
+                $errors = data_get($response, 'body.errors', []);
+                $error = is_array($errors) ? json_encode($errors) : 'JOOR linesheet sync failed.';
+            }
+        } catch (Throwable $exception) {
+            Log::warning('Failed to sync sub-category linesheet to JOOR.', [
+                'sub_category_id' => $subCategory->id,
+                'error' => $exception->getMessage(),
+            ]);
+
+            $error = $exception->getMessage();
+        }
+
+        return ['joor_synced' => $synced, 'joor_sync_error' => $error];
+    }
+
+    /**
+     * Best-effort archive of the JOOR linesheet tied to this sub-category (JOOR has no
+     * hard-delete for collections). Never throws — must not block sub-category deletion.
+     */
+    private function archiveLinesheet(SubCategory $subCategory): void
+    {
+        try {
+            $this->joorService->archiveSubCategoryLinesheet($subCategory);
+        } catch (Throwable $exception) {
+            Log::warning('Failed to archive sub-category linesheet in JOOR.', [
+                'sub_category_id' => $subCategory->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
     }
 
     public function index(): JsonResponse
@@ -42,8 +94,9 @@ class SubCategoryController extends Controller
         }
 
         $subcategory = SubCategory::query()->create($validated)->load('category');
+        $joorResult = $this->syncLinesheet($subcategory);
 
-        return response()->json($this->toResponseArray($subcategory), 201);
+        return response()->json([...$this->toResponseArray($subcategory->fresh()->load('category')), ...$joorResult], 201);
     }
 
     public function show(SubCategory $sub_category): JsonResponse
@@ -69,8 +122,9 @@ class SubCategoryController extends Controller
         }
 
         $sub_category->update($validated);
+        $joorResult = $this->syncLinesheet($sub_category);
 
-        return response()->json($this->toResponseArray($sub_category->fresh()->load('category')));
+        return response()->json([...$this->toResponseArray($sub_category->fresh()->load('category')), ...$joorResult]);
     }
 
     public function destroy(SubCategory $sub_category): JsonResponse
@@ -79,6 +133,7 @@ class SubCategoryController extends Controller
             Storage::disk('public')->delete($sub_category->image);
         }
 
+        $this->archiveLinesheet($sub_category);
         $sub_category->delete();
 
         return response()->json(null, 204);
