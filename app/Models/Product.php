@@ -46,6 +46,7 @@ class Product extends Model
         'position',
         'show_on_best_sellers',
         'combo_product_ids',
+        'is_active',
     ];
 
     protected function casts(): array
@@ -66,6 +67,7 @@ class Product extends Model
             'stock' => 'integer',
             'position' => 'integer',
             'show_on_best_sellers' => 'boolean',
+            'is_active' => 'boolean',
         ];
     }
 }

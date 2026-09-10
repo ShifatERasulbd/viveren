@@ -78,6 +78,7 @@ class ProductController extends Controller
         }
 
         $products = Product::select($columns)
+            ->when(Schema::hasColumn('products', 'is_active'), fn ($query) => $query->where('is_active', true))
             ->orderByRaw('position IS NULL')
             ->orderBy('position')
             ->orderByDesc('created_at')
@@ -151,12 +152,14 @@ class ProductController extends Controller
 
         if (! empty($attachedProductIds)) {
             $products = Product::select($columns)
+                ->when(Schema::hasColumn('products', 'is_active'), fn ($query) => $query->where('is_active', true))
                 ->whereIn('id', $attachedProductIds)
                 ->get()
                 ->sortBy(static fn (Product $product): int => array_search($product->id, $attachedProductIds, true))
                 ->values();
         } else {
             $products = Product::select($columns)
+                ->when(Schema::hasColumn('products', 'is_active'), fn ($query) => $query->where('is_active', true))
                 ->orderByDesc('id')
                 ->take(24)
                 ->get();
@@ -224,6 +227,7 @@ class ProductController extends Controller
 
         $products = Product::query()
             ->select($columns)
+            ->when(Schema::hasColumn('products', 'is_active'), fn ($query) => $query->where('is_active', true))
             ->orderByRaw('position IS NULL')
             ->orderBy('position')
             ->orderByDesc('created_at')
@@ -668,6 +672,29 @@ class ProductController extends Controller
             'joor_synced' => $joorSynced,
             'joor_sync_error' => $joorSyncError,
             'joor_response' => $joorResponse,
+        ]);
+    }
+
+    public function toggleStatus(Request $request, string $product): JsonResponse
+    {
+        $productModel = $this->resolveProductModel($product);
+
+        if (! $productModel) {
+            return response()->json([
+                'message' => 'Product not found.',
+            ], 404);
+        }
+
+        $isActive = $request->has('is_active')
+            ? $request->boolean('is_active')
+            : ! $productModel->is_active;
+
+        $productModel->is_active = $isActive;
+        $productModel->save();
+
+        return response()->json([
+            'message' => $isActive ? 'Product enabled successfully' : 'Product disabled successfully',
+            'product' => $productModel,
         ]);
     }
 

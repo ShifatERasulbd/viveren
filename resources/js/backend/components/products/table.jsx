@@ -1,5 +1,5 @@
 import { Fragment, useMemo, useState } from 'react';
-import { ChevronDown, ChevronRight, GripVertical, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, GripVertical, Pencil, Plus, Power, PowerOff, Search, Trash2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -25,6 +25,8 @@ export default function ProductTable({
     onSync,
     onReorder,
     isReordering,
+    onToggleStatus,
+    togglingId,
 }) {
     const [search, setSearch] = useState('');
     const [expandedGroups, setExpandedGroups] = useState({});
@@ -260,13 +262,14 @@ export default function ProductTable({
                                 <TableHead className="text-center">Size Chart</TableHead>
                                 <TableHead className="text-right">Stock</TableHead>
                                 <TableHead className="text-right">Price</TableHead>
+                                <TableHead className="text-center">Status</TableHead>
                                 <TableHead className="text-right">Action</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {isLoading && (
                                 <TableRow>
-                                    <TableCell colSpan={12} className="h-24 text-center text-muted-foreground">
+                                    <TableCell colSpan={13} className="h-24 text-center text-muted-foreground">
                                         Loading products...
                                     </TableCell>
                                 </TableRow>
@@ -274,7 +277,7 @@ export default function ProductTable({
 
                             {!isLoading && products.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={12} className="h-24 text-center text-muted-foreground">
+                                    <TableCell colSpan={13} className="h-24 text-center text-muted-foreground">
                                         No products found.
                                     </TableCell>
                                 </TableRow>
@@ -282,7 +285,7 @@ export default function ProductTable({
 
                             {!isLoading && groupedProducts.length === 0 && products.length > 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={12} className="h-24 text-center text-muted-foreground">
+                                    <TableCell colSpan={13} className="h-24 text-center text-muted-foreground">
                                         No products match your search.
                                     </TableCell>
                                 </TableRow>
@@ -290,7 +293,7 @@ export default function ProductTable({
 
                             {!isLoading && hasActiveSearch && (
                                 <TableRow>
-                                    <TableCell colSpan={12} className="h-10 text-center text-xs text-muted-foreground">
+                                    <TableCell colSpan={13} className="h-10 text-center text-xs text-muted-foreground">
                                         Clear search to drag and reposition products.
                                     </TableCell>
                                 </TableRow>
@@ -361,6 +364,35 @@ export default function ProductTable({
                                                 <TableCell className="text-right">{primary.stock ?? 0}</TableCell>
                                                 <TableCell className="text-right">
                                                     {Number(primary.price || 0).toFixed(2)}
+                                                </TableCell>
+                                                <TableCell className="text-center">
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <span
+                                                            className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                                                                primary.is_active === false
+                                                                    ? 'bg-destructive/10 text-destructive'
+                                                                    : 'bg-green-100 text-green-700'
+                                                            }`}
+                                                        >
+                                                            {primary.is_active === false ? 'Disabled' : 'Enabled'}
+                                                        </span>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="h-7 gap-1 px-2 text-xs"
+                                                            onClick={() => onToggleStatus?.(primary)}
+                                                            disabled={togglingId === primary.id}
+                                                            type="button"
+                                                            onMouseDown={(event) => event.stopPropagation()}
+                                                        >
+                                                            {primary.is_active === false ? (
+                                                                <Power className="h-3.5 w-3.5" />
+                                                            ) : (
+                                                                <PowerOff className="h-3.5 w-3.5" />
+                                                            )}
+                                                            {primary.is_active === false ? 'Enable' : 'Disable'}
+                                                        </Button>
+                                                    </div>
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <div className="flex items-center justify-end gap-1">
@@ -435,6 +467,34 @@ export default function ProductTable({
                                                         <TableCell className="text-right">{variant.stock ?? 0}</TableCell>
                                                         <TableCell className="text-right">
                                                             {Number(variant.price || 0).toFixed(2)}
+                                                        </TableCell>
+                                                        <TableCell className="text-center">
+                                                            <div className="flex items-center justify-center gap-2">
+                                                                <span
+                                                                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                                                                        variant.is_active === false
+                                                                            ? 'bg-destructive/10 text-destructive'
+                                                                            : 'bg-green-100 text-green-700'
+                                                                    }`}
+                                                                >
+                                                                    {variant.is_active === false ? 'Disabled' : 'Enabled'}
+                                                                </span>
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    className="h-7 gap-1 px-2 text-xs"
+                                                                    onClick={() => onToggleStatus?.(variant)}
+                                                                    disabled={togglingId === variant.id}
+                                                                    type="button"
+                                                                >
+                                                                    {variant.is_active === false ? (
+                                                                        <Power className="h-3.5 w-3.5" />
+                                                                    ) : (
+                                                                        <PowerOff className="h-3.5 w-3.5" />
+                                                                    )}
+                                                                    {variant.is_active === false ? 'Enable' : 'Disable'}
+                                                                </Button>
+                                                            </div>
                                                         </TableCell>
                                                         <TableCell className="text-right">
                                                             <div className="flex items-center justify-end gap-1">
