@@ -893,6 +893,24 @@ export default function EditForm({
                                         />
                                         {errors.discount_price && <p className="text-xs text-destructive">{errors.discount_price[0]}</p>}
                                     </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="product-wholesale-price">
+                                            Whole Sale Price
+                                        </Label>
+                                        <Input
+                                            id="product-wholesale-price"
+                                            name="wholesale_price"
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            value={form.wholesale_price ?? ''}
+                                            onChange={onChange}
+                                            placeholder="0.00"
+                                        />
+                                        {errors.wholesale_price && <p className="text-xs text-destructive">{errors.wholesale_price[0]}</p>}
+                                    </div>
+
                                 </div>
                             </div>
 
