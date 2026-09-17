@@ -79,11 +79,11 @@ export default function ComingSoonPage() {
             </div>
 
             <h5 className="mb-6 text-left font-serif text-5xl font-normal leading-[0.95] tracking-[-0.04em] text-white md:text-[2.2rem]">
-              Comming Soon
+              Coming Soon
             </h5>
 
             <p className="mb-8 text-left text-sm leading-relaxed text-gray-200 md:text-[1.05rem]">
-              At spring 2027
+              Spring 2027
             </p>
 
             {/* Shortened form width from max-w-[520px] to max-w-[360px] */}
