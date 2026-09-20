@@ -5,6 +5,8 @@
 export const emptyOrderForm = {
     status: 'IN_PROGRESS',
     po_number: '',
+    export_status: '',
+    export_description: '',
     customer_id: '',
     customer_code: '',
     price_type_id: '',
@@ -60,7 +62,8 @@ export const emptyOrderForm = {
 };
 
 const CORE_FLAT_FIELDS = [
-    'status', 'po_number', 'customer_id', 'customer_code', 'price_type_id', 'price_type_name',
+    'status', 'po_number', 'export_status', 'export_description',
+    'customer_id', 'customer_code', 'price_type_id', 'price_type_name',
     'collection_id', 'collection_code',
     'shipping_address_id', 'shipping_address_code', 'shipping_price',
     'billing_address_id', 'billing_address_code',
@@ -88,6 +91,10 @@ export function buildNestedOrderPayload(form, { includeDoor = false } = {}) {
 
     CORE_FLAT_FIELDS.forEach((key) => {
         if (form.useCustomShippingAddress && (key === 'shipping_address_id' || key === 'shipping_address_code')) return;
+        // JOOR ties shipping_method to a saved shipping_address_id/code — it rejects the whole
+        // update ("shipping_address_id is required to set shipping_method_id") if a custom
+        // (inline) shipping address is sent instead, so drop the method along with the address.
+        if (form.useCustomShippingAddress && (key === 'shipping_method_id' || key === 'shipping_method_code')) return;
         if (form.useCustomBillingAddress && (key === 'billing_address_id' || key === 'billing_address_code')) return;
         if (form[key] !== '' && form[key] !== null && form[key] !== undefined) {
             payload[key] = form[key];
@@ -153,6 +160,8 @@ export function mapOrderToForm(order) {
         ...emptyOrderForm,
         status: order.status || 'IN_PROGRESS',
         po_number: order.po_number || '',
+        export_status: order.export_status || '',
+        export_description: order.export_description || '',
         customer_id: order.customer?.id || '',
         customer_code: order.customer?.code || '',
         price_type_id: order.price_type?.id || '',

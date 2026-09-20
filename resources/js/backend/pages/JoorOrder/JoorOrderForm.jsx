@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { resolveOrderLineItems, resolveOrderSummaryFields } from './orderDisplay';
 
 const STATUS_OPTIONS = ['IN_PROGRESS', 'NOTES', 'PENDING', 'APPROVED', 'SHIPPED', 'CANCELLED'];
+const EXPORT_STATUS_OPTIONS = ['', 'SUCCESS', 'FAILED', 'UNDEFINED'];
 
 function Field({ label, hint, error, children }) {
     return (
@@ -102,7 +103,42 @@ export default function JoorOrderForm({ form, order, orderItems = [], orderItems
                 </Section>
             )}
 
-          
+            <Section title="Update Order" description="Change the status (and any other fields below), then save to update this order in JOOR.">
+                <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <Field label="Status" error={errors?.status?.[0]}>
+                        <select
+                            value={form.status}
+                            onChange={handleField('status')}
+                            className="h-9 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm"
+                        >
+                            {STATUS_OPTIONS.map((option) => (
+                                <option key={option} value={option}>{option}</option>
+                            ))}
+                        </select>
+                    </Field>
+                    <Field label="Tracking Number">
+                        <Input value={form.tracking_number} onChange={handleField('tracking_number')} placeholder="e.g. 1Z999AA10123456784" />
+                    </Field>
+                    <Field label="PO Number">
+                        <Input value={form.po_number} onChange={handleField('po_number')} />
+                    </Field>
+                    <Field label="Export Status" hint="Reflects whether this order was exported to your system; shown as 'Order Export Status' in JOOR.">
+                        <select
+                            value={form.export_status}
+                            onChange={handleField('export_status')}
+                            className="h-9 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm"
+                        >
+                            {EXPORT_STATUS_OPTIONS.map((option) => (
+                                <option key={option || 'none'} value={option}>{option || 'Unchanged'}</option>
+                            ))}
+                        </select>
+                    </Field>
+                    <Field label="Export Description">
+                        <Input value={form.export_description} onChange={handleField('export_description')} placeholder="Optional export note" />
+                    </Field>
+                </div>
+            </Section>
+
             <div className="flex items-center justify-end gap-3">
                 <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
                     Cancel
