@@ -131,7 +131,17 @@ function resolveSizeDisplayName(value, sizeNameLookup = {}) {
         return '';
     }
 
-    return sizeNameLookup[token] || token;
+    // If it exists in our lookup map, return the proper size name (e.g., 'S', 'M', 'L')
+    if (sizeNameLookup[token]) {
+        return sizeNameLookup[token];
+    }
+
+    // Suppress numeric IDs while the lookup is loading/pending
+    if (/^\d+$/.test(token)) {
+        return '';
+    }
+
+    return token;
 }
 
 function normalizeSizes(product, sizeNameLookup = {}) {
@@ -470,7 +480,7 @@ export default function SingleProductMainSection({ product, initialColor = '', c
                 { label: String(product?.name || 'Product'), to: detailUrl },
             ];
         },
-        [product?.name, product?.slug]
+        [product?.name, product?.slug, initialColor]
     );
 
     function decreaseQuantity() {
@@ -543,7 +553,7 @@ export default function SingleProductMainSection({ product, initialColor = '', c
         if (!filteredImages.includes(selectedImage)) {
             setSelectedImage(filteredImages[0]);
         }
-    }, [filteredImages, selectedImage, imageList]);
+    }, [filteredImages, selectedImage]);
 
     const primaryVideo = filteredVideos[0] || '';
 
