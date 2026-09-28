@@ -70,30 +70,47 @@ const FabricInnovations = () => {
 
       {displayData.items.length > 0 && (
         <div className="max-w-7xl mx-auto space-y-8">
-          {displayData.items.map((item, index) => (
-            <article
-              key={item.id || `${item.contentTitle || 'material'}-${index}`}
-              className="flex flex-col gap-6 rounded-2xl border border-[#d8cfc2] bg-[#f8f3ec] p-6 shadow-sm lg:flex-row lg:items-center"
-            >
-              <div className="text-[#2b2724] lg:w-1/2">
-                <h3 className="font-serif text-3xl mb-2">{item.contentHeader || 'Material'}</h3>
-                <p className="text-[#d98d6e] text-xs font-bold tracking-[0.1em] uppercase mb-6">
-                  {item.contentTitle || 'Content title'}
-                </p>
-                <p className="leading-relaxed opacity-90">{item.details || 'Material details go here.'}</p>
-              </div>
+          {displayData.items.map((item, index) => {
+            const headerText = item.contentHeader || 'Material';
+            // Regex to split header text from any trailing parentheses content (e.g. "(Upcoming Spring 2027)")
+            const match = headerText.match(/^(.*?)(\s*\(.*\))$/);
 
-              {item.image && (
-                <div className="overflow-hidden rounded-xl bg-[#efe6da] lg:w-1/2">
-                  <img
-                    src={item.image}
-                    alt={item.contentHeader || 'Our materials image'}
-                    className="h-full w-full object-cover"
-                  />
+            return (
+              <article
+                key={item.id || `${item.contentTitle || 'material'}-${index}`}
+                className="flex flex-col gap-6 rounded-2xl border border-[#d8cfc2] bg-[#f8f3ec] p-6 shadow-sm lg:flex-row lg:items-center"
+              >
+                <div className="text-[#2b2724] lg:w-1/2">
+                  <h3 className="font-serif text-3xl mb-2">
+                    {/* --- CHANGED: Made parenthetical text silver, non-bold (font-normal), and smaller (text-lg) --- */}
+                    {match ? (
+                      <>
+                        {match[1]}
+                        <span className="text-[#a8a29e] font-normal text-lg ml-1">{match[2]}</span>
+                      </>
+                    ) : (
+                      headerText
+                    )}
+                    {/* ------------------------------------------------------------------------------------------------ */}
+                  </h3>
+                  <p className="text-[#d98d6e] text-xs font-bold tracking-[0.1em] uppercase mb-6">
+                    {item.contentTitle || 'Content title'}
+                  </p>
+                  <p className="leading-relaxed opacity-90">{item.details || 'Material details go here.'}</p>
                 </div>
-              )}
-            </article>
-          ))}
+
+                {item.image && (
+                  <div className="overflow-hidden rounded-xl bg-[#efe6da] lg:w-1/2">
+                    <img
+                      src={item.image}
+                      alt={item.contentHeader || 'Our materials image'}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                )}
+              </article>
+            );
+          })}
         </div>
       )}
     </section>
