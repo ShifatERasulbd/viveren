@@ -183,58 +183,62 @@ class ProductController extends Controller
     }
 
 
-    public function publicShopIndex(): JsonResponse
-    {
-        $columns = [
-            'id',
-            'name',
-            'sku',
-            'description',
-            'fit',
-            'fabric_and_care',
-            'product_features',
-            'product_composition',
-            'long_description',
-            'additional_information',
-            'price',
-            'discount_price',
-            'cover_image',
-            'size_chart_image',
-            'size_chart_images',
-            'image_gallery',
-            'color',
-            'color_variant_images',
-            'color_variant_videos',
-            'color_variant_size_charts',
-            'size',
-            'length',
-            'width',
-            'height',
-            'stock',
-            'variant_rows',
-            'grand_child_id',
-            'show_on_best_sellers',
-            'position',
-        ];
+   public function publicShopIndex(): JsonResponse
+{
+    $columns = [
+        'id',
+        'name',
+        'sku',
+        'description',
+        'fit',
+        'fabric_and_care',
+        'product_features',
+        'product_composition',
+        'long_description',
+        'additional_information',
+        'price',
+        'discount_price',
+        'cover_image',
+        'size_chart_image',
+        'size_chart_images',
+        'image_gallery',
+        'color',
+        'color_variant_images',
+        'color_variant_videos',
+        'color_variant_size_charts',
+        'size',
+        'length',
+        'width',
+        'height',
+        'stock',
+        'variant_rows',
+        'grand_child_id',
+        'show_on_best_sellers',
+        'position',
+    ];
 
-        if (Schema::hasColumn('products', 'slug')) {
-            $columns[] = 'slug';
-        }
-
-        if (Schema::hasColumn('products', 'combo_product_ids')) {
-            $columns[] = 'combo_product_ids';
-        }
-
-        $products = Product::query()
-            ->select($columns)
-            ->when(Schema::hasColumn('products', 'is_active'), fn ($query) => $query->where('is_active', true))
-            ->orderByRaw('position IS NULL')
-            ->orderBy('position')
-            ->orderByDesc('created_at')
-            ->get();
-
-        return response()->json($products);
+    if (Schema::hasColumn('products', 'slug')) {
+        $columns[] = 'slug';
     }
+
+    if (Schema::hasColumn('products', 'combo_product_ids')) {
+        $columns[] = 'combo_product_ids';
+    }
+
+    if (Schema::hasColumn('products', 'related_product_ids')) {
+        $columns[] = 'related_product_ids';
+    }
+
+    $products = Product::query()
+        ->select($columns)
+        ->when(Schema::hasColumn('products', 'is_active'), fn ($query) => $query->where('is_active', true))
+        ->orderByRaw('position IS NULL')
+        ->orderBy('position')
+        ->orderByDesc('created_at')
+        ->get();
+
+    return response()->json($products);
+}
 
     public function show(string $product): JsonResponse
     {
@@ -252,7 +256,7 @@ class ProductController extends Controller
     public function store(Request $request): JsonResponse
     {
         $this->normalizeBooleanFields($request, ['show_on_best_sellers']);
-        $this->normalizeJsonFields($request, ['variant_rows', 'color_variant_images', 'color_variant_videos', 'color_variant_size_charts', 'size_chart_images', 'product_features', 'combo_product_ids']);
+        $this->normalizeJsonFields($request, ['variant_rows', 'color_variant_images', 'color_variant_videos', 'color_variant_size_charts', 'size_chart_images', 'product_features', 'combo_product_ids', 'related_product_ids']);
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -291,6 +295,8 @@ class ProductController extends Controller
             'show_on_best_sellers' => 'nullable|boolean',
             'combo_product_ids' => 'nullable|array',
             'combo_product_ids.*' => 'integer',
+            'related_product_ids' => 'nullable|array',
+            'related_product_ids.*' => 'integer',
             'variant_rows' => 'nullable|array',
             'variant_rows.*.key' => 'nullable|string|max:255',
             'variant_rows.*.color' => 'nullable|string|max:255',
@@ -309,6 +315,7 @@ class ProductController extends Controller
             'color_variant_size_charts' => 'nullable|array',
             'color_variant_size_charts.*' => 'nullable|array',
             'color_variant_size_charts.*.*' => 'nullable|string|max:2048',
+            
         ]);
 
         if ($request->hasFile('thumbnail_image')) {
@@ -353,6 +360,7 @@ class ProductController extends Controller
         $validated['fabric_and_care'] = trim((string) ($validated['fabric_and_care'] ?? ($validated['additional_information'] ?? '')));
         $validated['long_description'] = $validated['fit'];
         $validated['additional_information'] = $validated['fabric_and_care'];
+        $validated['related_product_ids'] = $this->normalizeComboProductIds($validated['related_product_ids'] ?? [], null);
 
         if (!isset($validated['position']) || $validated['position'] === null || $validated['position'] === '') {
             $validated['position'] = (int) Product::query()->max('position') + 1;
@@ -433,7 +441,7 @@ class ProductController extends Controller
         }
 
         $this->normalizeBooleanFields($request, ['show_on_best_sellers', 'clear_gallery', 'clear_videos', 'clear_size_charts']);
-        $this->normalizeJsonFields($request, ['variant_rows', 'color_variant_images', 'color_variant_videos', 'color_variant_size_charts', 'size_chart_images', 'product_features', 'image_gallery_existing', 'product_videos_existing', 'size_chart_images_existing', 'combo_product_ids']);
+        $this->normalizeJsonFields($request, ['variant_rows', 'color_variant_images', 'color_variant_videos', 'color_variant_size_charts', 'size_chart_images', 'product_features', 'image_gallery_existing', 'product_videos_existing', 'size_chart_images_existing', 'combo_product_ids', 'related_product_ids']);
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -485,6 +493,8 @@ class ProductController extends Controller
             'show_on_best_sellers' => 'nullable|boolean',
             'combo_product_ids' => 'nullable|array',
             'combo_product_ids.*' => 'integer',
+            'related_product_ids' => 'nullable|array',
+            'related_product_ids.*' => 'integer',
             'variant_rows' => 'nullable|array',
             'variant_rows.*.key' => 'nullable|string|max:255',
             'variant_rows.*.color' => 'nullable|string|max:255',
@@ -588,6 +598,9 @@ class ProductController extends Controller
         $validated['combo_product_ids'] = $request->has('combo_product_ids')
             ? $this->normalizeComboProductIds($validated['combo_product_ids'] ?? [], $productModel->id)
             : $this->normalizeComboProductIds($productModel->combo_product_ids ?? [], $productModel->id);
+        $validated['related_product_ids'] = $request->has('related_product_ids')
+            ? $this->normalizeComboProductIds($validated['related_product_ids'] ?? [], $productModel->id)
+            : $this->normalizeComboProductIds($productModel->related_product_ids ?? [], $productModel->id);
         $validated['fit'] = trim((string) ($validated['fit'] ?? ($validated['long_description'] ?? ($productModel->fit ?? ''))));
         $validated['fabric_and_care'] = trim((string) ($validated['fabric_and_care'] ?? ($validated['additional_information'] ?? ($productModel->fabric_and_care ?? ''))));
         $validated['long_description'] = $validated['fit'];

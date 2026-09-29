@@ -133,6 +133,8 @@ export default function EditProduct() {
     const [comboProductOptions, setComboProductOptions] = useState([]);
     const [comboProductSelectValue, setComboProductSelectValue] = useState('');
     const [selectedComboProductIds, setSelectedComboProductIds] = useState([]);
+    const [relatedProductSelectValue, setRelatedProductSelectValue] = useState('');
+    const [selectedRelatedProductIds, setSelectedRelatedProductIds] = useState([]);
     const [categoryOptions, setCategoryOptions] = useState([]);
     const [subCategoryOptions, setSubCategoryOptions] = useState([]);
     const [grandChildOptions, setGrandChildOptions] = useState([]);
@@ -421,7 +423,6 @@ export default function EditProduct() {
         async function loadProduct() {
             setIsLoading(true);
             setLoadError('');
-
             try {
                 const data = await fetchProduct(id);
                 if (!ignore) {
@@ -491,6 +492,11 @@ export default function EditProduct() {
                     setSelectedComboProductIds(
                         Array.isArray(data?.combo_product_ids)
                             ? [...new Set(data.combo_product_ids.map((comboId) => String(comboId)))]
+                            : [],
+                    );
+                    setSelectedRelatedProductIds(
+                        Array.isArray(data?.related_product_ids)
+                            ? [...new Set(data.related_product_ids.map((relId) => String(relId)))]
                             : [],
                     );
 
@@ -608,6 +614,21 @@ export default function EditProduct() {
             ignore = true;
         };
     }, [id]);
+
+    const handleAddRelatedProduct = () => {
+        if (!relatedProductSelectValue) {
+            return;
+        }
+
+        setSelectedRelatedProductIds((previous) => (
+            previous.includes(relatedProductSelectValue) ? previous : [...previous, relatedProductSelectValue]
+        ));
+        setRelatedProductSelectValue('');
+    };
+
+    const handleRemoveRelatedProduct = (productIdToRemove) => {
+        setSelectedRelatedProductIds((previous) => previous.filter((productId) => productId !== productIdToRemove));
+    };
 
     useEffect(() => {
         if (colorOptions.length === 0 && sizeOptions.length === 0) {
@@ -1205,6 +1226,7 @@ export default function EditProduct() {
                         ? [...new Set(variantRows.map((row) => row.size).filter(Boolean))].join(', ')
                         : form.size,
                 combo_product_ids: selectedComboProductIds,
+                related_product_ids: selectedRelatedProductIds,
                 variant_rows: variantRows,
                 color_variant_images: colorVariantImageMap,
                 color_variant_videos: colorVariantVideoMap,
@@ -1287,6 +1309,11 @@ export default function EditProduct() {
                     onComboProductSelectChange={setComboProductSelectValue}
                     onAddComboProduct={handleAddComboProduct}
                     onRemoveComboProduct={handleRemoveComboProduct}
+                    relatedProductSelectValue={relatedProductSelectValue}
+                    selectedRelatedProductIds={selectedRelatedProductIds}
+                    onRelatedProductSelectChange={setRelatedProductSelectValue}
+                    onAddRelatedProduct={handleAddRelatedProduct}
+                    onRemoveRelatedProduct={handleRemoveRelatedProduct}
                     colorTrendingMap={colorTrendingMap}
                     colorFabricMap={colorFabricMap}
                     variantRows={variantRows}

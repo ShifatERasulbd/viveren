@@ -39,6 +39,11 @@ export default function EditForm({
     galleryPreviewItems = [],
     variantGroupName = '',
     errors = {},
+    relatedProductSelectValue = '',
+    selectedRelatedProductIds = [],
+    onRelatedProductSelectChange,
+    onAddRelatedProduct,
+    onRemoveRelatedProduct,
     isSubmitting = false,
     onChange,
     onColorSelectChange,
@@ -968,6 +973,63 @@ export default function EditForm({
                                     </div>
                                 )}
                                 {errors.combo_product_ids && <p className="text-xs text-destructive">{errors.combo_product_ids[0]}</p>}
+                            </div>
+
+
+                            <div className="space-y-2">
+                                <Label htmlFor="product-related">Related Products</Label>
+                                <p className="text-xs text-muted-foreground">
+                                    Link other products as related recommendations.
+                                </p>
+                                <div className="flex items-center gap-2">
+                                    <select
+                                        id="product-related"
+                                        value={relatedProductSelectValue}
+                                        onChange={(event) => onRelatedProductSelectChange?.(event.target.value)}
+                                        disabled={isSubmitting || isOptionsLoading}
+                                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-xs outline-none ring-offset-background focus-visible:ring-1 focus-visible:ring-ring"
+                                    >
+                                        <option value="">{isOptionsLoading ? 'Loading products...' : 'Select a product'}</option>
+                                        {comboProductOptions
+                                            .filter((product) => !selectedRelatedProductIds.includes(String(product?.id ?? '')))
+                                            .map((product) => (
+                                                <option key={product.id} value={String(product.id)}>
+                                                    {product.name}
+                                                </option>
+                                            ))}
+                                    </select>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={onAddRelatedProduct}
+                                        disabled={isSubmitting || isOptionsLoading || !relatedProductSelectValue}
+                                    >
+                                        Add
+                                    </Button>
+                                </div>
+                                {selectedRelatedProductIds.length > 0 && (
+                                    <div className="flex flex-wrap gap-2 pt-1">
+                                        {selectedRelatedProductIds.map((productId) => (
+                                            <div
+                                                key={productId}
+                                                className="inline-flex items-center gap-2 rounded-md border bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground"
+                                            >
+                                                <span>{getComboProductLabel(productId)}</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => onRemoveRelatedProduct?.(productId)}
+                                                    disabled={isSubmitting}
+                                                    className="text-[11px] leading-none opacity-70 transition-opacity hover:opacity-100"
+                                                    aria-label={`Remove ${getComboProductLabel(productId)}`}
+                                                >
+                                                    x
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                                {errors.related_product_ids && <p className="text-xs text-destructive">{errors.related_product_ids[0]}</p>}
                             </div>
 
                             {variantRows.length > 0 && (

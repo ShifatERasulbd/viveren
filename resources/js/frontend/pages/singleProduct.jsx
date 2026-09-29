@@ -65,6 +65,24 @@ function productMatchesColor(product, colorParam, colorNameById = {}) {
     });
 }
 
+function parseIdList(value) {
+    let list = value;
+
+    if (typeof list === 'string') {
+        try {
+            list = JSON.parse(list);
+        } catch {
+            list = list.split(',');
+        }
+    }
+
+    if (!Array.isArray(list)) {
+        return [];
+    }
+
+    return [...new Set(list.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0))];
+}
+
 export default function SingleProductPage() {
     const { slug: routeSlug = '', color: routeColor = '' } = useParams();
     const [searchParams] = useSearchParams();
@@ -186,6 +204,17 @@ export default function SingleProductPage() {
             return [];
         }
 
+        // If related products were selected in admin (related_product_ids), show only those.
+        const selectedIds = parseIdList(currentProduct.related_product_ids)
+            .filter((id) => id !== Number(currentProduct.id));
+
+        if (selectedIds.length > 0) {
+            return selectedIds
+                .map((id) => products.find((item) => Number(item?.id) === id))
+                .filter(Boolean);
+        }
+
+        // Nothing selected (null / empty): keep the original behavior.
         const sameGroup = products.filter(
             (item) =>
                 item?.id !== currentProduct.id
@@ -263,7 +292,7 @@ export default function SingleProductPage() {
                 {/* <SingleProductInfoTabs product={currentProduct} /> */}
             </LazySection>
             <LazySection heightClass="h-[640px]" variant="catalog">
-                <RelatedProductsSection products={relatedProducts} />
+                <RelatedProductsSection products={relatedProducts} currentProduct={currentProduct} />
             </LazySection>
             <LazySection heightClass="h-[220px]" variant="newsletter">
                 <NewsletterSection />

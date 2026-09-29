@@ -367,11 +367,46 @@ function RelatedProductCard({ product, onAddToCart, colorLookup = {}, colorNameB
     );
 }
 
-export default function RelatedProductsSection({ products = [] }) {
+function parseRelatedIds(value) {
+    let list = value;
+
+    if (typeof list === 'string') {
+        try {
+            list = JSON.parse(list);
+        } catch {
+            list = list.split(',');
+        }
+    }
+
+    if (!Array.isArray(list)) {
+        return [];
+    }
+
+    return [...new Set(list.map((id) => String(id ?? '').trim()).filter(Boolean))];
+}
+
+export default function RelatedProductsSection({ products = [], relatedProductIds, currentProduct = null }) {
     const { addToCart, openCartDrawer } = useCart();
     const [variantModalState, setVariantModalState] = useState(null);
     const [colorLookup, setColorLookup] = useState({});
     const [colorNameById, setColorNameById] = useState({});
+
+    // Only the products selected in "related_product_ids" are shown.
+    // If nothing is selected (null / empty), the original `products` list is shown as before.
+    const selectedIds = useMemo(
+        () => parseRelatedIds(relatedProductIds ?? currentProduct?.related_product_ids),
+        [relatedProductIds, currentProduct],
+    );
+
+    const visibleProducts = useMemo(() => {
+        if (selectedIds.length === 0) {
+            return products;
+        }
+
+        const byId = new Map(products.map((item) => [String(item?.id), item]));
+
+        return selectedIds.map((id) => byId.get(id)).filter(Boolean);
+    }, [products, selectedIds]);
 
     useEffect(() => {
         let ignore = false;
@@ -439,6 +474,10 @@ export default function RelatedProductsSection({ products = [] }) {
         openCartDrawer();
     }
 
+    if (selectedIds.length > 0 && visibleProducts.length === 0) {
+        return null;
+    }
+
     return (
         <section className={`${featuresFontClass}  py-10 sm:py-14`}>
             <style dangerouslySetInnerHTML={{ __html: `
@@ -479,7 +518,7 @@ export default function RelatedProductsSection({ products = [] }) {
 
                 <div className="relative">
                     <div className="grid grid-cols-2 gap-x-1 gap-y-8 md:grid-cols-3 lg:grid-cols-5 lg:gap-x-1">
-                        {products.map((product) => (
+                        {visibleProducts.map((product) => (
                             <RelatedProductCard
                                 key={product.id}
                                 product={product}

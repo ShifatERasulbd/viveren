@@ -33,6 +33,12 @@ function buildProductPayload(data = {}) {
                 .map((id) => Number(id))
                 .filter((id) => Number.isInteger(id) && id > 0)
             : [],
+
+        related_product_ids: Array.isArray(data.related_product_ids)
+            ? data.related_product_ids
+                .map((id) => Number(id))
+                .filter((id) => Number.isInteger(id) && id > 0)
+            : [], // <--- Add this block
         variant_rows: Array.isArray(data.variant_rows) ? data.variant_rows : [],
         color_variant_images:
             data.color_variant_images && typeof data.color_variant_images === 'object'
