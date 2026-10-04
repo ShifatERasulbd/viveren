@@ -11,7 +11,7 @@
         <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700,800,900" rel="stylesheet" />
 
         <script>window.APP_NAME = '{{ config('app.name') }}';</script>
-        @vite(['resources/css/app.css', 'resources/js/App.jsx'])
+        @vite(['resources/css/app.css', 'resources/js/Apps.jsx'])
     </head>
     <body class="bg-[#f4f2ed] text-zinc-950">
         <div id="app"></div>
