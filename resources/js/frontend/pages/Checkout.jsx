@@ -21,6 +21,25 @@ function roundCurrency(value) {
     return Math.round((numericValue + Number.EPSILON) * 100) / 100;
 }
 
+// FIX: safe money parser (handles numbers, "12.50", "$12.50", bad values)
+function parseMoney(value) {
+    if (value === null || value === undefined || value === '') {
+        return null;
+    }
+
+    if (typeof value === 'number') {
+        return Number.isFinite(value) ? value : null;
+    }
+
+    const cleaned = String(value).replace(/[^0-9.\-]/g, '');
+    if (cleaned === '') {
+        return null;
+    }
+
+    const parsed = Number(cleaned);
+    return Number.isFinite(parsed) ? parsed : null;
+}
+
 function calculateStripeCharge(baseAmount) {
     const amount = Math.max(0, Number(baseAmount) || 0);
     return roundCurrency((amount * STRIPE_PERCENT_RATE) + STRIPE_FIXED_FEE);
@@ -28,8 +47,9 @@ function calculateStripeCharge(baseAmount) {
 
 function normalizeShippingOption(option, index) {
     const code = normalizeServiceCode(option?.code, '02');
-    const amount = Number(option?.amount ?? option?.price ?? 0);
-    const safeAmount = Number.isFinite(amount) && amount >= 0 ? amount : 0;
+    // FIX: read `price` first (same field the backend uses), then `amount`
+    const amount = parseMoney(option?.price) ?? parseMoney(option?.amount) ?? 0;
+    const safeAmount = amount >= 0 ? amount : 0;
     const description = String(option?.description || '').trim();
 
     return {
@@ -246,17 +266,25 @@ function CheckoutForm() {
         [shippingOptions, selectedShippingOptionCode],
     );
 
+    // FIX: shipping now falls back to the API quote when the option amount is missing/zero
     const shipping = useMemo(() => {
-        const selectedAmount = Number(selectedShippingOption?.amount ?? NaN);
-        if (Number.isFinite(selectedAmount) && selectedAmount >= 0) {
-            return roundCurrency(selectedAmount);
+        if (!hasShippingQuote) {
+            return 0;
         }
 
-        const value = Number(quotedShipping);
-        return Number.isFinite(value) && value > 0 ? value : 0;
-    }, [selectedShippingOption, quotedShipping]);
+        // Use the selected option's price when it is a real positive number...
+        const optionAmount = Number(selectedShippingOption?.amount);
+        if (Number.isFinite(optionAmount) && optionAmount > 0) {
+            return roundCurrency(optionAmount);
+        }
 
-    const baseTotal = useMemo(() => roundCurrency(subtotal + shipping), [subtotal, shipping]);
+        // ...otherwise fall back to the price returned by the quote API.
+        return roundCurrency(parseMoney(quotedShipping) ?? 0);
+    }, [hasShippingQuote, selectedShippingOption, quotedShipping]);
+
+    // FIX: total = subtotal + shipping (numeric-safe)
+    const subtotalAmount = useMemo(() => roundCurrency(subtotal), [subtotal]);
+    const baseTotal = useMemo(() => roundCurrency(subtotalAmount + shipping), [subtotalAmount, shipping]);
     const stripeCharge = useMemo(() => calculateStripeCharge(baseTotal), [baseTotal]);
     // Total charged to the customer excludes the Stripe processing surcharge.
     const total = baseTotal;
@@ -524,7 +552,8 @@ function CheckoutForm() {
                     });
                 }
 
-                setQuotedShipping(Number(payload?.shipping || 0));
+                // FIX: parse the API shipping value safely
+                setQuotedShipping(parseMoney(payload?.shipping) ?? 0);
                 setHasShippingQuote(true);
             } catch (error) {
                 console.error('[Shipping quote] request failed', error);

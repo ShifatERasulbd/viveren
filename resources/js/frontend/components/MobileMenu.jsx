@@ -16,6 +16,15 @@ export default function MobileMenu({
     supportPhone,
     itemCount,
 }) {
+    const isCustomerDashboard = typeof window !== 'undefined' && window.location.pathname.startsWith('/user');
+
+    const handleLinkClick = (href) => (event) => {
+        if (isCustomerDashboard) {
+            event.preventDefault();
+            window.location.assign(href);
+        }
+    };
+
     return (
         <>
             <div
@@ -61,7 +70,7 @@ export default function MobileMenu({
                                 return (
                                     <li key={`mobile-${item.label}`} className="border-b border-zinc-200/80">
                                         <div className="flex items-center justify-between gap-2 px-1 py-4">
-                                            <Link to={item.href} onClick={closeMobileMenu} className="min-w-0 flex-1 text-[0.88rem] font-semibold uppercase tracking-[0.04em] text-zinc-900">
+                                            <Link to={item.href} onClick={(event) => { closeMobileMenu(); handleLinkClick(item.href)(event); }} className="min-w-0 flex-1 text-[0.88rem] font-semibold uppercase tracking-[0.04em] text-zinc-900">
                                                 <span>{item.label}</span>
                                             </Link>
 
@@ -84,7 +93,7 @@ export default function MobileMenu({
                                                     return (
                                                         <li key={`mobile-submenu-${itemKey}-${child.id}`}>
                                                             <div className="flex items-center justify-between gap-2 py-2 pr-1">
-                                                                <Link to={child.href} onClick={closeMobileMenu} className="min-w-0 flex-1 text-[0.8rem] font-medium uppercase tracking-[0.03em] text-zinc-700">
+                                                                <Link to={child.href} onClick={(event) => { closeMobileMenu(); handleLinkClick(child.href)(event); }} className="min-w-0 flex-1 text-[0.8rem] font-medium uppercase tracking-[0.03em] text-zinc-700">
                                                                     {child.label}
                                                                 </Link>
 
@@ -99,7 +108,7 @@ export default function MobileMenu({
                                                                 <ul id={`mobile-submenu-${itemKey}-${subItemKey}`} className="pb-1 pl-3">
                                                                     {grandChildItems.map((grandChild) => (
                                                                         <li key={`mobile-grand-child-${itemKey}-${subItemKey}-${grandChild.id}`}>
-                                                                            <Link to={grandChild.href} onClick={closeMobileMenu} className="block py-1.5 text-[0.74rem] font-medium uppercase tracking-[0.03em] text-zinc-600">
+                                                                            <Link to={grandChild.href} onClick={(event) => { closeMobileMenu(); handleLinkClick(grandChild.href)(event); }} className="block py-1.5 text-[0.74rem] font-medium uppercase tracking-[0.03em] text-zinc-600">
                                                                                 {grandChild.label}
                                                                             </Link>
                                                                         </li>
@@ -117,7 +126,7 @@ export default function MobileMenu({
                         </ul>
 
                         <div className="mt-7 border-t border-zinc-200/80 pt-6">
-                            <Link to="/login" onClick={closeMobileMenu} className="inline-flex items-center gap-2 text-[0.88rem] font-medium uppercase tracking-[0.03em] text-zinc-800">
+                            <Link to="/login" onClick={(event) => { closeMobileMenu(); handleLinkClick('/login')(event); }} className="inline-flex items-center gap-2 text-[0.88rem] font-medium uppercase tracking-[0.03em] text-zinc-800">
                                 <UserCircle2 className="size-4" strokeWidth={1.8} />
                                 Register/ Login
                             </Link>

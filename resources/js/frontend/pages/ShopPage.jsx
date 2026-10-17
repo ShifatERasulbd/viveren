@@ -15,7 +15,7 @@ export default function ShopPage() {
         <div className="bg-background">
            
             <LazySection heightClass="h-[760px]" variant="catalog">
-                <ShopCatalogSection />
+                <ShopCatalogSection/>
             </LazySection>
             
            

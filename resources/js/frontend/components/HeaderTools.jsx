@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom';
 const buttonBaseClassName = 'inline-flex size-11 items-center justify-center rounded-full text-zinc-950 transition-colors hover:bg-white/70 hover:text-zinc-700';
 
 export default function HeaderTools({ utilityIcons, itemCount, openSearch, handleOpenCart }) {
+    const isCustomerDashboard = typeof window !== 'undefined' && window.location.pathname.startsWith('/user');
+
     const renderAction = ({ label, icon: Icon, href }) => {
         const commonIcon = <Icon className="size-5" strokeWidth={1.75} />;
 
@@ -30,7 +32,18 @@ export default function HeaderTools({ utilityIcons, itemCount, openSearch, handl
 
         if (href?.startsWith('/')) {
             return (
-                <Link key={label} to={href} aria-label={label} className={buttonBaseClassName}>
+                <Link
+                    key={label}
+                    to={href}
+                    aria-label={label}
+                    className={buttonBaseClassName}
+                    onClick={(event) => {
+                        if (isCustomerDashboard) {
+                            event.preventDefault();
+                            window.location.assign(href);
+                        }
+                    }}
+                >
                     {commonIcon}
                 </Link>
             );

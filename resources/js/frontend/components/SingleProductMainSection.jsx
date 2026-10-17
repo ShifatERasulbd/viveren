@@ -275,7 +275,14 @@ function resolveInitialColor(preferredColor, availableColors, colorRecords = [],
     return allowFallback ? (availableColors[0] || '') : '';
 }
 
-export default function SingleProductMainSection({ product, initialColor = '', comboProducts = [] }) {
+export default function SingleProductMainSection({
+    product,
+    initialColor = '',
+    comboProducts = [],
+    colorOptions = [],
+    canonicalSlug = '',
+    onColorChange,
+}) {
     const { addToCart, openCartDrawer } = useCart();
     const [colorLookup, setColorLookup] = useState({});
     const [colorRecords, setColorRecords] = useState([]);
@@ -304,7 +311,11 @@ export default function SingleProductMainSection({ product, initialColor = '', c
         return unique.map((item) => toAbsoluteImageUrl(item));
     }, [product?.cover_image, product?.image_gallery]);
 
-    const colors = useMemo(() => normalizeColors(product?.color, colorRecords), [product?.color, colorRecords]);
+    // Same-slug products share one page, so the swatches list every color of the group.
+    const colors = useMemo(() => {
+        const source = Array.isArray(colorOptions) && colorOptions.length > 0 ? colorOptions : product?.color;
+        return normalizeColors(source, colorRecords);
+    }, [colorOptions, product?.color, colorRecords]);
     const colorVariantImages = useMemo(
         () => normalizeColorVariantImages(product?.color_variant_images),
         [product?.color_variant_images],
@@ -467,7 +478,7 @@ export default function SingleProductMainSection({ product, initialColor = '', c
 
     const breadcrumbs = useMemo(
         () => {
-            const slug = String(product?.slug || '').trim();
+            const slug = String(canonicalSlug || product?.slug || '').trim();
             const name = String(product?.name || '').trim();
             const color = String(initialColor || '').trim().replace(/ /g, '-');
             const detailUrl = slug
@@ -480,7 +491,7 @@ export default function SingleProductMainSection({ product, initialColor = '', c
                 { label: String(product?.name || 'Product'), to: detailUrl },
             ];
         },
-        [product?.name, product?.slug, initialColor]
+        [product?.name, product?.slug, canonicalSlug, initialColor]
     );
 
     function decreaseQuantity() {
@@ -493,6 +504,7 @@ export default function SingleProductMainSection({ product, initialColor = '', c
 
     function handleSelectColor(colorLabel) {
         setSelectedColor(colorLabel);
+        onColorChange?.(colorLabel);
     }
 
     function handleAddToCart() {

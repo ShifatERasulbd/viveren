@@ -9,7 +9,7 @@ import {
     FileText,
 } from 'lucide-react';
 import { useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 import {
     Sidebar,
@@ -52,7 +52,7 @@ const inventoryItems = [
 
 const orderItems = [
     { title: 'Orders', icon: ShoppingBag, path: '/admin/orders' },
-    { title: 'JOOR Orders', icon: ShoppingBag, path: '/admin/joor-orders' },
+    { title: 'JOOR Orders', icon: ShoppingBag, path: '/admin/joor-orders', adminOnly: true },
 ];
 
 
@@ -69,23 +69,30 @@ const complianceItems = [
 
 
 export function AppSidebar(props) {
-        const isMenuItemActive = (path) => {
-            return location.pathname === path || location.pathname.startsWith(`${path}/`);
-        };
-
-    const navigate = useNavigate();
     const location = useLocation();
     const { user } = useAppContext();
     const [isLoggingOut, setIsLoggingOut] = useState(false);
     const isCustomer = user?.user_type === 'customer';
 
-   
-    
+    // Customers live under /user/*, everyone else under /admin/*
+    const basePath = isCustomer ? '/user' : '/admin';
+    const resolvePath = (path) => path.replace(/^\/admin/, basePath);
+
+    const isMenuItemActive = (path) => {
+        const resolved = resolvePath(path);
+        return location.pathname === resolved || location.pathname.startsWith(`${resolved}/`);
+    };
+
+    // Customers must not see admin-only entries (e.g. JOOR Orders)
+    const visibleOrderItems = orderItems.filter((item) => !(isCustomer && item.adminOnly));
 
     const handleLogout = async () => {
         if (isLoggingOut) {
             return;
         }
+
+        // Read the role before the session is cleared
+        const wasCustomer = isCustomer;
 
         setIsLoggingOut(true);
 
@@ -108,7 +115,8 @@ export function AppSidebar(props) {
             });
         } finally {
             setIsLoggingOut(false);
-            navigate('/admin');
+            // Full page load: /login is served by the storefront app, not this admin SPA
+            window.location.assign(wasCustomer ? '/login' : '/admin');
         }
     };
 
@@ -134,7 +142,7 @@ export function AppSidebar(props) {
                                             tooltip={item.title}
                                             isActive={isMenuItemActive(item.path)}
                                         >
-                                            <Link to={item.path}>
+                                            <Link to={resolvePath(item.path)}>
                                                 <item.icon className="size-4 shrink-0 text-sidebar-foreground" />
                                                 <span>{item.title}</span>
                                             </Link>
@@ -159,7 +167,7 @@ export function AppSidebar(props) {
                                             tooltip={item.title}
                                             isActive={isMenuItemActive(item.path)}
                                         >
-                                            <Link to={item.path}>
+                                            <Link to={resolvePath(item.path)}>
                                                 <item.icon className="size-4 shrink-0 text-sidebar-foreground" />
                                                 <span>{item.title}</span>
                                             </Link>
@@ -184,7 +192,7 @@ export function AppSidebar(props) {
                                             tooltip={item.title}
                                             isActive={isMenuItemActive(item.path)}
                                         >
-                                            <Link to={item.path}>
+                                            <Link to={resolvePath(item.path)}>
                                                 <item.icon className="size-4 shrink-0 text-sidebar-foreground" />
                                                 <span>{item.title}</span>
                                             </Link>
@@ -199,19 +207,19 @@ export function AppSidebar(props) {
               
 
                 
-                {orderItems.length > 0 && (
+                {visibleOrderItems.length > 0 && (
                     <SidebarGroup>
                         <SidebarGroupLabel>Orders</SidebarGroupLabel>
                         <SidebarGroupContent>
                             <SidebarMenu>
-                                {orderItems.map((item) => (
+                                {visibleOrderItems.map((item) => (
                                     <SidebarMenuItem key={item.title}>
                                         <SidebarMenuButton
                                             asChild
                                             tooltip={item.title}
                                             isActive={isMenuItemActive(item.path)}
                                         >
-                                            <Link to={item.path}>
+                                            <Link to={resolvePath(item.path)}>
                                                 <item.icon className="size-4 shrink-0 text-sidebar-foreground" />
                                                 <span>{item.title}</span>
                                             </Link>
@@ -235,7 +243,7 @@ export function AppSidebar(props) {
                                             tooltip={item.title}
                                             isActive={isMenuItemActive(item.path)}
                                         >
-                                            <Link to={item.path}>
+                                            <Link to={resolvePath(item.path)}>
                                                 <item.icon className="size-4 shrink-0 text-sidebar-foreground" />
                                                 <span>{item.title}</span>
                                             </Link>
@@ -259,7 +267,7 @@ export function AppSidebar(props) {
                                             tooltip={item.title}
                                             isActive={isMenuItemActive(item.path)}
                                         >
-                                            <Link to={item.path}>
+                                            <Link to={resolvePath(item.path)}>
                                                 <item.icon className="size-4 shrink-0 text-sidebar-foreground" />
                                                 <span>{item.title}</span>
                                             </Link>
@@ -283,7 +291,7 @@ export function AppSidebar(props) {
                                             tooltip={item.title}
                                             isActive={isMenuItemActive(item.path)}
                                         >
-                                            <Link to={item.path}>
+                                            <Link to={resolvePath(item.path)}>
                                                 <item.icon className="size-4 shrink-0 text-sidebar-foreground" />
                                                 <span>{item.title}</span>
                                             </Link>

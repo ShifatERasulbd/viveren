@@ -2,10 +2,22 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 
 export default function Brand({ headerLogo, onClick, siteName }) {
+    const isCustomerDashboard = typeof window !== 'undefined' && window.location.pathname.startsWith('/user');
+
+    const handleClick = (event) => {
+        if (isCustomerDashboard) {
+            event.preventDefault();
+            window.location.assign('/');
+            return;
+        }
+
+        onClick?.(event);
+    };
+
     return (
         <Link
             to="/"
-            onClick={onClick}
+            onClick={handleClick}
             className="site-header-brand absolute left-1/2 -translate-x-1/2 flex min-w-0 items-center transition-opacity hover:opacity-80 xl:relative xl:left-auto xl:translate-x-0 xl:col-start-1 xl:justify-self-start"
             aria-label="Home"
         >

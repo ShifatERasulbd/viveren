@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -89,6 +90,24 @@ Route::middleware('auth:sanctum')->group(function () {
     })->where('path', '.*');
 });
 
+// Customer area: same SPA, shown under /user/*
+// Must stay above the catch-all routes below.
+Route::get('/user/{path?}', function (Request $request) {
+    $user = $request->user();
+
+    // Not logged in -> storefront login page
+    if (! $user) {
+        return redirect('/login');
+    }
+
+    // Admins/staff belong under /admin
+    if ($user->user_type !== 'customer') {
+        return redirect('/admin/' . ($request->route('path') ?: 'dashboard'));
+    }
+
+    return view('app');
+})->where('path', '.*');
+
 Route::get('/{subCategorySlug}/{grandChildSlug?}', function () {
     return view('home');
 });
@@ -97,4 +116,3 @@ Route::get('/{subCategorySlug}/{grandChildSlug?}', function () {
 Route::get('/{any}', function () {
     return view('home');
 })->where('any', '.*');
-

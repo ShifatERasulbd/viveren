@@ -103,6 +103,14 @@ export default function App() {
                                 </main>
                             }
                         />
+
+                        {/* Customer area: /user/dashboard, /user/orders */}
+                        <Route path="/user" element={<AppLayout />}>
+                            <Route path="dashboard" element={<Dashboard />} />
+                            <Route path="orders" element={<Orders />} />
+                            <Route path="orders/:id/edit" element={<EditOrder />} />
+                        </Route>
+
                         {/* user Managemnent */}
                         <Route path="/admin" element={<AppLayout />}>
                             <Route path="dashboard" element={<Dashboard />} />
@@ -177,4 +185,3 @@ export default function App() {
         </AppProvider>
     );
 }
-

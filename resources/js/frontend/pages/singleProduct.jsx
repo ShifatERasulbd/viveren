@@ -1,8 +1,8 @@
-import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import SectionSkeleton from '../components/SectionSkeleton.jsx';
-
+ 
 const SingleProductMainSection = lazy(() => import('../components/SingleProductMainSection.jsx'));
 // const SingleProductInfoTabs = lazy(() => import('../components/SingleProductInfoTabs.jsx'));
 const RelatedProductsSection = lazy(() => import('../components/RelatedProductsSection.jsx'));
@@ -44,25 +44,41 @@ function parseColorTokens(value) {
     return [];
 }
 
-function productMatchesColor(product, colorParam, colorNameById = {}) {
-    const wanted = String(colorParam || '').trim().toLowerCase();
-    if (!wanted) {
-        return false;
-    }
+function toSlugToken(value) {
+    return String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+}
 
-    return parseColorTokens(product?.color).some((token) => {
-        const rawToken = String(token || '').trim().toLowerCase();
-        // Direct match
-        if (rawToken === wanted) {
-            return true;
+// "women-s-short-2" belongs to "women-s-short" when a product with that base slug exists.
+function createBaseSlugResolver(products) {
+    const slugs = new Set(products.map((item) => String(item?.slug || '').trim()).filter(Boolean));
+
+    return function resolveBaseSlug(slug) {
+        let current = String(slug || '').trim();
+
+        while (true) {
+            const match = current.match(/^(.*)-\d+$/);
+            if (match && slugs.has(match[1])) {
+                current = match[1];
+                continue;
+            }
+            return current;
         }
-        // If product color is an ID, resolve to name and compare
-        const resolvedName = colorNameById[rawToken];
-        if (resolvedName && resolvedName.toLowerCase() === wanted) {
-            return true;
-        }
-        return false;
-    });
+    };
+}
+
+function getProductColorLabels(product, colorNameById = {}) {
+    return parseColorTokens(product?.color)
+        .map((token) => String(colorNameById[token] || token).trim())
+        .filter(Boolean);
+}
+
+function buildDetailUrl(slug, colorLabel = '') {
+    const colorSlug = toSlugToken(colorLabel);
+    return `/product-details/${encodeURIComponent(slug)}${colorSlug ? `/${encodeURIComponent(colorSlug)}` : ''}`;
 }
 
 function parseIdList(value) {
@@ -86,8 +102,10 @@ function parseIdList(value) {
 export default function SingleProductPage() {
     const { slug: routeSlug = '', color: routeColor = '' } = useParams();
     const [searchParams] = useSearchParams();
+    const navigate = useNavigate();
     const [products, setProducts] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isColorsReady, setIsColorsReady] = useState(false);
     const [colorNameById, setColorNameById] = useState({});
 
     useEffect(() => {
@@ -116,7 +134,13 @@ export default function SingleProductPage() {
                         }
                     }
                 } catch {}
-            } catch {}
+            } catch {
+                // Ignore; page falls back to raw color tokens.
+            } finally {
+                if (!ignore) {
+                    setIsColorsReady(true);
+                }
+            }
         }
 
         bootstrap();
@@ -162,51 +186,154 @@ export default function SingleProductPage() {
         };
     }, []);
 
-    const currentProduct = useMemo(() => {
+    // All products that share one base slug (women-s-short, women-s-short-2, ...) form one page.
+    const productGroup = useMemo(() => {
         if (!Array.isArray(products) || products.length === 0) {
             return null;
         }
 
-        const slugParam = routeSlug || searchParams.get('slug');
-        const nameParam = searchParams.get('name');
-        const colorParam = (routeColor || searchParams.get('color') || '').replace(/-/g, ' ');
+        const resolveBase = createBaseSlugResolver(products);
+        const hasSlug = (item) => String(item?.slug || '').trim() !== '';
+        const collectMembers = (base) => products.filter((item) => hasSlug(item) && resolveBase(item.slug) === base);
+
+        const slugParam = String(routeSlug || searchParams.get('slug') || '').trim();
+        const nameParam = String(searchParams.get('name') || '').trim().toLowerCase();
+
+        let canonicalSlug = '';
+        let members = [];
+        let entry = null;
+        let matchedBySlug = false;
+
+        const adopt = (item) => {
+            entry = item;
+            if (hasSlug(item)) {
+                canonicalSlug = resolveBase(item.slug);
+                members = collectMembers(canonicalSlug);
+            } else {
+                canonicalSlug = '';
+                members = [item];
+            }
+        };
 
         if (slugParam) {
-            const bySlugCandidates = products.filter((item) => String(item?.slug || '') === String(slugParam));
-            const bySlug = bySlugCandidates.find((item) => productMatchesColor(item, colorParam, colorNameById)) || bySlugCandidates[0];
-            if (bySlug) {
-                return bySlug;
+            const base = resolveBase(slugParam);
+            const found = collectMembers(base);
+            if (found.length > 0) {
+                canonicalSlug = base;
+                members = found;
+                matchedBySlug = true;
+                entry = found.find((item) => String(item.slug).trim() === slugParam) || null;
             }
         }
 
-        if (nameParam) {
-            const normalizedName = String(nameParam).trim().toLowerCase();
-            const byNameCandidates = products.filter(
-                (item) => String(item?.name || '').trim().toLowerCase() === normalizedName,
-            );
-            const byName = byNameCandidates.find((item) => productMatchesColor(item, colorParam, colorNameById)) || byNameCandidates[0];
-
+        if (members.length === 0 && nameParam) {
+            const byName = products.find((item) => String(item?.name || '').trim().toLowerCase() === nameParam);
             if (byName) {
-                return byName;
+                adopt(byName);
             }
         }
 
-        return products[0] || null;
-    }, [products, routeSlug, routeColor, searchParams, colorNameById]);
+        if (members.length === 0) {
+            adopt(products[0]);
+        }
+
+        const suffixRank = (item) => {
+            const slug = String(item?.slug || '').trim();
+            if (slug === canonicalSlug) {
+                return 0;
+            }
+            const match = slug.slice(canonicalSlug.length).match(/^-(\d+)$/);
+            return match ? Number(match[1]) : Number.MAX_SAFE_INTEGER;
+        };
+
+        const sortedMembers = [...members].sort(
+            (left, right) => suffixRank(left) - suffixRank(right) || Number(left?.id) - Number(right?.id),
+        );
+
+        return {
+            canonicalSlug,
+            members: sortedMembers,
+            entry: entry && sortedMembers.includes(entry) ? entry : sortedMembers[0],
+            matchedBySlug,
+        };
+    }, [products, routeSlug, searchParams]);
+
+    // Unique colors across every product in the group; each color points at the product that owns it.
+    const groupColors = useMemo(() => {
+        if (!productGroup) {
+            return [];
+        }
+
+        const seen = new Map();
+
+        productGroup.members.forEach((member) => {
+            getProductColorLabels(member, colorNameById).forEach((label) => {
+                const key = toSlugToken(label);
+                if (key && !seen.has(key)) {
+                    seen.set(key, { label, slug: key, product: member });
+                }
+            });
+        });
+
+        return [...seen.values()];
+    }, [productGroup, colorNameById]);
+
+    const colorOptions = useMemo(() => groupColors.map((item) => item.label), [groupColors]);
+
+    const requestedColor = useMemo(() => {
+        const requestedSlug = toSlugToken(routeColor || searchParams.get('color') || '');
+        if (!requestedSlug) {
+            return null;
+        }
+        return groupColors.find((item) => item.slug === requestedSlug) || null;
+    }, [groupColors, routeColor, searchParams]);
+
+    // Description, images, sizes, price... all come from the product that owns the selected color.
+    const currentProduct = requestedColor?.product || productGroup?.entry || null;
 
     const initialColor = useMemo(() => {
-        const colorParam = String(routeColor || searchParams.get('color') || '').trim().replace(/-/g, ' ');
-        return colorParam;
-    }, [routeColor, searchParams]);
+        if (requestedColor) {
+            return requestedColor.label;
+        }
+
+        if (!currentProduct || !productGroup || currentProduct === productGroup.members[0]) {
+            return '';
+        }
+
+        return getProductColorLabels(currentProduct, colorNameById)[0] || '';
+    }, [requestedColor, currentProduct, productGroup, colorNameById]);
+
+    // /product-details/women-s-short-2[/color] -> /product-details/women-s-short/color
+    useEffect(() => {
+        if (!productGroup?.matchedBySlug || !currentProduct || !productGroup.canonicalSlug) {
+            return;
+        }
+
+        if (String(routeSlug || '').trim() === productGroup.canonicalSlug) {
+            return;
+        }
+
+        navigate(buildDetailUrl(productGroup.canonicalSlug, initialColor), { replace: true });
+    }, [productGroup, currentProduct, routeSlug, initialColor, navigate]);
+
+    const handleColorChange = useCallback((colorLabel) => {
+        if (!productGroup?.canonicalSlug) {
+            return;
+        }
+
+        navigate(buildDetailUrl(productGroup.canonicalSlug, colorLabel), { replace: true });
+    }, [productGroup, navigate]);
 
     const relatedProducts = useMemo(() => {
         if (!currentProduct) {
             return [];
         }
 
+        const groupIds = new Set((productGroup?.members || [currentProduct]).map((item) => Number(item?.id)));
+
         // If related products were selected in admin (related_product_ids), show only those.
         const selectedIds = parseIdList(currentProduct.related_product_ids)
-            .filter((id) => id !== Number(currentProduct.id));
+            .filter((id) => !groupIds.has(id));
 
         if (selectedIds.length > 0) {
             return selectedIds
@@ -217,15 +344,15 @@ export default function SingleProductPage() {
         // Nothing selected (null / empty): keep the original behavior.
         const sameGroup = products.filter(
             (item) =>
-                item?.id !== currentProduct.id
+                !groupIds.has(Number(item?.id))
                 && item?.grand_child_id != null
                 && item?.grand_child_id === currentProduct.grand_child_id,
         );
 
-        const fallback = products.filter((item) => item?.id !== currentProduct.id);
+        const fallback = products.filter((item) => !groupIds.has(Number(item?.id)));
 
         return (sameGroup.length > 0 ? sameGroup : fallback).slice(0, 8);
-    }, [products, currentProduct]);
+    }, [products, currentProduct, productGroup]);
 
     const comboProducts = useMemo(() => {
         const currentId = Number(currentProduct?.id);
@@ -265,7 +392,7 @@ export default function SingleProductPage() {
         return [...matched.values()];
     }, [products, currentProduct]);
 
-    if (isLoading) {
+    if (isLoading || !isColorsReady) {
         return (
             <div className="bg-background">
                 <LazySection heightClass="h-[760px]" variant="product">
@@ -286,11 +413,16 @@ export default function SingleProductPage() {
     return (
         <div className="bg-background">
             <LazySection heightClass="h-[760px]" variant="product">
-                <SingleProductMainSection product={currentProduct} initialColor={initialColor} comboProducts={comboProducts} />
+                <SingleProductMainSection
+                    product={currentProduct}
+                    initialColor={initialColor}
+                    comboProducts={comboProducts}
+                    colorOptions={colorOptions}
+                    canonicalSlug={productGroup?.canonicalSlug || ''}
+                    onColorChange={handleColorChange}
+                />
             </LazySection>
-            <LazySection heightClass="h-[320px]" variant="generic">
-                {/* <SingleProductInfoTabs product={currentProduct} /> */}
-            </LazySection>
+          
             <LazySection heightClass="h-[640px]" variant="catalog">
                 <RelatedProductsSection products={relatedProducts} currentProduct={currentProduct} />
             </LazySection>

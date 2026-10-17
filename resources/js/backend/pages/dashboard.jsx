@@ -6,6 +6,7 @@ import { StockOverviewChart } from '@/components/dashboard/chart';
 import { LowStockAlertTable } from '@/components/dashboard/low-stock-alertTable';
 import { useAppContext } from '@/context/AppContext';
 import { requestJson } from '@/lib/apiClient';
+import { bootstrapPublicSettings } from '../../utils/siteSettings';
 
 export default function Dashboard() {
     const { setPageTitle, user } = useAppContext();
@@ -15,6 +16,12 @@ export default function Dashboard() {
     useEffect(() => {
         setPageTitle('Dashboard');
     }, [setPageTitle]);
+
+    useEffect(() => {
+        if (user?.user_type === 'customer') {
+            bootstrapPublicSettings();
+        }
+    }, [user?.user_type]);
 
     useEffect(() => {
         if (!user || user?.user_type === 'customer') {
@@ -82,23 +89,23 @@ export default function Dashboard() {
         return <div className="text-sm text-zinc-500">Loading dashboard...</div>;
     }
 
+    // Customer view: content only. AppLayout already provides the storefront
+    // Header, Footer, CartProvider, CartDrawer and the customer sidebar.
     if (user?.user_type === 'customer') {
         return (
-            <div className="space-y-5">
-                <div className="rounded border border-zinc-200 bg-white p-6">
-                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">Customer Dashboard</p>
-                    <h2 className="mt-2 text-2xl font-semibold text-zinc-900">Welcome back, {user.first_name || user.name}</h2>
-                    <p className="mt-2 max-w-xl text-sm text-zinc-600">
-                        You can review your recent orders and track their status from your orders section.
-                    </p>
-                    <div className="mt-5">
-                        <Link
-                            to="/admin/orders"
-                            className="inline-flex h-10 items-center rounded bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-black"
-                        >
-                            View My Orders
-                        </Link>
-                    </div>
+            <div className="rounded border border-zinc-200 bg-white p-6">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">Customer Dashboard</p>
+                <h2 className="mt-2 text-2xl font-semibold text-zinc-900">Welcome back, {user.first_name || user.name}</h2>
+                <p className="mt-2 max-w-xl text-sm text-zinc-600">
+                    You can review your recent orders and track their status from your orders section.
+                </p>
+                <div className="mt-5">
+                    <Link
+                        to="/user/orders"
+                        className="inline-flex h-10 items-center rounded bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-black"
+                    >
+                        View My Orders
+                    </Link>
                 </div>
             </div>
         );

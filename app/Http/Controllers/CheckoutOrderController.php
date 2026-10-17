@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\OrderConfirmationMail;
 use App\Models\CheckoutOrder;
 use App\Models\Color;
 use App\Models\Product;
@@ -11,6 +12,7 @@ use App\Services\VeeqoShippingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Stripe\StripeClient;
 
 class CheckoutOrderController extends Controller
@@ -426,6 +428,16 @@ class CheckoutOrderController extends Controller
             'payment_status' => 'paid',
             'payment_intent_id' => $validated['payment_intent_id'],
         ]);
+
+        // Send the order confirmation. A mail failure must never break a paid order.
+        try {
+            Mail::to($order->email)->send(new OrderConfirmationMail($order));
+        } catch (\Throwable $exception) {
+            Log::error('Order confirmation email failed', [
+                'order_number' => $order->order_number,
+                'error' => $exception->getMessage(),
+            ]);
+        }
 
         return response()->json([
             'message' => 'Order created successfully',

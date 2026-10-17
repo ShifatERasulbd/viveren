@@ -14,6 +14,15 @@ export default function MainNav({
     shopMegaMenuCaption,
     shopMegaMenuHref,
 }) {
+    const isCustomerDashboard = typeof window !== 'undefined' && window.location.pathname.startsWith('/user');
+
+    const handleLinkClick = (href) => (event) => {
+        if (isCustomerDashboard) {
+            event.preventDefault();
+            window.location.assign(href);
+        }
+    };
+
     return (
         <nav className="site-header-nav col-start-1 hidden items-center justify-start gap-5 xl:col-start-2 xl:flex" aria-label="Primary">
             {isNavigationLoading ? (
@@ -43,6 +52,7 @@ export default function MainNav({
                         >
                             <Link
                                 to={item.href}
+                                onClick={handleLinkClick(item.href)}
                                 className="site-header-nav-link flex items-center h-full text-[14px] font-medium uppercase tracking-[0.12em] text-zinc-950 transition-opacity hover:opacity-60"
                                 style={{ fontFamily: 'Montserrat, sans-serif' }}
                                 aria-expanded={isShopMegaMenuOpen}
@@ -69,7 +79,7 @@ export default function MainNav({
                                                     shopChildColumns.map((column) => (
                                                         <div key={column.title} className="px-2 py-2">
                                                             <h3 className="text-[0.8rem] font-semibold uppercase tracking-[0.18em] text-zinc-400">
-                                                                <Link to={column.href} className="transition-colors hover:text-zinc-700" onClick={closeShopMenuImmediately}>
+                                                                <Link to={column.href} className="transition-colors hover:text-zinc-700" onClick={(event) => { closeShopMenuImmediately(); handleLinkClick(column.href)(event); }}>
                                                                     {column.title}
                                                                 </Link>
                                                             </h3>
@@ -77,7 +87,7 @@ export default function MainNav({
                                                             <ul className="mt-5 space-y-2 text-[0.98rem] font-medium uppercase leading-7 tracking-[0.01em] text-zinc-600">
                                                                 {column.items.map((megaItem) => (
                                                                     <li key={`${column.title}-${megaItem.label}`}>
-                                                                        <Link to={megaItem.href} className="transition-colors hover:text-zinc-950" onClick={closeShopMenuImmediately}>
+                                                                        <Link to={megaItem.href} className="transition-colors hover:text-zinc-950" onClick={(event) => { closeShopMenuImmediately(); handleLinkClick(megaItem.href)(event); }}>
                                                                             {megaItem.label}
                                                                         </Link>
                                                                     </li>
@@ -94,7 +104,7 @@ export default function MainNav({
                                         {shopMegaMenuImage ? (
                                             <div className="flex min-w-0 basis-[28%] justify-center">
                                                 <figure className="w-full max-w-[420px] text-center">
-                                                    <Link to={shopMegaMenuHref} className="block overflow-hidden border border-zinc-200 bg-zinc-100 p-3" onClick={closeShopMenuImmediately}>
+                                                    <Link to={shopMegaMenuHref} className="block overflow-hidden border border-zinc-200 bg-zinc-100 p-3" onClick={(event) => { closeShopMenuImmediately(); handleLinkClick(shopMegaMenuHref)(event); }}>
                                                         <img src={shopMegaMenuImage} alt={shopMegaMenuCaption} className="h-[260px] w-full object-contain object-center xl:h-[300px]" />
                                                     </Link>
                                                 </figure>
@@ -104,7 +114,7 @@ export default function MainNav({
                                          {shopMegaMenuImage2 ? (
                                             <div className="flex min-w-0 basis-[28%] justify-center">
                                                 <figure className="w-full max-w-[420px] text-center">
-                                                    <Link to={shopMegaMenuHref} className="block overflow-hidden border border-zinc-200 bg-zinc-100 p-3" onClick={closeShopMenuImmediately}>
+                                                    <Link to={shopMegaMenuHref} className="block overflow-hidden border border-zinc-200 bg-zinc-100 p-3" onClick={(event) => { closeShopMenuImmediately(); handleLinkClick(shopMegaMenuHref)(event); }}>
                                                         <img src={shopMegaMenuImage2} alt={shopMegaMenuCaption} className="h-[260px] w-full object-contain object-center xl:h-[300px]" />
                                                     </Link>
                                                 </figure>
@@ -118,6 +128,7 @@ export default function MainNav({
                         <Link
                             key={navKey}
                             to={item.href}
+                            onClick={handleLinkClick(item.href)}
                             className="site-header-nav-link text-[14px] font-medium uppercase tracking-[0.12em] text-zinc-950 transition-opacity hover:opacity-60"
                             style={{ fontFamily: 'Montserrat, sans-serif' }}
                         >

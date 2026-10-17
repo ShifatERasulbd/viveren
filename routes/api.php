@@ -33,8 +33,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\GoogleAuthController;
 
+// Admin panel password login (used by /admin)
+Route::post('/login', [AuthController::class, 'login'])->middleware(['web', 'throttle:10,1']);
 
-Route::post('/login', [AuthController::class, 'login'])->middleware(['web', 'throttle:6,1']);
+
+// Updated OTP Login Routes
+Route::post('/login/send-otp', [AuthController::class, 'sendOtp'])->middleware(['web', 'throttle:6,1']);
+Route::post('/login/verify-otp', [AuthController::class, 'verifyOtp'])->middleware(['web', 'throttle:10,1']);
+
 Route::post('/register', [AuthController::class, 'register'])->middleware(['web', 'throttle:6,1']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware(['web', 'throttle:6,1']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware(['web', 'throttle:6,1']);
@@ -186,7 +192,7 @@ Route::middleware('auth:sanctum')->group(function () {
 	Route::delete('/public-api-keys/{publicApiKey}', [PublicApiKeyController::class, 'destroy']);
 
 	// Compliance Management
-	Route::apiResource('/compliance', \App\Http\Controllers\CompliancePageController::class);
+	Route::apiResource('/compliance', \App\Type\CompliancePageController::class);
 	});
 	
 });

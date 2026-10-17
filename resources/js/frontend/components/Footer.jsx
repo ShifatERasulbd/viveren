@@ -29,8 +29,14 @@ function resolveAssetUrl(path) {
     return `/${raw.replace(/^\/+/, '')}`;
 }
 
-function FooterCol({ heading, links, onOpenModal }) {
+function FooterCol({ heading, links, onOpenModal, onLinkClick }) {
     const linkBaseClass = `font-monstrate ${sectionTypography.footerLink} text-zinc-400 transition-colors hover:text-white`;
+
+    const handleClick = (href, event) => {
+        if (onLinkClick) {
+            onLinkClick(href, event);
+        }
+    };
 
     return (
         <nav aria-label={heading}>
@@ -49,11 +55,11 @@ function FooterCol({ heading, links, onOpenModal }) {
                                 {label}
                             </button>
                         ) : href?.startsWith('/') ? (
-                            <Link to={href} className={linkBaseClass}>
+                            <Link to={href} className={linkBaseClass} onClick={(event) => handleClick(href, event)}>
                                 {label}
                             </Link>
                         ) : (
-                            <a href={href} className={linkBaseClass}>
+                            <a href={href} className={linkBaseClass} onClick={(event) => handleClick(href, event)}>
                                 {label}
                             </a>
                         )}
@@ -68,6 +74,14 @@ export default function Footer() {
     const [siteSettings, setSiteSettings] = useState(() => getSettingsPayload());
     const [complianceData, setComplianceData] = useState(null);
     const [activeModal, setActiveModal] = useState(null);
+    const isCustomerDashboard = typeof window !== 'undefined' && window.location.pathname.startsWith('/user');
+
+    const handleLinkClick = (href, event) => {
+        if (isCustomerDashboard) {
+            event.preventDefault();
+            window.location.assign(href);
+        }
+    };
 
     useEffect(() => {
         let ignore = false;
@@ -139,7 +153,7 @@ export default function Footer() {
                     
                     {/* Brand column */}
                     <div className="space-y-4">
-                        <Link to="/" className="inline-flex items-center gap-1">
+                        <Link to="/" className="inline-flex items-center gap-1" onClick={(event) => handleLinkClick('/', event)}>
                             {footerLogo ? (
                                 <img
                                     src={footerLogo}
@@ -179,9 +193,9 @@ export default function Footer() {
                         </div>
                     </div>
 
-                    <FooterCol heading="Shop" links={shopLinks} />
-                    <FooterCol heading="Customer Service" links={helpLinks}  />
-                    <FooterCol heading="Other" links={houseLinks}  />
+                    <FooterCol heading="Shop" links={shopLinks} onLinkClick={handleLinkClick} />
+                    <FooterCol heading="Customer Service" links={helpLinks} onLinkClick={handleLinkClick} />
+                    <FooterCol heading="Other" links={houseLinks} onLinkClick={handleLinkClick} />
                 </div>
             </div>
 
@@ -189,12 +203,12 @@ export default function Footer() {
                 <div className={`mx-auto flex w-full max-w-[1700px] flex-col items-center justify-between gap-3 px-6 py-5 ${sectionTypography.footerLegal} text-zinc-500 sm:flex-row sm:px-10 lg:px-16`}>
                     <span>© 2026 Viveren. All rights reserved.</span>
                     <div className="flex items-center gap-6">
-                        <Link to="/privacy" className="transition-colors hover:text-white">
+                        <button type="button" className="transition-colors hover:text-white" onClick={(event) => handleLinkClick('/privacy', event)}>
                             Privacy
-                        </Link>
-                        <Link to="/terms" className="transition-colors hover:text-white">
+                        </button>
+                        <button type="button" className="transition-colors hover:text-white" onClick={(event) => handleLinkClick('/terms', event)}>
                             Terms
-                        </Link>
+                        </button>
                        
                     </div>
                 </div>

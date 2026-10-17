@@ -12,6 +12,9 @@ import { sectionTypography } from '../utils/sectionTypography';
 const productImage = '/uploads/heroes/images/hero1.webp';
 const PLACEHOLDER_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='800' viewBox='0 0 600 800'%3E%3Crect width='100%25' height='100%25' fill='%23eef0f3'/%3E%3C/svg%3E";
 const PRODUCTS_PER_PAGE = 12;
+const CARD_WIDTH = 325;
+const CARD_GAP = 4;
+const MAX_COLUMNS = 4;
 const FABRIC_OPTIONS = ['Flex Twill', 'Dual Skin Scuba', 'Aero Twill', 'Terra Soft'];
 const FABRIC_SLUG_MAP = Object.fromEntries(
     FABRIC_OPTIONS.map((fabric) => [fabric.toLowerCase().replace(/\s+/g, '-'), fabric]),
@@ -19,7 +22,7 @@ const FABRIC_SLUG_MAP = Object.fromEntries(
 
 function toFabricSlug(value) {
     return String(value || '').trim().toLowerCase().replace(/\s+/g, '-');
-}
+} 
 
 function getProductGender(product) {
     const name = String(product?.name || '').trim().toLowerCase();
@@ -975,9 +978,9 @@ function ProductCard({ product, colorLookup = {}, colorNameLookup = {}, onAddToC
     
 
     return (
-        <article className="group min-w-0 w-full overflow-hidden border border-zinc-200">
+        <article className="group w-[325px] shrink-0 overflow-hidden border border-zinc-200">
             <Link to={productLink} className="block">
-                <div className="relative h-[430px] w-full overflow-hidden bg-zinc-100 sm:h-[470px] lg:h-[510px]">
+                <div className="relative h-[510px] w-[325px] overflow-hidden bg-zinc-100">
                     <div
                         className={`absolute inset-0 bg-zinc-200/70 transition-opacity duration-500 ${
                             isImageLoaded ? 'opacity-0' : 'animate-pulse opacity-100'
@@ -1117,11 +1120,33 @@ function ShopProductsGrid({
     const end = visibleProducts.length > 0 ? start + visibleProducts.length - 1 : 0;
     const genderFilterValue = selectedGenders.length === 1 ? selectedGenders[0] : 'All';
 
+    const gridRef = useRef(null);
+    const [columns, setColumns] = useState(MAX_COLUMNS);
+
+    useEffect(() => {
+        const el = gridRef.current;
+        if (!el) {
+            return undefined;
+        }
+
+        const update = () => {
+            const fit = Math.floor((el.clientWidth + CARD_GAP) / (CARD_WIDTH + CARD_GAP));
+            setColumns(Math.max(1, Math.min(MAX_COLUMNS, fit)));
+        };
+
+        update();
+        const observer = new ResizeObserver(update);
+        observer.observe(el);
+
+        return () => observer.disconnect();
+    }, [visibleProducts.length]);
+
     return (
         <div className="min-w-0 max-w-full">
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3  py-4">
                 <p className="text-[0.88rem]  tracking-[0.07em] text-slate-600">
                     Showing {start}-{end} of {totalResults} results
+                    <span className="ml-3 text-zinc-400">· {columns} per row</span>
                 </p>
 
                 <div className="flex items-center gap-3">
@@ -1150,7 +1175,15 @@ function ShopProductsGrid({
             </div>
 
             {visibleProducts.length > 0 ? (
-                <div className="grid min-w-0 grid-cols-2 gap-x-1 gap-y-4 md:grid-cols-3 xl:grid-cols-4">
+                <div
+                    ref={gridRef}
+                    className="grid min-w-0 gap-y-4"
+                    style={{
+                        gridTemplateColumns: `repeat(${columns}, ${CARD_WIDTH}px)`,
+                        columnGap: CARD_GAP,
+                        justifyContent: 'center',
+                    }}
+                >
                     {visibleProducts.map((product) => (
                         <ProductCard key={product.id} product={product} colorLookup={colorLookup} colorNameLookup={colorNameLookup} onAddToCart={onAddToCart} seedColorOnly={seedColorOnly} hideColorSwatches={hideColorSwatches} />
                     ))}
@@ -1886,8 +1919,8 @@ export default function ShopCatalogSection() {
 
     if (isLoading) {
         return (
-            <section className={`${featuresFontClass} max-w-full overflow-x-hidden px-5 py-12 sm:px-8 lg:px-12 lg:py-16`}>
-                <div className="mx-auto grid min-w-0 w-full max-w-[1709px] animate-pulse gap-8 lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-10">
+            <section className={`${featuresFontClass} max-w-full overflow-x-hidden px-5 py-12 sm:px-8 lg:px-6 lg:py-16`}>
+                <div className="mx-auto grid min-w-0 w-full max-w-[1709px] animate-pulse gap-8 lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-6">
                     <div className="space-y-4 rounded border border-zinc-200  p-5">
                         <div className="h-5 w-28 rounded bg-zinc-200" />
                         <div className="h-10 rounded bg-zinc-200" />
@@ -1903,10 +1936,13 @@ export default function ShopCatalogSection() {
                             <div className="h-9 w-28 rounded bg-zinc-200" />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+                        <div
+                            className="grid gap-4"
+                            style={{ gridTemplateColumns: `repeat(auto-fill, ${CARD_WIDTH}px)`, justifyContent: 'center' }}
+                        >
                             {Array.from({ length: 8 }).map((_, index) => (
-                                <article key={`shop-card-skeleton-${index}`} className="overflow-hidden border border-zinc-200">
-                                    <div className="h-[430px] bg-zinc-200 sm:h-[470px] lg:h-[510px]" />
+                                <article key={`shop-card-skeleton-${index}`} className="w-[325px] overflow-hidden border border-zinc-200">
+                                    <div className="h-[510px] bg-zinc-200" />
                                     <div className="space-y-2 p-4">
                                         <div className="h-3.5 w-[80%] rounded bg-zinc-200" />
                                         <div className="h-3.5 w-20 rounded bg-zinc-200" />
@@ -1923,11 +1959,11 @@ export default function ShopCatalogSection() {
     return (
         <section
             ref={catalogTopRef}
-            className={`${featuresFontClass} max-w-full overflow-x-hidden px-5 py-12 transition-opacity duration-500 sm:px-8 lg:px-12 lg:py-16 ${
+            className={`${featuresFontClass} max-w-full overflow-x-hidden px-5 py-12 transition-opacity duration-500 sm:px-8 lg:px-6 lg:py-16 ${
                 isContentVisible ? 'opacity-100' : 'opacity-0'
             }`}
         >
-            <div className="mx-auto grid min-w-0 w-full max-w-[1709px] gap-8 lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-10">
+            <div className="mx-auto grid min-w-0 w-full max-w-[1709px] gap-8 lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-6">
                 <div className="hidden lg:block">
                     <ShopSidebar
                         sizeOptions={sizeOptions}

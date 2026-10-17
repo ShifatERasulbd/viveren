@@ -75,6 +75,16 @@ export default function Header() {
     
     const closeMenuTimerRef = useRef(null);
     const searchInputRef = useRef(null);
+    const isCustomerDashboard = location.pathname.startsWith('/user');
+
+    function goToFrontendRoute(path) {
+        if (isCustomerDashboard) {
+            window.location.assign(path);
+            return;
+        }
+
+        navigate(path);
+    }
 
     function openMobileMenu() {
         setIsMobileMenuOpen(true);
@@ -104,7 +114,7 @@ export default function Header() {
         closeSearch();
 
         if (location && location.pathname !== '/') {
-            navigate('/');
+            goToFrontendRoute('/');
             window.setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 40);
             return;
         }
@@ -119,17 +129,17 @@ export default function Header() {
         closeSearch();
 
         if (!normalized) {
-            navigate('/shop');
+            goToFrontendRoute('/shop');
             return;
         }
 
         const searchSlug = toSearchSlug(normalized);
         if (!searchSlug) {
-            navigate('/shop');
+            goToFrontendRoute('/shop');
             return;
         }
 
-        navigate(`/search/${encodeURIComponent(searchSlug)}`);
+        goToFrontendRoute(`/search/${encodeURIComponent(searchSlug)}`);
     }
 
     function handleOpenCart() {
