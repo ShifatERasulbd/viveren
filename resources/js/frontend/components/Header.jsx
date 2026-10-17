@@ -48,6 +48,17 @@ function resolveShopColumnHref(name, slug) {
     return `/${encodeURIComponent(slug)}`;
 }
 
+function resolveSubCategoryItemHref(subCategoryName, subCategorySlug, grandChildSlug) {
+    const baseHref = `/${encodeURIComponent(subCategorySlug)}/${encodeURIComponent(grandChildSlug)}`;
+    const normalized = String(subCategoryName || '').trim().toLowerCase();
+
+    if (normalized === 'men' || normalized === 'women') {
+        return `${baseHref}?gender=${encodeURIComponent(normalized)}`;
+    }
+
+    return baseHref;
+}
+
 const utilityIcons = [
     { label: 'Account', icon: UserRound, href: '/login' },
     { label: 'Search', icon: Search, href: '#search' },
@@ -396,9 +407,9 @@ export default function Header() {
                 .get(Number(subCategory?.id))
                 ?.map((grandChild) => ({
                     label: String(grandChild?.name || '').trim() || 'Item',
-                    href: `/${encodeURIComponent(subCategorySlug)}/${encodeURIComponent(
+                    href: resolveSubCategoryItemHref(subCategory?.name, subCategorySlug,
                         String(grandChild?.slug || '').trim() || String(grandChild?.id || '')
-                    )}`,
+                    ),
                 })) || [];
 
             return {
@@ -437,9 +448,9 @@ export default function Header() {
                     const grandChildItems = (grandChildsBySubCategory.get(Number(subCategory?.id)) || []).map((grandChild) => ({
                         id: grandChild?.id,
                         label: String(grandChild?.name || '').trim() || 'Item',
-                        href: `/${encodeURIComponent(subCategoryKey)}/${encodeURIComponent(
+                        href: resolveSubCategoryItemHref(subCategory?.name, subCategoryKey,
                             String(grandChild?.slug || '').trim() || String(grandChild?.id || '')
-                        )}`,
+                        ),
                     }));
 
                     return {

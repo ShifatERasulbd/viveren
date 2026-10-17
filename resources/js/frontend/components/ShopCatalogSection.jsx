@@ -1636,8 +1636,7 @@ export default function ShopCatalogSection() {
             // Don't let the default gender/availability filters hide search matches.
             setSelectedGenders([]);
             setSelectedAvailability([]);
-        } else if (pathName === '/shop') {
-            // Mega-menu Men/Women links carry ?gender=, Collections/plain Shop links show everything.
+        } else {
             const genderValue = String(params.get('gender') || '').trim().toLowerCase();
             if (genderValue === 'men') {
                 setSelectedGenders(['Men']);
