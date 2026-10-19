@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 
 import RelatedProductsSection from '../components/RelatedProductsSection.jsx';
 import { featuresFontClass } from '../utils/typography';
+import { bootstrapPublicSettings, getSettingsPayload, onSettingsUpdated } from '../../utils/siteSettings';
 
 function normalizeProductList(payload) {
     if (Array.isArray(payload)) {
@@ -72,6 +73,44 @@ function buildInvoiceFileName(orderNumber) {
     return `${normalized || 'invoice'}.pdf`;
 }
 
+function resolveLogoUrl(value = '') {
+    const path = String(value || '').trim();
+
+    if (!path) {
+        return '';
+    }
+
+    if (/^(https?:|data:|blob:)/i.test(path)) {
+        return path;
+    }
+
+    return `/${path.replace(/^\/+/, '')}`;
+}
+
+function loadLogoImage(source) {
+    return new Promise((resolve, reject) => {
+        const image = new Image();
+        image.crossOrigin = 'anonymous';
+        image.onload = () => {
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = image.naturalWidth;
+                canvas.height = image.naturalHeight;
+                canvas.getContext('2d').drawImage(image, 0, 0);
+                resolve({
+                    data: canvas.toDataURL('image/png'),
+                    width: image.naturalWidth,
+                    height: image.naturalHeight,
+                });
+            } catch {
+                reject(new Error('The configured header logo could not be prepared for the invoice.'));
+            }
+        };
+        image.onerror = () => reject(new Error('The configured header logo could not be loaded.'));
+        image.src = source;
+    });
+}
+
 export default function OrderConfirmationPage() {
     const [searchParams] = useSearchParams();
     const orderNumber = searchParams.get('order') || '';
@@ -81,6 +120,14 @@ export default function OrderConfirmationPage() {
     const [orderError, setOrderError] = useState('');
     const [isLoadingOrder, setIsLoadingOrder] = useState(false);
     const [relatedProducts, setRelatedProducts] = useState([]);
+    const [siteSettings, setSiteSettings] = useState(() => getSettingsPayload());
+
+    useEffect(() => {
+        const unsubscribe = onSettingsUpdated((payload) => setSiteSettings(payload || {}));
+        bootstrapPublicSettings().then((payload) => setSiteSettings(payload || {}));
+
+        return unsubscribe;
+    }, []);
 
     useEffect(() => {
         let ignore = false;
@@ -199,7 +246,7 @@ export default function OrderConfirmationPage() {
         return parsed.toLocaleString();
     }, [order?.created_at]);
 
-    function handleDownloadInvoice() {
+    async function handleDownloadInvoice() {
         if (!order) {
             toast.error('Invoice details are not available yet.');
             return;
@@ -208,63 +255,113 @@ export default function OrderConfirmationPage() {
         const doc = new jsPDF({ unit: 'pt', format: 'a4' });
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
-        const margin = 40;
-        let cursorY = 48;
+        const margin = 44;
+        const contentWidth = pageWidth - (margin * 2);
+        const navy = [31, 47, 67];
+        const muted = [105, 112, 121];
+        const gold = [174, 143, 91];
+        const light = [245, 246, 247];
+        const columns = {
+            item: margin + 12,
+            qty: pageWidth - margin - 166,
+            price: pageWidth - margin - 104,
+            total: pageWidth - margin - 12,
+        };
+        let cursorY = 0;
+        let logoImage = null;
+        const logoUrl = resolveLogoUrl(siteSettings?.header_logo);
 
-        const writeLabelValue = (label, value, x, y) => {
+        if (logoUrl) {
+            try {
+                logoImage = await loadLogoImage(logoUrl);
+            } catch (error) {
+                toast.warning(`${error.message} The invoice will be downloaded without it.`);
+            }
+        }
+
+        const drawTableHeader = () => {
+            doc.setFillColor(...navy);
+            doc.roundedRect(margin, cursorY, contentWidth, 30, 4, 4, 'F');
             doc.setFont('helvetica', 'bold');
-            doc.setFontSize(10);
-            doc.text(label, x, y);
-            doc.setFont('helvetica', 'normal');
-            doc.text(String(value || '-'), x + 70, y);
+            doc.setFontSize(9);
+            doc.setTextColor(255, 255, 255);
+            doc.text('ITEM', columns.item, cursorY + 19);
+            doc.text('QTY', columns.qty, cursorY + 19, { align: 'center' });
+            doc.text('PRICE', columns.price, cursorY + 19, { align: 'right' });
+            doc.text('TOTAL', columns.total, cursorY + 19, { align: 'right' });
+            cursorY += 42;
         };
 
-        const ensurePageSpace = (heightNeeded = 24) => {
-            if (cursorY + heightNeeded <= pageHeight - margin) {
-                return;
-            }
-
+        const addPageWithTableHeader = () => {
             doc.addPage();
             cursorY = 48;
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(9);
+            doc.setTextColor(...muted);
+            doc.text(`ORDER ${String(order.order_number || '').toUpperCase()}`, margin, cursorY);
+            cursorY += 20;
+            drawTableHeader();
         };
+
+        doc.setFillColor(...navy);
+        doc.rect(0, 0, pageWidth, 8, 'F');
+
+        if (logoImage) {
+            const maxLogoWidth = 142;
+            const maxLogoHeight = 48;
+            const scale = Math.min(maxLogoWidth / logoImage.width, maxLogoHeight / logoImage.height);
+            const logoWidth = logoImage.width * scale;
+            const logoHeight = logoImage.height * scale;
+            doc.addImage(logoImage.data, 'PNG', margin, 38 + ((maxLogoHeight - logoHeight) / 2), logoWidth, logoHeight);
+        } else {
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(21);
+            doc.setTextColor(...navy);
+            doc.text('VIVEREN', margin, 69);
+        }
 
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(24);
-        doc.text('1971Co. Invoice', margin, cursorY);
-
-        cursorY += 24;
+        doc.setTextColor(...navy);
+        doc.text('INVOICE', pageWidth - margin, 54, { align: 'right' });
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(11);
-        doc.text(`Generated on ${createdDate}`, margin, cursorY);
+        doc.setFontSize(9);
+        doc.setTextColor(...muted);
+        doc.text(`ORDER  ${order.order_number || '-'}`, pageWidth - margin, 72, { align: 'right' });
+        doc.text(`ISSUED  ${createdDate}`, pageWidth - margin, 87, { align: 'right' });
+        doc.setDrawColor(...gold);
+        doc.setLineWidth(1.5);
+        doc.line(margin, 104, pageWidth - margin, 104);
 
-        cursorY += 28;
-        doc.setDrawColor(220, 220, 220);
-        doc.line(margin, cursorY, pageWidth - margin, cursorY);
+        cursorY = 124;
+        doc.setFillColor(...light);
+        doc.roundedRect(margin, cursorY, contentWidth, 62, 5, 5, 'F');
+        const metaColumns = [margin + 14, margin + 184, margin + 354];
+        const metadata = [
+            ['ORDER STATUS', order.status || 'Processing'],
+            ['COURIER', order.courier_service || '-'],
+            ['TRACKING NUMBER', order.courier_reference || '-'],
+        ];
+        metadata.forEach(([label, value], index) => {
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(8);
+            doc.setTextColor(...muted);
+            doc.text(label, metaColumns[index], cursorY + 22);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10);
+            doc.setTextColor(...navy);
+            const wrapped = doc.splitTextToSize(String(value), 150);
+            doc.text(wrapped.slice(0, 2), metaColumns[index], cursorY + 41);
+        });
 
-        cursorY += 22;
-        writeLabelValue('Order:', order.order_number || '-', margin, cursorY);
-        writeLabelValue('Status:', order.status || '-', margin + 220, cursorY);
-
-        cursorY += 18;
-        writeLabelValue('Courier:', order.courier_service || '-', margin, cursorY);
-        writeLabelValue('Tracking:', order.courier_reference || '-', margin + 220, cursorY);
-
-        cursorY += 28;
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(11);
-        doc.text('Customer', margin, cursorY);
-        doc.text('Shipping Address', margin + 260, cursorY);
-
-        cursorY += 18;
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10);
-
+        cursorY += 89;
+        const cardGap = 14;
+        const cardWidth = (contentWidth - cardGap) / 2;
         const customerLines = [
             `${order.first_name || ''} ${order.last_name || ''}`.trim() || '-',
             order.email || '-',
             order.phone || '-',
         ];
-
         const addressLines = [
             order.address_line_1 || '-',
             order.address_line_2 || '',
@@ -272,26 +369,30 @@ export default function OrderConfirmationPage() {
             order.country || '-',
         ].filter(Boolean);
 
-        customerLines.forEach((line, index) => {
-            doc.text(String(line), margin, cursorY + (index * 14));
+        [
+            { title: 'BILLED TO', lines: customerLines, x: margin },
+            { title: 'SHIPPING ADDRESS', lines: addressLines, x: margin + cardWidth + cardGap },
+        ].forEach(({ title, lines, x }) => {
+            doc.setFillColor(255, 255, 255);
+            doc.setDrawColor(224, 227, 230);
+            doc.roundedRect(x, cursorY, cardWidth, 91, 5, 5, 'FD');
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(8);
+            doc.setTextColor(...gold);
+            doc.text(title, x + 13, cursorY + 19);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            doc.setTextColor(...navy);
+            let lineY = cursorY + 39;
+            lines.forEach((line) => {
+                const wrapped = doc.splitTextToSize(String(line), cardWidth - 26);
+                doc.text(wrapped, x + 13, lineY);
+                lineY += wrapped.length * 12;
+            });
         });
 
-        addressLines.forEach((line, index) => {
-            doc.text(String(line), margin + 260, cursorY + (index * 14));
-        });
-
-        cursorY += Math.max(customerLines.length, addressLines.length) * 14 + 26;
-        ensurePageSpace(40);
-
-        doc.setFont('helvetica', 'bold');
-        doc.text('Item', margin, cursorY);
-        doc.text('Qty', pageWidth - 220, cursorY);
-        doc.text('Price', pageWidth - 150, cursorY);
-        doc.text('Total', pageWidth - 80, cursorY);
-
-        cursorY += 10;
-        doc.line(margin, cursorY, pageWidth - margin, cursorY);
-        cursorY += 18;
+        cursorY += 116;
+        drawTableHeader();
 
         invoiceItems.forEach((item, index) => {
             const qty = Number(item?.quantity || 1);
@@ -300,40 +401,77 @@ export default function OrderConfirmationPage() {
             const details = [
                 item?.selectedColor ? `Color: ${item.selectedColor}` : '',
                 item?.selectedSize ? `Size: ${item.selectedSize}` : '',
-            ].filter(Boolean).join(' | ');
+            ].filter(Boolean).join('  |  ');
+            const itemWidth = columns.qty - columns.item - 22;
+            const wrappedName = doc.splitTextToSize(String(item?.name || `Item ${index + 1}`), itemWidth);
+            const wrappedDetails = details ? doc.splitTextToSize(details, itemWidth) : [];
+            const rowHeight = Math.max(42, 16 + ((wrappedName.length + wrappedDetails.length) * 12));
 
-            const wrappedName = doc.splitTextToSize(String(item?.name || `Item ${index + 1}`), pageWidth - 260);
-            const wrappedDetails = details ? doc.splitTextToSize(details, pageWidth - 260) : [];
-            const rowHeight = Math.max(22, ((wrappedName.length + wrappedDetails.length) * 12) + 10);
-
-            ensurePageSpace(rowHeight + 10);
-
-            doc.setFont('helvetica', 'bold');
-            doc.text(wrappedName, margin, cursorY);
-            doc.setFont('helvetica', 'normal');
-            if (wrappedDetails.length > 0) {
-                doc.text(wrappedDetails, margin, cursorY + (wrappedName.length * 12));
+            if (cursorY + rowHeight > pageHeight - 56) {
+                addPageWithTableHeader();
             }
 
-            doc.text(String(qty), pageWidth - 220, cursorY);
-            doc.text(`$${formatMoney(price)}`, pageWidth - 150, cursorY);
-            doc.text(`$${formatMoney(lineTotal)}`, pageWidth - 80, cursorY);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(9);
+            doc.setTextColor(...navy);
+            doc.text(wrappedName, columns.item, cursorY + 15);
+            if (wrappedDetails.length > 0) {
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(8);
+                doc.setTextColor(...muted);
+                doc.text(wrappedDetails, columns.item, cursorY + 15 + (wrappedName.length * 12));
+            }
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            doc.setTextColor(...navy);
+            doc.text(String(qty), columns.qty, cursorY + 15, { align: 'center' });
+            doc.text(`$${formatMoney(price)}`, columns.price, cursorY + 15, { align: 'right' });
+            doc.setFont('helvetica', 'bold');
+            doc.text(`$${formatMoney(lineTotal)}`, columns.total, cursorY + 15, { align: 'right' });
 
             cursorY += rowHeight;
-            doc.setDrawColor(235, 235, 235);
-            doc.line(margin, cursorY - 8, pageWidth - margin, cursorY - 8);
+            doc.setDrawColor(231, 233, 235);
+            doc.setLineWidth(0.6);
+            doc.line(margin, cursorY, pageWidth - margin, cursorY);
         });
 
-        cursorY += 8;
-        ensurePageSpace(60);
-        doc.setFont('helvetica', 'normal');
-        doc.text(`Subtotal: $${formatMoney(order.subtotal)}`, pageWidth - 180, cursorY);
-        cursorY += 16;
-        doc.text(`Shipping: $${formatMoney(order.shipping)}`, pageWidth - 180, cursorY);
         cursorY += 20;
+        if (cursorY + 110 > pageHeight - 48) {
+            doc.addPage();
+            cursorY = 56;
+        }
+
+        const totalsX = pageWidth - margin - 190;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(...muted);
+        doc.text('Subtotal', totalsX, cursorY);
+        doc.setTextColor(...navy);
+        doc.text(`$${formatMoney(order.subtotal)}`, pageWidth - margin, cursorY, { align: 'right' });
+        cursorY += 19;
+        doc.setTextColor(...muted);
+        doc.text('Shipping', totalsX, cursorY);
+        doc.setTextColor(...navy);
+        doc.text(`$${formatMoney(order.shipping)}`, pageWidth - margin, cursorY, { align: 'right' });
+        cursorY += 13;
+        doc.setDrawColor(...gold);
+        doc.setLineWidth(0.8);
+        doc.line(totalsX, cursorY, pageWidth - margin, cursorY);
+        cursorY += 22;
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(12);
-        doc.text(`Total: $${formatMoney(order.total)}`, pageWidth - 180, cursorY);
+        doc.setTextColor(...navy);
+        doc.text('TOTAL', totalsX, cursorY);
+        doc.text(`$${formatMoney(order.total)}`, pageWidth - margin, cursorY, { align: 'right' });
+
+        for (let page = 1; page <= doc.getNumberOfPages(); page += 1) {
+            doc.setPage(page);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            doc.setTextColor(...muted);
+            doc.text('Thank you for shopping with Viveren.', margin, pageHeight - 24);
+            doc.text(`${page} / ${doc.getNumberOfPages()}`, pageWidth - margin, pageHeight - 24, { align: 'right' });
+        }
 
         doc.save(buildInvoiceFileName(order.order_number));
     }
