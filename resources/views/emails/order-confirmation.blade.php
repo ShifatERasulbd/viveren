@@ -106,9 +106,9 @@
                                 <tbody>
                                     @foreach ($items as $item)
                                         <tr>
-                                            @if (!empty($item['image']))
-                                                <td width="60" valign="middle" style="padding: 12px 0; border-bottom: 1px solid #eef0f2;">
-                                                    <img src="{{ $item['image'] }}" alt="{{ $item['name'] }}" width="48" height="48" style="border-radius: 6px; object-fit: cover; display: block;">
+                                           @if (!empty($item['image']))
+                                                <td width="72" valign="middle" style="padding: 12px 12px 12px 0; border-bottom: 1px solid #eef0f2;">
+                                                    <img src="{{ $item['image'] }}" alt="{{ $item['name'] }}" width="60" style="display: block; width: 60px; height: auto; border: 0; border-radius: 6px;">
                                                 </td>
                                             @endif
                                             <td valign="middle" style="padding: 12px 8px; border-bottom: 1px solid #eef0f2; font-size: 14px; color: #334155;">
