@@ -1738,7 +1738,25 @@ function CheckoutForm() {
                     </button>
 
                     <p className="mt-4 text-[0.75rem] text-zinc-500">
-                        By placing an order, you agree to our Terms of Use and acknowledge our Privacy Policy.
+                        By placing an order, you agree to our{' '}
+                        <Link
+                            to="/terms"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline underline-offset-2 transition-colors hover:text-zinc-900"
+                        >
+                            Terms of Use
+                        </Link>{' '}
+                        and acknowledge our{' '}
+                        <Link
+                            to="/privacy"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline underline-offset-2 transition-colors hover:text-zinc-900"
+                        >
+                            Privacy Policy
+                        </Link>
+                        .
                     </p>
                 </aside>
             </div>
