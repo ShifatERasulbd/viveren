@@ -2,9 +2,9 @@ import { MapPin } from 'lucide-react';
 
 import { featuresFontClass } from '../utils/typography';
 
-const locationLabel = '70 Washington Square S, New York, NY 10012, USA';
+const locationLabel = '14 Progress Road, Billerica, MA 01821, United States';
 const mapEmbedUrl =
-    'https://www.openstreetmap.org/export/embed.html?bbox=-74.0058%2C40.7288%2C-73.9944%2C40.7358&layer=mapnik&marker=40.7323%2C-73.9981';
+    'https://www.openstreetmap.org/export/embed.html?bbox=-71.2407%2C42.5181%2C-71.2293%2C42.5251&layer=mapnik&marker=42.5216%2C-71.2350';
 
 export default function ContactLocationMapSection() {
     return (
