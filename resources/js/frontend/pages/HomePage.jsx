@@ -6,7 +6,6 @@ const CollectionsSection = lazy(() => import('../components/CollectionsSection.j
 const FeaturesSection = lazy(() => import('../components/FeaturesSection.jsx'));
 const HomeBackgroundImageSection = lazy(() => import('../components/HomeBackgroundImageSection.jsx'));
 const TrendingProduct = lazy(() => import('../components/TrendingProduct.jsx'));
-const NewsletterSection = lazy(() => import('../components/NewsletterSection.jsx'));
 
 /**
  * Progressive 3-phase lazy loading section:
@@ -82,7 +81,6 @@ const sectionRegistry = {
         component: HomeBackgroundImageSection,
     },
     trending: { height: 'h-[720px]', variant: 'catalog', component: TrendingProduct },
-    newsletter: { height: 'h-[220px]', variant: 'newsletter', component: NewsletterSection },
 };
 
 const defaultSectionOrder = [
@@ -90,7 +88,6 @@ const defaultSectionOrder = [
     'collections',
     'home-background-image',
     'trending',
-    'newsletter',
 ];
 
 function normalizeSectionOrder(order) {

@@ -5,6 +5,7 @@ import { getSettingsPayload, onSettingsUpdated } from '../../utils/siteSettings'
 import { timelessFontClass } from '../utils/typography';
 import { sectionTypography } from '../utils/sectionTypography';
 import ComplianceModal from './ComplianceModal.jsx';
+import NewsletterSection from './NewsletterSection.jsx';
 
 const shopLinks = [
     { label: 'Best Sellers', href: '/collections/best-selling-products' },
@@ -127,7 +128,6 @@ export default function Footer() {
     ], []);
 
     const houseLinks = useMemo(() => [
-     
         { label: 'Sustainability', href: '/sustainability' },
     ], []);
 
@@ -149,8 +149,8 @@ export default function Footer() {
     return (
         <footer className={`${timelessFontClass} font-monstrate bg-[#1a1a1a] text-white`}>
             <div className="mx-auto w-full max-w-[1700px] px-6 pb-14 pt-14 sm:px-10 lg:px-16">
-                <div className="grid grid-cols-1 gap-10 lg:grid-cols-4">
-                    
+                <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-5">
+
                     {/* Brand column */}
                     <div className="space-y-4">
                         <Link to="/" className="inline-flex items-center gap-1" onClick={(event) => handleLinkClick('/', event)}>
@@ -182,20 +182,14 @@ export default function Footer() {
                                 ))}
                             </div>
                         )}
-
-                        <div className="pt-2">
-                            <img
-                                src="/cardImage.png"
-                                alt="Payment and card information"
-                                className="h-7 w-auto max-w-full object-contain object-left"
-                                loading="lazy"
-                            />
-                        </div>
                     </div>
 
                     <FooterCol heading="Shop" links={shopLinks} onLinkClick={handleLinkClick} />
                     <FooterCol heading="Customer Service" links={helpLinks} onLinkClick={handleLinkClick} />
-                    <FooterCol heading="Other" links={houseLinks} onLinkClick={handleLinkClick} />
+                    <div className="lg:justify-self-center">
+                        <FooterCol heading="Other" links={houseLinks} onLinkClick={handleLinkClick} />
+                    </div>
+                    <NewsletterSection />
                 </div>
             </div>
 
@@ -209,17 +203,16 @@ export default function Footer() {
                         <Link to="/terms" className="transition-colors hover:text-white" onClick={(event) => handleLinkClick('/terms', event)}>
                             Terms
                         </Link>
-                       
+                        <img
+                            src="/cardImage.png"
+                            alt="Payment and card information"
+                            className="h-6 w-auto object-contain"
+                            loading="lazy"
+                        />
                     </div>
                 </div>
             </div>
 
-            <ComplianceModal
-                isOpen={!!activeModal}
-                onClose={closeModal}
-                title={activeModalMeta?.title || ''}
-                content={modalContent}
-            />
         </footer>
     );
 }

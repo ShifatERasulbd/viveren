@@ -6,7 +6,6 @@ const ContactHeroSection = lazy(() => import('../components/ContactHeroSection.j
 
 const ContactSection = lazy(() => import('../components/ContactSection.jsx'));
 const ContactLocationMapSection = lazy(() => import('../components/ContactLocationMapSection.jsx'));
-const NewsletterSection = lazy(() => import('../components/NewsletterSection.jsx'));
 const InstagramSection = lazy(() => import('../components/InstagramSection.jsx'));
 
 function LazySection({ children, heightClass, className, variant = 'generic', defer = true }) {
@@ -76,9 +75,6 @@ export default function ContactPage() {
             </LazySection>
             <LazySection heightClass="h-[520px]" className="px-0" variant="map" defer={!isBuilderPreview}>
                 <ContactLocationMapSection />
-            </LazySection>
-            <LazySection heightClass="h-[220px]" variant="newsletter" defer={!isBuilderPreview}>
-                <NewsletterSection />
             </LazySection>
            
         </>

@@ -3,5 +3,4 @@ export const homeSections = [
     { key: 'collections', title: 'Collections', status: 'active' },
     { key: 'home-background-image', title: 'Home Background Image', status: 'active' },
     { key: 'trending', title: 'New Arrivals', status: 'active' },
-    { key: 'newsletter', title: 'Newsletter Section', status: 'active' },
 ];
