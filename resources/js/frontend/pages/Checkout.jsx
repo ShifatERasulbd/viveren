@@ -1559,7 +1559,9 @@ function CheckoutForm() {
                         </div>
                         <div className="flex items-center justify-between">
                             <span>Shipping</span>
-                            {isFetchingShipping || !hasShippingQuote ? (
+                            {!hasCompleteShippingAddress && subtotal > 0 ? (
+                                <span className="text-right text-[0.8rem] text-zinc-500">Enter the shipping address</span>
+                            ) : isFetchingShipping || !hasShippingQuote ? (
                                 <span className="select-none blur-sm" aria-label="Calculating shipping">
                                     $0.00
                                 </span>

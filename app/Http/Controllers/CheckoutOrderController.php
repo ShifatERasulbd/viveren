@@ -7,6 +7,7 @@ use App\Models\CheckoutOrder;
 use App\Models\Color;
 use App\Models\Product;
 use App\Models\Size;
+use App\Services\InvalidShippingAddressException;
 use App\Services\ShippingRateService;
 use App\Services\VeeqoShippingService;
 use Illuminate\Http\JsonResponse;
@@ -110,9 +111,14 @@ class CheckoutOrderController extends Controller
                 'trace' => $exception->getTraceAsString(),
             ]);
 
+            // Never surface raw carrier/Veeqo errors to the customer.
+            $message = $exception instanceof InvalidShippingAddressException
+                ? $exception->getMessage()
+                : 'Unable to fetch shipping rates at the moment. Please try again.';
+
             return response()->json([
-                'message' => 'Unable to fetch shipping rates at the moment.',
-                'error' => $exception->getMessage(),
+                'message' => $message,
+                'error' => $message,
             ], 422);
         }
 

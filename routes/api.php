@@ -193,7 +193,7 @@ Route::middleware('auth:sanctum')->group(function () {
 	Route::delete('/public-api-keys/{publicApiKey}', [PublicApiKeyController::class, 'destroy']);
 
 	// Compliance Management
-	Route::apiResource('/compliance', \App\Type\CompliancePageController::class);
+	Route::apiResource('/compliance', \App\Http\Controllers\CompliancePageController::class);
 	});
 	
 });
