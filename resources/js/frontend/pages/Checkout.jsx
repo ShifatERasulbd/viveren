@@ -1561,10 +1561,23 @@ function CheckoutForm() {
                             <span>Shipping</span>
                             {!hasCompleteShippingAddress && subtotal > 0 ? (
                                 <span className="text-right text-[0.8rem] text-zinc-500">Enter the shipping address</span>
-                            ) : isFetchingShipping || !hasShippingQuote ? (
-                                <span className="select-none blur-sm" aria-label="Calculating shipping">
-                                    $0.00
+                            ) : isFetchingShipping || (!hasShippingQuote && !shippingError) ? (
+                                <span className="inline-flex items-center text-zinc-500" aria-label="Calculating shipping">
+                                    Calculating
+                                    <span className="inline-flex w-4 justify-start">
+                                        {[0, 1, 2].map((dot) => (
+                                            <span
+                                                key={dot}
+                                                className="animate-bounce"
+                                                style={{ animationDelay: `${dot * 0.15}s` }}
+                                            >
+                                                .
+                                            </span>
+                                        ))}
+                                    </span>
                                 </span>
+                            ) : !hasShippingQuote ? (
+                                <span className="text-zinc-400">--</span>
                             ) : (
                                 <span>{shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`}</span>
                             )}

@@ -203,12 +203,12 @@ export default function Footer() {
                 <div className={`mx-auto flex w-full max-w-[1700px] flex-col items-center justify-between gap-3 px-6 py-5 ${sectionTypography.footerLegal} text-zinc-500 sm:flex-row sm:px-10 lg:px-16`}>
                     <span>© 2026 Viveren. All rights reserved.</span>
                     <div className="flex items-center gap-6">
-                        <button type="button" className="transition-colors hover:text-white" onClick={(event) => handleLinkClick('/privacy', event)}>
+                        <Link to="/privacy" className="transition-colors hover:text-white" onClick={(event) => handleLinkClick('/privacy', event)}>
                             Privacy
-                        </button>
-                        <button type="button" className="transition-colors hover:text-white" onClick={(event) => handleLinkClick('/terms', event)}>
+                        </Link>
+                        <Link to="/terms" className="transition-colors hover:text-white" onClick={(event) => handleLinkClick('/terms', event)}>
                             Terms
-                        </button>
+                        </Link>
                        
                     </div>
                 </div>

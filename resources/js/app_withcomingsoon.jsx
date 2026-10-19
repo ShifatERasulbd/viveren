@@ -22,6 +22,9 @@ const AuthPage = lazy(() => import('./frontend/pages/Auth.jsx'));
 const ResetPasswordPage = lazy(() => import('./frontend/pages/ResetPassword.jsx'));
 const CheckoutPage = lazy(() => import('./frontend/pages/Checkout.jsx'));
 const OrderConfirmationPage = lazy(() => import('./frontend/pages/OrderConfirmation.jsx'));
+const PrivacyPage = lazy(() => import('./frontend/pages/PrivacyPage.jsx'));
+const TermsPage = lazy(() => import('./frontend/pages/TermsPage.jsx'));
+const ShippingPage = lazy(() => import('./frontend/pages/ShippingPage.jsx'));
 
 const SustainabilityPage = lazy(() => import('./frontend/pages/Sustainability.jsx'));
 
@@ -52,6 +55,9 @@ function resolvePageLabel(pathname) {
     if (path === '/about') return 'About';
     if (path === '/sustainability') return 'Sustainability';
     if (path === '/contact') return 'Contact';
+    if (path === '/privacy') return 'Privacy Policy';
+    if (path === '/terms') return 'Terms & Conditions';
+    if (path === '/shipping') return 'Shipping & Returns';
     if (path === '/checkout') return 'Checkout';
     if (path === '/order-confirmation') return 'Order Confirmation';
     if (path === '/login') return 'Login';
@@ -152,9 +158,9 @@ function SiteAccessGate({ children }) {
 
 function FrontendLayout() {
     return (
-        <div className="min-h-screen bg-background text-zinc-950">
+        <div className="flex min-h-screen flex-col bg-background text-zinc-950">
             <Header />
-            <main>
+            <main className="flex-1">
                 <Outlet />
             </main>
             <Footer />
@@ -189,6 +195,9 @@ function AppRouter() {
                             <Route path="about" element={withPageFallback(AboutPage)} />
                             <Route path="contact" element={withPageFallback(ContactPage)} />
                             <Route path="sustainability" element={withPageFallback(SustainabilityPage)} />
+                            <Route path="privacy" element={withPageFallback(PrivacyPage)} />
+                            <Route path="terms" element={withPageFallback(TermsPage)} />
+                            <Route path="shipping" element={withPageFallback(ShippingPage)} />
                             <Route path="checkout" element={withPageFallback(CheckoutPage)} />
                             <Route path="order-confirmation" element={withPageFallback(OrderConfirmationPage)} />
                             <Route path="login" element={withPageFallback(AuthPage)} />
