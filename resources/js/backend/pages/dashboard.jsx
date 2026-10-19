@@ -1,30 +1,31 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 
 import { HeaderCard } from '@/components/dashboard/Header-Card';
 import { StockOverviewChart } from '@/components/dashboard/chart';
 import { LowStockAlertTable } from '@/components/dashboard/low-stock-alertTable';
 import { useAppContext } from '@/context/AppContext';
 import { requestJson } from '@/lib/apiClient';
-import { bootstrapPublicSettings } from '../../utils/siteSettings';
+
+const EMPTY_CARDS = [
+    { title: 'Total Purchase', amount: 0, format: 'currency', description: 'From all checkout orders' },
+    { title: 'Total Sell', amount: 0, format: 'count', description: 'Items sold across all orders' },
+    { title: 'Total Revenue', amount: 0, format: 'currency', description: 'Gross revenue from checkout totals' },
+];
 
 export default function Dashboard() {
     const { setPageTitle, user } = useAppContext();
     const [headerCards, setHeaderCards] = useState([]);
     const [isSummaryLoading, setIsSummaryLoading] = useState(true);
 
+    const isCustomer = user?.user_type === 'customer';
+
     useEffect(() => {
         setPageTitle('Dashboard');
     }, [setPageTitle]);
 
     useEffect(() => {
-        if (user?.user_type === 'customer') {
-            bootstrapPublicSettings();
-        }
-    }, [user?.user_type]);
-
-    useEffect(() => {
-        if (!user || user?.user_type === 'customer') {
+        if (!user || isCustomer) {
             return;
         }
 
@@ -43,33 +44,14 @@ export default function Dashboard() {
 
                 if (!ignore) {
                     setHeaderCards([
-                        {
-                            title: 'Total Purchase',
-                            amount: totalPurchase,
-                            format: 'currency',
-                            description: 'From all checkout orders',
-                        },
-                        {
-                            title: 'Total Sell',
-                            amount: totalSell,
-                            format: 'count',
-                            description: 'Items sold across all orders',
-                        },
-                        {
-                            title: 'Total Revenue',
-                            amount: totalRevenue,
-                            format: 'currency',
-                            description: 'Gross revenue from checkout totals',
-                        },
+                        { ...EMPTY_CARDS[0], amount: totalPurchase },
+                        { ...EMPTY_CARDS[1], amount: totalSell },
+                        { ...EMPTY_CARDS[2], amount: totalRevenue },
                     ]);
                 }
             } catch {
                 if (!ignore) {
-                    setHeaderCards([
-                        { title: 'Total Purchase', amount: 0, format: 'currency', description: 'From all checkout orders' },
-                        { title: 'Total Sell', amount: 0, format: 'count', description: 'Items sold across all orders' },
-                        { title: 'Total Revenue', amount: 0, format: 'currency', description: 'Gross revenue from checkout totals' },
-                    ]);
+                    setHeaderCards(EMPTY_CARDS);
                 }
             } finally {
                 if (!ignore) {
@@ -83,32 +65,15 @@ export default function Dashboard() {
         return () => {
             ignore = true;
         };
-    }, [user]);
+    }, [user, isCustomer]);
 
     if (!user) {
         return <div className="text-sm text-zinc-500">Loading dashboard...</div>;
     }
 
-    // Customer view: content only. AppLayout already provides the storefront
-    // Header, Footer, CartProvider, CartDrawer and the customer sidebar.
-    if (user?.user_type === 'customer') {
-        return (
-            <div className="rounded border border-zinc-200 bg-white p-6">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">Customer Dashboard</p>
-                <h2 className="mt-2 text-2xl font-semibold text-zinc-900">Welcome back, {user.first_name || user.name}</h2>
-                <p className="mt-2 max-w-xl text-sm text-zinc-600">
-                    You can review your recent orders and track their status from your orders section.
-                </p>
-                <div className="mt-5">
-                    <Link
-                        to="/user/orders"
-                        className="inline-flex h-10 items-center rounded bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-black"
-                    >
-                        View My Orders
-                    </Link>
-                </div>
-            </div>
-        );
+    // Customers have their own dashboard.
+    if (isCustomer) {
+        return <Navigate to="/user/dashboard" replace />;
     }
 
     return (

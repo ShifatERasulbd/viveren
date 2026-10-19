@@ -34,7 +34,8 @@ export default function AppLayout() {
     const isCustomerAllowedPath =
         location.pathname === '/user/dashboard'
         || location.pathname === '/user/orders'
-        || location.pathname === '/user/edit-profile';
+        || location.pathname === '/user/edit-profile'
+        || /^\/user\/orders\/[^/]+$/.test(location.pathname);
 
     const handleLogout = async () => {
         if (isLoggingOut) return;
@@ -137,7 +138,7 @@ export default function AppLayout() {
             return;
         }
 
-        if (!isDashboardPath && !isOrdersPath && !isEditProfilePath) {
+        if (!isDashboardPath && !isOrdersPath && !isEditProfilePath && !/^\/user\/orders\/[^/]+$/.test(location.pathname)) {
             navigate('/user/dashboard', { replace: true });
         }
     }, [location.pathname, navigate, user]);

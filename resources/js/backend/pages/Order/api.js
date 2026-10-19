@@ -36,15 +36,26 @@ export async function bulkDeleteOrders(ids) {
     });
 }
 
-export async function fetchCustomerOrders({ page = 1, perPage = 20, status = '', search = '' } = {}) {
+export async function fetchCustomerOrders({ page = 1, perPage = 20, status = '', search = '', from = '', to = '' } = {}) {
     const params = new URLSearchParams({ page, per_page: perPage });
     if (status) params.set('status', status);
     if (search) params.set('search', search);
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
     return requestJson(`/api/customer/orders?${params.toString()}`);
+}
+
+export async function fetchCustomerRecentItems(limit = 2) {
+    return requestJson(`/api/customer/orders/recent-items?limit=${limit}`);
 }
 
 export async function cancelCustomerOrder(id) {
     return requestJson(`/api/customer/orders/${id}/cancel`, {
         method: 'PUT',
     });
+}
+
+
+export async function fetchCustomerOrder(id) {
+    return requestJson(`/api/customer/orders/${id}`);
 }

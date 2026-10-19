@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CardElement, Elements, useElements, useStripe } from '@stripe/react-stripe-js';
+import {
+    CardCvcElement,
+    CardExpiryElement,
+    CardNumberElement,
+    Elements,
+    useElements,
+    useStripe,
+} from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -12,6 +19,10 @@ const fallbackImage = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/s
 const STRIPE_PERCENT_RATE = 0.029;
 const STRIPE_FIXED_FEE = 0.3;
 
+// Set this to the real path of your Monstrate font file (must be served with CORS headers).
+const MONSTRATE_FONT_URL = '/fonts/monstrate.woff2';
+const STRIPE_FONT_FAMILY = 'Monstrate, Arial, sans-serif';
+
 function roundCurrency(value) {
     const numericValue = Number(value);
     if (!Number.isFinite(numericValue)) {
@@ -21,7 +32,7 @@ function roundCurrency(value) {
     return Math.round((numericValue + Number.EPSILON) * 100) / 100;
 }
 
-// FIX: safe money parser (handles numbers, "12.50", "$12.50", bad values)
+// Safe money parser (handles numbers, "12.50", "$12.50", bad values)
 function parseMoney(value) {
     if (value === null || value === undefined || value === '') {
         return null;
@@ -45,9 +56,20 @@ function calculateStripeCharge(baseAmount) {
     return roundCurrency((amount * STRIPE_PERCENT_RATE) + STRIPE_FIXED_FEE);
 }
 
+function normalizeServiceCode(value, fallback = '02') {
+    const raw = String(value ?? '').trim();
+    const resolved = raw || fallback;
+
+    if (/^\d+$/.test(resolved)) {
+        return resolved.padStart(2, '0');
+    }
+
+    return resolved.toUpperCase();
+}
+
 function normalizeShippingOption(option, index) {
     const code = normalizeServiceCode(option?.code, '02');
-    // FIX: read `price` first (same field the backend uses), then `amount`
+    // Read `price` first (same field the backend uses), then `amount`
     const amount = parseMoney(option?.price) ?? parseMoney(option?.amount) ?? 0;
     const safeAmount = amount >= 0 ? amount : 0;
     const description = String(option?.description || '').trim();
@@ -60,25 +82,15 @@ function normalizeShippingOption(option, index) {
     };
 }
 
-function normalizeServiceCode(value, fallback = '02') {
-    const raw = String(value ?? '').trim();
-    const resolved = raw || fallback;
-
-    if (/^\d+$/.test(resolved)) {
-        return resolved.padStart(2, '0');
-    }
-
-    return resolved.toUpperCase();
-}
-
-const cardElementOptions = {
-    hidePostalCode: true,
+const baseElementStyle = {
     style: {
         base: {
             color: '#18181b',
+            fontFamily: STRIPE_FONT_FAMILY,
             fontSize: '15px',
             '::placeholder': {
-                color: '#a1a1aa',
+                color: '#71717a',
+                textTransform: 'none',
             },
         },
         invalid: {
@@ -86,6 +98,154 @@ const cardElementOptions = {
         },
     },
 };
+
+const cardNumberOptions = {
+    ...baseElementStyle,
+    placeholder: 'Card number',
+    showIcon: false,
+    disableLink: true,
+};
+const cardExpiryOptions = { ...baseElementStyle, placeholder: 'Expiration date (MM / YY)' };
+const cardCvcOptions = { ...baseElementStyle, placeholder: 'Security code' };
+
+const KNOWN_BRANDS = ['visa', 'mastercard', 'amex'];
+
+const OTHER_BRANDS = [
+    {
+        id: 'discover',
+        name: 'Discover',
+        logo: (
+            <span className="flex flex-col items-center leading-none">
+                <span className="text-[0.36rem] font-black tracking-tight text-zinc-800">DISCOVER</span>
+                <span className="mt-0.5 h-1.5 w-5 rounded-full bg-gradient-to-r from-[#ff6000] to-[#f9a01b]" />
+            </span>
+        ),
+    },
+    {
+        id: 'diners',
+        name: 'Diners Club',
+        logo: (
+            <span className="flex h-4 w-4 items-center justify-center rounded-full border-[3px] border-[#0079be] bg-white">
+                <span className="h-2 w-[2px] bg-[#0079be]" />
+            </span>
+        ),
+    },
+    {
+        id: 'elo',
+        name: 'Elo',
+        logo: <span className="text-[0.7rem] font-black lowercase leading-none tracking-tighter text-zinc-900">elo</span>,
+    },
+    {
+        id: 'jcb',
+        name: 'JCB',
+        logo: (
+            <span className="flex gap-px">
+                <span className="flex h-3.5 w-2.5 items-center justify-center rounded-sm bg-[#0b4ea2] text-[0.4rem] font-bold text-white">J</span>
+                <span className="flex h-3.5 w-2.5 items-center justify-center rounded-sm bg-[#d4112f] text-[0.4rem] font-bold text-white">C</span>
+                <span className="flex h-3.5 w-2.5 items-center justify-center rounded-sm bg-[#00954f] text-[0.4rem] font-bold text-white">B</span>
+            </span>
+        ),
+    },
+    {
+        id: 'unionpay',
+        name: 'UnionPay',
+        logo: (
+            <span className="flex h-full w-full items-center justify-center bg-gradient-to-r from-[#e21836] via-[#00447c] to-[#007b84]">
+                <span className="text-[0.36rem] font-bold leading-none tracking-tight text-white">UnionPay</span>
+            </span>
+        ),
+    },
+];
+
+function CardBrandBadges({ brand }) {
+    const isKnown = KNOWN_BRANDS.includes(brand);
+    const activeOtherBrand = OTHER_BRANDS.find((item) => item.id === brand);
+    const isOther = brand !== 'unknown' && !isKnown;
+
+    // Treat Amex, Visa, and Mastercard as single brands when they are active
+    const isSingleBrand = brand === 'visa' || brand === 'mastercard' || brand === 'amex' || (!isKnown && brand !== 'unknown');
+
+    const fade = (id) =>
+        brand !== 'unknown' && brand !== id ? 'opacity-30 grayscale' : 'opacity-100';
+
+    const showVisa = !isSingleBrand || brand === 'visa';
+    const showMastercard = !isSingleBrand || brand === 'mastercard';
+    const showAmex = !isSingleBrand || brand === 'amex';
+
+    return (
+        <span className="flex items-center gap-1.5">
+            {activeOtherBrand ? (
+                <span className="flex items-center gap-1.5">
+                    <span
+                        title={activeOtherBrand.name}
+                        className="flex h-6 w-9 items-center justify-center overflow-hidden rounded border border-zinc-300 bg-white shadow-sm"
+                    >
+                        {activeOtherBrand.logo}
+                    </span>
+                    <span className="text-[0.7rem] font-bold uppercase text-zinc-800">
+                        {activeOtherBrand.name}
+                    </span>
+                </span>
+            ) : (
+                <>
+                    {showVisa && (
+                        <span className={`rounded bg-[#1434cb] px-2 py-1 text-[0.65rem] font-bold italic text-white transition ${fade('visa')}`}>
+                            VISA
+                        </span>
+                    )}
+
+                    {showMastercard && (
+                        <span className={`flex h-6 w-9 items-center justify-center rounded border border-zinc-200 bg-white transition ${fade('mastercard')}`}>
+                            <span className="h-3.5 w-3.5 rounded-full bg-[#eb001b]" />
+                            <span className="-ml-1.5 h-3.5 w-3.5 rounded-full bg-[#f79e1b] opacity-90" />
+                        </span>
+                    )}
+
+                    {showAmex && (
+                        <span className={`rounded bg-[#1f72cd] px-1.5 py-1 text-[0.6rem] font-bold text-white transition ${fade('amex')}`}>
+                            AMEX
+                        </span>
+                    )}
+
+                    {!isSingleBrand && (
+                        <span className="group relative">
+                            <button
+                                type="button"
+                                aria-label="Show other accepted cards"
+                                onClick={(event) => event.preventDefault()}
+                                className={`rounded border px-1.5 py-1 text-[0.65rem] transition ${
+                                    isOther ? 'border-zinc-900 text-zinc-900' : 'border-zinc-200 text-zinc-600'
+                                } ${brand !== 'unknown' && !isOther ? 'opacity-30' : ''} hover:border-zinc-900 hover:text-zinc-900`}
+                            >
+                                +5
+                            </button>
+
+                            <span
+                                role="tooltip"
+                                className="pointer-events-none invisible absolute bottom-full right-[-6px] z-30 mb-2 w-[168px] rounded-md bg-[#1a1a1a] p-2 opacity-0 shadow-lg transition group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100"
+                            >
+                                <span className="flex flex-wrap gap-1.5">
+                                    {OTHER_BRANDS.map((item) => (
+                                        <span
+                                            key={item.id}
+                                            title={item.name}
+                                            className={`flex h-5 w-8 items-center justify-center overflow-hidden rounded-[3px] bg-white transition ${
+                                                brand !== 'unknown' && brand !== item.id ? 'opacity-40' : 'opacity-100'
+                                            }`}
+                                        >
+                                            {item.logo}
+                                        </span>
+                                    ))}
+                                </span>
+                                <span className="absolute -bottom-1 right-[15px] h-2 w-2 rotate-45 bg-[#1a1a1a]" />
+                            </span>
+                        </span>
+                    )}
+                </>
+            )}
+        </span>
+    );
+}
 
 function toImageUrl(value) {
     if (typeof value !== 'string' || !value.trim()) {
@@ -156,6 +316,29 @@ function CheckoutForm() {
     const isCartEmpty = items.length === 0;
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [fieldErrors, setFieldErrors] = useState({});
+    const [touchedFields, setTouchedFields] = useState({});
+
+    // Refs and state for error scrolling and blinking
+    const fieldRefs = useRef({});
+    const [blinkingField, setBlinkingField] = useState(null);
+
+    function setFieldRef(name) {
+        return (el) => {
+            fieldRefs.current[name] = el;
+        };
+    }
+
+    function scrollToAndBlink(fieldName) {
+        const el = fieldRefs.current[fieldName];
+        if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setBlinkingField(fieldName);
+            setTimeout(() => {
+                setBlinkingField((prev) => (prev === fieldName ? null : prev));
+            }, 2000);
+        }
+    }
+
     const [quotedShipping, setQuotedShipping] = useState(0);
     const [shippingOptions, setShippingOptions] = useState([]);
     const [selectedShippingOptionCode, setSelectedShippingOptionCode] = useState('02');
@@ -165,9 +348,7 @@ function CheckoutForm() {
     const [hasShippingQuote, setHasShippingQuote] = useState(false);
     const [shippingError, setShippingError] = useState('');
     const [stateOptions, setStateOptions] = useState([]);
-    const [cityOptions, setCityOptions] = useState([]);
     const [isLoadingStates, setIsLoadingStates] = useState(false);
-    const [isLoadingCities, setIsLoadingCities] = useState(false);
     const [form, setForm] = useState({
         first_name: '',
         last_name: '',
@@ -181,6 +362,44 @@ function CheckoutForm() {
         country: 'United States',
         notes: '',
     });
+
+    // Billing Form State & Checkbox
+    const [useShippingAsBilling, setUseShippingAsBilling] = useState(true);
+    const [billingForm, setBillingForm] = useState({
+        first_name: '',
+        last_name: '',
+        address_line_1: '',
+        address_line_2: '',
+        city: '',
+        state: '',
+        postal_code: '',
+        country: 'United States',
+    });
+    const [billingStateQuery, setBillingStateQuery] = useState('');
+    const [isBillingStateOpen, setIsBillingStateOpen] = useState(false);
+    const billingContainerRef = useRef(null);
+
+    // Payment UI state
+    const [paymentMethod, setPaymentMethod] = useState('card');
+    const [nameOnCard, setNameOnCard] = useState('');
+    const [showCardErrors, setShowCardErrors] = useState(false);
+    const [cardBrand, setCardBrand] = useState('unknown');
+    const [cardStatus, setCardStatus] = useState({
+        number: { complete: false, error: '' },
+        expiry: { complete: false, error: '' },
+        cvc: { complete: false, error: '' },
+    });
+    const [touchedCardFields, setTouchedCardFields] = useState({
+        number: false,
+        expiry: false,
+        cvc: false,
+        nameOnCard: false,
+    });
+
+    // State combobox
+    const [stateQuery, setStateQuery] = useState('');
+    const [isOpen, setIsOpen] = useState(false);
+    const containerRef = useRef(null);
 
     useEffect(() => {
         let ignore = false;
@@ -266,7 +485,7 @@ function CheckoutForm() {
         [shippingOptions, selectedShippingOptionCode],
     );
 
-    // FIX: shipping now falls back to the API quote when the option amount is missing/zero
+    // Shipping falls back to the API quote when the option amount is missing/zero
     const shipping = useMemo(() => {
         if (!hasShippingQuote) {
             return 0;
@@ -282,7 +501,6 @@ function CheckoutForm() {
         return roundCurrency(parseMoney(quotedShipping) ?? 0);
     }, [hasShippingQuote, selectedShippingOption, quotedShipping]);
 
-    // FIX: total = subtotal + shipping (numeric-safe)
     const subtotalAmount = useMemo(() => roundCurrency(subtotal), [subtotal]);
     const baseTotal = useMemo(() => roundCurrency(subtotalAmount + shipping), [subtotalAmount, shipping]);
     const stripeCharge = useMemo(() => calculateStripeCharge(baseTotal), [baseTotal]);
@@ -307,6 +525,48 @@ function CheckoutForm() {
             })),
         [items],
     );
+
+    function handleCardFieldChange(field) {
+        return (event) => {
+            if (field === 'number') {
+                setCardBrand(event?.empty ? 'unknown' : event?.brand || 'unknown');
+            }
+
+            setCardStatus((previous) => ({
+                ...previous,
+                [field]: {
+                    complete: Boolean(event?.complete),
+                    error: event?.error?.message || '',
+                },
+            }));
+        };
+    }
+
+    function handleCardFieldBlur(field) {
+        return () => {
+            setTouchedCardFields((previous) => ({ ...previous, [field]: true }));
+        };
+    }
+
+    function getCardError(field, emptyMessage) {
+        if (cardStatus[field].error) {
+            return cardStatus[field].error;
+        }
+
+        if ((showCardErrors || touchedCardFields[field]) && !cardStatus[field].complete) {
+            return emptyMessage;
+        }
+
+        return '';
+    }
+
+    function cardBoxClass(hasError, isBlinking) {
+        return `font-monstrate flex h-14 w-full items-center rounded-lg border bg-white px-3.5 transition-colors ${
+            hasError || isBlinking
+                ? 'border-red-600 ring-1 ring-red-600'
+                : 'border-zinc-300 hover:border-zinc-500 focus-within:border-zinc-900 focus-within:ring-1 focus-within:ring-zinc-900'
+        } ${isBlinking ? 'animate-[pulse_0.5s_ease-in-out_infinite]' : ''}`;
+    }
 
     function validateFormValues(values) {
         const errors = {};
@@ -334,7 +594,40 @@ function CheckoutForm() {
             errors.email = 'Enter a valid email address';
         }
 
+        const stateValue = String(values.state || '').trim();
+        if (stateValue && stateOptions.length > 0) {
+            const isValidState = stateOptions.some(
+                (s) =>
+                    s.state_code.toLowerCase() === stateValue.toLowerCase() ||
+                    s.state_name.toLowerCase() === stateValue.toLowerCase()
+            );
+            if (!isValidState) {
+                errors.state = 'Please select a valid state';
+            }
+        }
+
         return errors;
+    }
+
+    function isBillingAddressIncomplete() {
+        const requiredBillingFields = ['first_name', 'last_name', 'address_line_1', 'city', 'state', 'postal_code'];
+        return requiredBillingFields.some((field) => !String(billingForm[field] || '').trim());
+    }
+
+    function handleBlur(field) {
+        return () => {
+            setTouchedFields((previous) => ({ ...previous, [field]: true }));
+            const validationErrors = validateFormValues(form);
+            setFieldErrors((previous) => {
+                const next = { ...previous };
+                if (validationErrors[field]) {
+                    next[field] = validationErrors[field];
+                } else {
+                    delete next[field];
+                }
+                return next;
+            });
+        };
     }
 
     function toFieldErrors(payloadErrors) {
@@ -351,22 +644,30 @@ function CheckoutForm() {
     }
 
     function inputClass(field) {
-        return `font-monstrate h-11 w-full border px-3 text-[0.9rem] normal-case text-zinc-900 outline-none focus:border-zinc-900 transition-colors ${
-            fieldErrors[field] ? 'border-red-400 bg-red-50' : 'border-zinc-200 bg-white hover:border-zinc-400'
-        }`;
+        const hasError = touchedFields[field] && fieldErrors[field];
+        const isBlinking = blinkingField === field;
+        return `font-monstrate h-11 w-full border px-3 text-[0.9rem] normal-case text-zinc-900 outline-none focus:border-zinc-900 transition-colors placeholder:normal-case ${
+            hasError || isBlinking ? 'border-red-400 bg-red-50 ring-1 ring-red-500' : 'border-zinc-200 bg-white hover:border-zinc-400'
+        } ${isBlinking ? 'animate-[pulse_0.5s_ease-in-out_infinite]' : ''}`;
     }
 
     function updateField(field, value) {
         setForm((previous) => ({ ...previous, [field]: value }));
-        setFieldErrors((previous) => {
-            if (!previous[field]) {
-                return previous;
-            }
 
+        const validationErrors = validateFormValues({ ...form, [field]: value });
+        setFieldErrors((previous) => {
             const next = { ...previous };
-            delete next[field];
+            if (validationErrors[field]) {
+                next[field] = validationErrors[field];
+            } else {
+                delete next[field];
+            }
             return next;
         });
+    }
+
+    function updateBillingField(field, value) {
+        setBillingForm((previous) => ({ ...previous, [field]: value }));
     }
 
     useEffect(() => {
@@ -410,78 +711,18 @@ function CheckoutForm() {
     }, []);
 
     useEffect(() => {
-        const selectedState = String(form.state || '').trim();
-
-        if (!selectedState) {
-            setCityOptions([]);
-            return;
-        }
-
-        let ignore = false;
-        const controller = new AbortController();
-
-        async function loadCities() {
-            setIsLoadingCities(true);
-
-            try {
-                const params = new URLSearchParams({ state: selectedState });
-                const response = await fetch(`/api/public/locations/cities?${params.toString()}`, {
-                    headers: { Accept: 'application/json' },
-                    signal: controller.signal,
-                });
-
-                if (!response.ok) {
-                    if (!ignore) {
-                        setCityOptions([]);
-                    }
-                    return;
-                }
-
-                const payload = await response.json().catch(() => []);
-                if (!ignore) {
-                    setCityOptions(Array.isArray(payload) ? payload : []);
-                }
-            } catch (error) {
-                if (error?.name === 'AbortError') {
-                    return;
-                }
-
-                if (!ignore) {
-                    setCityOptions([]);
-                }
-            } finally {
-                if (!ignore) {
-                    setIsLoadingCities(false);
-                }
-            }
-        }
-
-        loadCities();
-
-        return () => {
-            ignore = true;
-            controller.abort();
-        };
-    }, [form.state]);
-
-    useEffect(() => {
         if (subtotal <= 0) {
-            console.log('[Shipping quote] skipped: subtotal is zero or negative', { subtotal });
             setQuotedShipping(0);
             setHasShippingQuote(false);
             setShippingError('');
-            return;
+            return undefined;
         }
 
         if (!hasCompleteShippingAddress) {
-            console.log('[Shipping quote] skipped: shipping address is incomplete', {
-                hasCompleteShippingAddress,
-                form,
-            });
             setQuotedShipping(0);
             setHasShippingQuote(false);
             setShippingError('');
-            return;
+            return undefined;
         }
 
         const controller = new AbortController();
@@ -506,8 +747,6 @@ function CheckoutForm() {
             items: normalizedItems,
         };
 
-        console.log('[Shipping quote] request', quotePayload);
-
         const timer = setTimeout(async () => {
             try {
                 const response = await fetch('/api/public/shipping/quote', {
@@ -521,11 +760,6 @@ function CheckoutForm() {
                 });
 
                 const payload = await response.json().catch(() => ({}));
-                console.log('[Shipping quote] response', {
-                    status: response.status,
-                    ok: response.ok,
-                    payload,
-                });
 
                 if (!response.ok) {
                     throw new Error(payload?.error || payload?.message || 'Unable to fetch shipping rates');
@@ -552,11 +786,9 @@ function CheckoutForm() {
                     });
                 }
 
-                // FIX: parse the API shipping value safely
                 setQuotedShipping(parseMoney(payload?.shipping) ?? 0);
                 setHasShippingQuote(true);
             } catch (error) {
-                console.error('[Shipping quote] request failed', error);
                 if (error?.name === 'AbortError') {
                     return;
                 }
@@ -577,67 +809,6 @@ function CheckoutForm() {
     // Note: selectedShippingOptionCode is intentionally excluded below — Veeqo issues a new
     // ephemeral rate code on every quote, so including it here would refetch in an infinite loop.
     }, [form.city, form.country, form.postal_code, form.state, hasCompleteShippingAddress, normalizedItems, selectedDeliveryDate, selectedDeliveryTime, subtotal]);
-
-    useEffect(() => {
-        const city = String(form.city || '').trim();
-        const state = String(form.state || '').trim();
-        const postalCode = String(form.postal_code || '').trim();
-        const country = String(form.country || '').trim().toLowerCase();
-
-        if (!city || !state) {
-            return;
-        }
-
-        if (postalCode) {
-            return;
-        }
-
-        if (country && country !== 'us' && country !== 'usa' && country !== 'united states') {
-            return;
-        }
-
-        const controller = new AbortController();
-        const timer = setTimeout(async () => {
-            try {
-                const params = new URLSearchParams({ city, state });
-                const response = await fetch(`/api/public/locations/postal-code?${params.toString()}`, {
-                    headers: { Accept: 'application/json' },
-                    signal: controller.signal,
-                });
-
-                if (!response.ok) {
-                    return;
-                }
-
-                const payload = await response.json().catch(() => ({}));
-                const nextPostalCode = String(payload?.postal_code || '').trim();
-
-                if (!nextPostalCode) {
-                    return;
-                }
-
-                setForm((previous) => {
-                    if (String(previous.postal_code || '').trim()) {
-                        return previous;
-                    }
-
-                    return {
-                        ...previous,
-                        postal_code: nextPostalCode,
-                    };
-                });
-            } catch (error) {
-                if (error?.name === 'AbortError') {
-                    return;
-                }
-            }
-        }, 300);
-
-        return () => {
-            controller.abort();
-            clearTimeout(timer);
-        };
-    }, [form.city, form.country, form.postal_code, form.state]);
 
     const deliveryDates = useMemo(() => {
         const days = [];
@@ -664,9 +835,73 @@ function CheckoutForm() {
         }
     }, [deliveryDates, selectedDeliveryDate, selectedDeliveryTime]);
 
+    useEffect(() => {
+        const matched = stateOptions.find((s) => s.state_code === form.state || s.state_name === form.state);
+        setStateQuery(matched ? `${matched.state_name} (${matched.state_code})` : form.state || '');
+    }, [form.state, stateOptions]);
+
+    useEffect(() => {
+        const matched = stateOptions.find((s) => s.state_code === billingForm.state || s.state_name === billingForm.state);
+        setBillingStateQuery(matched ? `${matched.state_name} (${matched.state_code})` : billingForm.state || '');
+    }, [billingForm.state, stateOptions]);
+
+    const filteredStates = stateOptions.filter((s) => {
+        const q = stateQuery.toLowerCase();
+        return s.state_name.toLowerCase().includes(q) || s.state_code.toLowerCase().includes(q);
+    });
+
+    const filteredBillingStates = stateOptions.filter((s) => {
+        const q = billingStateQuery.toLowerCase();
+        return s.state_name.toLowerCase().includes(q) || s.state_code.toLowerCase().includes(q);
+    });
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (containerRef.current && !containerRef.current.contains(e.target)) {
+                setIsOpen(false);
+            }
+            if (billingContainerRef.current && !billingContainerRef.current.contains(e.target)) {
+                setIsBillingStateOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const handleStateChange = (nextStateValue) => {
+        setForm((previous) => ({
+            ...previous,
+            state: nextStateValue,
+            city: '',
+            postal_code: '',
+        }));
+        setTouchedFields((previous) => ({ ...previous, state: true }));
+        const validationErrors = validateFormValues({ ...form, state: nextStateValue, city: '', postal_code: '' });
+        setFieldErrors((previous) => {
+            const next = { ...previous };
+            if (validationErrors.state) {
+                next.state = validationErrors.state;
+            } else {
+                delete next.state;
+            }
+            delete next.city;
+            delete next.postal_code;
+            return next;
+        });
+    };
+
+    const handleBillingStateChange = (nextStateValue) => {
+        setBillingForm((previous) => ({
+            ...previous,
+            state: nextStateValue,
+            city: '',
+            postal_code: '',
+        }));
+    };
+
     if (isCartEmpty) {
         return (
-            <section className={`${featuresFontClass} font-monstrate bg-[#f7f7f5] px-5 py-16 sm:px-8 lg:px-12`}>
+            <section className={`${featuresFontClass} font-monstrate bg-[#f5efe6] px-5 py-16 sm:px-8 lg:px-12`}>
                 <div className="mx-auto w-full max-w-[900px] bg-white p-8 text-center shadow-sm">
                     <h1 className="font-monstrate text-[2rem] uppercase tracking-[0.04em] text-zinc-900 sm:text-[2.3rem]">
                         Checkout
@@ -674,7 +909,7 @@ function CheckoutForm() {
                     <p className="mt-4 text-zinc-600">Your cart is empty. Add products before checkout.</p>
                     <Link
                         to="/shop"
-                        className="mt-6 inline-flex h-11 items-center justify-center bg-zinc-900 px-7 text-[0.78rem] font-semibold uppercase tracking-[0.14em] text-white transition-colors hover:bg-black"
+                        className="font-monstrate mt-6 inline-flex h-11 items-center justify-center bg-zinc-900 px-7 text-[0.78rem] font-semibold uppercase tracking-[0.14em] text-white transition-colors hover:bg-black"
                     >
                         Go To Shop
                     </Link>
@@ -688,15 +923,57 @@ function CheckoutForm() {
             return;
         }
 
+        if (paymentMethod !== 'card') {
+            toast.error('This payment method is not available yet. Please use a credit card.');
+            return;
+        }
+
         if (!stripe || !elements) {
             toast.error('Secure payment is still loading. Please wait a moment and try again.');
             return;
         }
 
+        const allFields = ['first_name', 'last_name', 'email', 'phone', 'address_line_1', 'city', 'state', 'postal_code', 'country'];
+        const allTouched = {};
+        allFields.forEach((f) => { allTouched[f] = true; });
+        setTouchedFields(allTouched);
+
+        setTouchedCardFields({ number: true, expiry: true, cvc: true, nameOnCard: true });
+
         const nextFieldErrors = validateFormValues(form);
         if (Object.keys(nextFieldErrors).length > 0) {
             setFieldErrors(nextFieldErrors);
             toast.error('Please fix the highlighted form fields');
+            const firstErrorField = Object.keys(nextFieldErrors)[0];
+            scrollToAndBlink(firstErrorField);
+            return;
+        }
+
+        if (!useShippingAsBilling && isBillingAddressIncomplete()) {
+            toast.error('Please complete your billing address');
+            scrollToAndBlink('billing');
+            return;
+        }
+
+        setShowCardErrors(true);
+        if (!cardStatus.number.complete) {
+            toast.error('Please complete your card number');
+            scrollToAndBlink('number');
+            return;
+        }
+        if (!cardStatus.expiry.complete) {
+            toast.error('Please complete your card expiration date');
+            scrollToAndBlink('expiry');
+            return;
+        }
+        if (!cardStatus.cvc.complete) {
+            toast.error('Please complete your card security code');
+            scrollToAndBlink('cvc');
+            return;
+        }
+        if (!nameOnCard.trim()) {
+            toast.error('Please enter the name on your card');
+            scrollToAndBlink('nameOnCard');
             return;
         }
 
@@ -723,7 +1000,7 @@ function CheckoutForm() {
                 return;
             }
 
-            const cardElement = elements.getElement(CardElement);
+            const cardElement = elements.getElement(CardNumberElement);
             if (!cardElement) {
                 toast.error('Payment form is not ready yet. Please try again.');
                 return;
@@ -733,15 +1010,16 @@ function CheckoutForm() {
                 payment_method: {
                     card: cardElement,
                     billing_details: {
-                        name: `${form.first_name} ${form.last_name}`.trim(),
+                        name: nameOnCard.trim(),
                         email: form.email,
                         phone: form.phone,
                         address: {
-                            line1: form.address_line_1,
-                            line2: form.address_line_2 || undefined,
-                            city: form.city,
-                            state: form.state,
-                            country: normalizeCountryCode(form.country),
+                            line1: useShippingAsBilling ? form.address_line_1 : billingForm.address_line_1,
+                            line2: useShippingAsBilling ? (form.address_line_2 || undefined) : (billingForm.address_line_2 || undefined),
+                            city: useShippingAsBilling ? form.city : billingForm.city,
+                            state: useShippingAsBilling ? form.state : billingForm.state,
+                            postal_code: useShippingAsBilling ? form.postal_code : billingForm.postal_code,
+                            country: normalizeCountryCode(useShippingAsBilling ? form.country : billingForm.country),
                         },
                     },
                 },
@@ -778,7 +1056,12 @@ function CheckoutForm() {
 
             if (!response.ok) {
                 if (payload?.errors && typeof payload.errors === 'object') {
-                    setFieldErrors(toFieldErrors(payload.errors));
+                    const mappedErrors = toFieldErrors(payload.errors);
+                    setFieldErrors(mappedErrors);
+                    const firstErrField = Object.keys(mappedErrors)[0];
+                    if (firstErrField) {
+                        scrollToAndBlink(firstErrField);
+                    }
                     const firstError = Object.values(payload.errors)[0];
                     const message = Array.isArray(firstError) ? firstError[0] : 'Failed to place order';
                     toast.error(String(message));
@@ -791,15 +1074,15 @@ function CheckoutForm() {
             const cachedInvoice = {
                 order_number: String(payload?.order_number || ''),
                 status: 'approved',
-                first_name: String(form.firstName || ''),
-                last_name: String(form.lastName || ''),
+                first_name: String(form.first_name || ''),
+                last_name: String(form.last_name || ''),
                 email: String(form.email || '').trim(),
                 phone: String(form.phone || ''),
-                address_line_1: String(form.address1 || ''),
-                address_line_2: String(form.address2 || ''),
+                address_line_1: String(form.address_line_1 || ''),
+                address_line_2: String(form.address_line_2 || ''),
                 city: String(form.city || ''),
                 state: String(form.state || ''),
-                postal_code: String(form.postalCode || ''),
+                postal_code: String(form.postal_code || ''),
                 country: String(form.country || ''),
                 notes: String(form.notes || ''),
                 items: normalizedItems,
@@ -831,10 +1114,15 @@ function CheckoutForm() {
         }
     }
 
+    const numberError = getCardError('number', 'Enter a card number');
+    const expiryError = getCardError('expiry', 'Enter a valid expiration date');
+    const cvcError = getCardError('cvc', 'Enter the security code Or CVV');
+    const nameError = (showCardErrors || touchedCardFields.nameOnCard) && !nameOnCard.trim();
+
     return (
-        <section className={`${featuresFontClass} font-monstrate bg-[#f7f7f5] px-5 py-12 sm:px-8 lg:px-12 lg:py-16`}>
+        <section className={`${featuresFontClass} font-monstrate bg-[#f5efe6] px-5 py-12 sm:px-8 lg:px-12 lg:py-16`}>
             <div className="mx-auto grid w-full max-w-[1500px] gap-8 lg:grid-cols-[1.35fr_0.9fr] lg:gap-10">
-                <div className="bg-white p-5 shadow-sm sm:p-8">
+                <div className="font-monstrate bg-white p-5 shadow-sm sm:p-8">
                     <div className="border-b border-zinc-200 pb-5">
                         <h1 className="font-monstrate text-[2rem] uppercase tracking-[0.04em] text-zinc-900 sm:text-[2.3rem]">
                             Checkout
@@ -846,55 +1134,59 @@ function CheckoutForm() {
                     <div className="mt-7">
                         <h2 className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-zinc-400">Contact Information</h2>
                         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <div>
+                            <div ref={setFieldRef('first_name')}>
                                 <label className="mb-1.5 block text-[0.75rem] font-medium uppercase tracking-[0.1em] text-zinc-600">
                                     First Name <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     value={form.first_name}
                                     onChange={(event) => updateField('first_name', event.target.value)}
+                                    onBlur={handleBlur('first_name')}
                                     placeholder="John"
                                     className={inputClass('first_name')}
                                 />
-                                {fieldErrors.first_name ? <p className="mt-1 text-xs text-red-500">{fieldErrors.first_name}</p> : null}
+                                {touchedFields.first_name && fieldErrors.first_name ? <p className="mt-1 text-xs text-red-500">{fieldErrors.first_name}</p> : null}
                             </div>
-                            <div>
+                            <div ref={setFieldRef('last_name')}>
                                 <label className="mb-1.5 block text-[0.75rem] font-medium uppercase tracking-[0.1em] text-zinc-600">
                                     Last Name <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     value={form.last_name}
                                     onChange={(event) => updateField('last_name', event.target.value)}
+                                    onBlur={handleBlur('last_name')}
                                     placeholder="Doe"
                                     className={inputClass('last_name')}
                                 />
-                                {fieldErrors.last_name ? <p className="mt-1 text-xs text-red-500">{fieldErrors.last_name}</p> : null}
+                                {touchedFields.last_name && fieldErrors.last_name ? <p className="mt-1 text-xs text-red-500">{fieldErrors.last_name}</p> : null}
                             </div>
-                            <div>
+                            <div ref={setFieldRef('email')}>
                                 <label className="mb-1.5 block text-[0.75rem] font-medium uppercase tracking-[0.1em] text-zinc-600">
                                     Email Address <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     value={form.email}
                                     onChange={(event) => updateField('email', event.target.value)}
+                                    onBlur={handleBlur('email')}
                                     placeholder="john@example.com"
                                     type="email"
                                     className={inputClass('email')}
                                 />
-                                {fieldErrors.email ? <p className="mt-1 text-xs text-red-500">{fieldErrors.email}</p> : null}
+                                {touchedFields.email && fieldErrors.email ? <p className="mt-1 text-xs text-red-500">{fieldErrors.email}</p> : null}
                             </div>
-                            <div>
+                            <div ref={setFieldRef('phone')}>
                                 <label className="mb-1.5 block text-[0.75rem] font-medium uppercase tracking-[0.1em] text-zinc-600">
                                     Phone Number <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     value={form.phone}
                                     onChange={(event) => updateField('phone', event.target.value)}
+                                    onBlur={handleBlur('phone')}
                                     placeholder="+1 (555) 000-0000"
                                     type="tel"
                                     className={inputClass('phone')}
                                 />
-                                {fieldErrors.phone ? <p className="mt-1 text-xs text-red-500">{fieldErrors.phone}</p> : null}
+                                {touchedFields.phone && fieldErrors.phone ? <p className="mt-1 text-xs text-red-500">{fieldErrors.phone}</p> : null}
                             </div>
                         </div>
                     </div>
@@ -903,17 +1195,18 @@ function CheckoutForm() {
                     <div className="mt-8">
                         <h2 className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-zinc-400">Shipping Address</h2>
                         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <div className="sm:col-span-2">
+                            <div ref={setFieldRef('address_line_1')} className="sm:col-span-2">
                                 <label className="mb-1.5 block text-[0.75rem] font-medium uppercase tracking-[0.1em] text-zinc-600">
                                     Address Line 1 <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     value={form.address_line_1}
                                     onChange={(event) => updateField('address_line_1', event.target.value)}
+                                    onBlur={handleBlur('address_line_1')}
                                     placeholder="123 Main Street"
                                     className={inputClass('address_line_1')}
                                 />
-                                {fieldErrors.address_line_1 ? <p className="mt-1 text-xs text-red-500">{fieldErrors.address_line_1}</p> : null}
+                                {touchedFields.address_line_1 && fieldErrors.address_line_1 ? <p className="mt-1 text-xs text-red-500">{fieldErrors.address_line_1}</p> : null}
                             </div>
                             <div className="sm:col-span-2">
                                 <label className="mb-1.5 block text-[0.75rem] font-medium uppercase tracking-[0.1em] text-zinc-600">
@@ -927,48 +1220,63 @@ function CheckoutForm() {
                                 />
                                 {fieldErrors.address_line_2 ? <p className="mt-1 text-xs text-red-500">{fieldErrors.address_line_2}</p> : null}
                             </div>
-                             <div>
+
+                            {/* State combobox */}
+                            <div
+                                ref={(el) => {
+                                    fieldRefs.current.state = el;
+                                    containerRef.current = el;
+                                }}
+                                className="relative"
+                            >
                                 <label className="mb-1.5 block text-[0.75rem] font-medium uppercase tracking-[0.1em] text-zinc-600">
                                     State <span className="text-red-500">*</span>
                                 </label>
-                                <select
-                                    value={form.state}
+                                <input
+                                    type="text"
+                                    value={isLoadingStates ? 'Loading states...' : stateQuery}
+                                    disabled={isLoadingStates}
+                                    placeholder="Type or select state"
+                                    onFocus={() => setIsOpen(true)}
+                                    onBlur={handleBlur('state')}
                                     onChange={(event) => {
-                                        const nextState = event.target.value;
-                                        setForm((previous) => ({
-                                            ...previous,
-                                            state: nextState,
-                                            city: '',
-                                            postal_code: '',
-                                        }));
-
-                                        setFieldErrors((previous) => {
-                                            const next = { ...previous };
-                                            delete next.state;
-                                            delete next.city;
-                                            delete next.postal_code;
-                                            return next;
-                                        });
+                                        const val = event.target.value;
+                                        setStateQuery(val);
+                                        setIsOpen(true);
+                                        handleStateChange(val);
                                     }}
                                     className={inputClass('state')}
-                                    disabled={isLoadingStates}
-                                >
-                                    <option value="">{isLoadingStates ? 'Loading states...' : 'Select state'}</option>
-                                    {stateOptions.map((state) => (
-                                        <option key={state.state_code} value={state.state_code}>
-                                            {state.state_name} ({state.state_code})
-                                        </option>
-                                    ))}
-                                </select>
-                                {fieldErrors.state ? <p className="mt-1 text-xs text-red-500">{fieldErrors.state}</p> : null}
+                                />
+
+                                {isOpen && !isLoadingStates && filteredStates.length > 0 && (
+                                    <ul className="font-monstrate absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border border-zinc-200 bg-white text-sm shadow-lg">
+                                        {filteredStates.map((state) => (
+                                            <li
+                                                key={state.state_code}
+                                                onClick={() => {
+                                                    handleStateChange(state.state_code);
+                                                    setStateQuery(`${state.state_name} (${state.state_code})`);
+                                                    setIsOpen(false);
+                                                }}
+                                                className="cursor-pointer px-3 py-2 text-zinc-800 hover:bg-zinc-100"
+                                            >
+                                                {state.state_name} <span className="text-zinc-500">({state.state_code})</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+
+                                {touchedFields.state && fieldErrors.state ? <p className="mt-1 text-xs text-red-500">{fieldErrors.state}</p> : null}
                             </div>
-                           
-                            <div>
+
+                            <div ref={setFieldRef('city')}>
                                 <label className="mb-1.5 block text-[0.75rem] font-medium uppercase tracking-[0.1em] text-zinc-600">
                                     City <span className="text-red-500">*</span>
                                 </label>
-                                <select
+                                <input
+                                    type="text"
                                     value={form.city}
+                                    onBlur={handleBlur('city')}
                                     onChange={(event) => {
                                         const nextCity = event.target.value;
                                         setForm((previous) => ({
@@ -977,57 +1285,194 @@ function CheckoutForm() {
                                             postal_code: '',
                                         }));
 
+                                        const validationErrors = validateFormValues({ ...form, city: nextCity, postal_code: '' });
                                         setFieldErrors((previous) => {
                                             const next = { ...previous };
-                                            delete next.city;
+                                            if (validationErrors.city) {
+                                                next.city = validationErrors.city;
+                                            } else {
+                                                delete next.city;
+                                            }
                                             delete next.postal_code;
                                             return next;
                                         });
                                     }}
+                                    placeholder={!form.state ? 'Select state first' : 'Enter city'}
                                     className={inputClass('city')}
-                                    disabled={!form.state || isLoadingCities}
-                                >
-                                    <option value="">
-                                        {!form.state
-                                            ? 'Select state first'
-                                            : isLoadingCities
-                                            ? 'Loading cities...'
-                                            : 'Select city'}
-                                    </option>
-                                    {cityOptions.map((city) => (
-                                        <option key={city} value={city}>
-                                            {city}
-                                        </option>
-                                    ))}
-                                </select>
-                                {fieldErrors.city ? <p className="mt-1 text-xs text-red-500">{fieldErrors.city}</p> : null}
+                                    disabled={!form.state}
+                                />
+                                {touchedFields.city && fieldErrors.city ? <p className="mt-1 text-xs text-red-500">{fieldErrors.city}</p> : null}
                             </div>
-                          
-                            <div>
+
+                            <div ref={setFieldRef('postal_code')}>
                                 <label className="mb-1.5 block text-[0.75rem] font-medium uppercase tracking-[0.1em] text-zinc-600">
-                                    Postal Code <span className="text-red-500">*</span>
+                                    Zip Code <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     value={form.postal_code}
                                     onChange={(event) => updateField('postal_code', event.target.value)}
+                                    onBlur={handleBlur('postal_code')}
                                     placeholder="10001"
                                     className={inputClass('postal_code')}
                                 />
-                                {fieldErrors.postal_code ? <p className="mt-1 text-xs text-red-500">{fieldErrors.postal_code}</p> : null}
+                                {touchedFields.postal_code && fieldErrors.postal_code ? <p className="mt-1 text-xs text-red-500">{fieldErrors.postal_code}</p> : null}
                             </div>
-                            <div>
+                            <div ref={setFieldRef('country')}>
                                 <label className="mb-1.5 block text-[0.75rem] font-medium uppercase tracking-[0.1em] text-zinc-600">
                                     Country <span className="text-red-500">*</span>
                                 </label>
-                               <input
+                                <input
                                     value={form.country}
                                     onChange={(event) => updateField('country', event.target.value)}
+                                    onBlur={handleBlur('country')}
                                     placeholder="United States"
                                     className={inputClass('country')}
-                                    readOnly // This makes the field non-editable
+                                    readOnly
                                 />
-                                {fieldErrors.country ? <p className="mt-1 text-xs text-red-500">{fieldErrors.country}</p> : null}
+                                {touchedFields.country && fieldErrors.country ? <p className="mt-1 text-xs text-red-500">{fieldErrors.country}</p> : null}
                             </div>
+
+                            {/* Checkbox moved right under Zip Code and Country */}
+                            <div className="sm:col-span-2 mt-2">
+                                <label className="flex cursor-pointer items-center gap-2.5 text-[0.88rem] text-zinc-800">
+                                    <input
+                                        type="checkbox"
+                                        checked={useShippingAsBilling}
+                                        onChange={(event) => setUseShippingAsBilling(event.target.checked)}
+                                        className="h-4 w-4 accent-zinc-900"
+                                    />
+                                    Use shipping address as billing address
+                                </label>
+                            </div>
+
+                            {/* Conditional Billing Address Form */}
+                            {!useShippingAsBilling && (
+                                <div ref={setFieldRef('billing')} className="sm:col-span-2 mt-4 border-t border-zinc-200 pt-5">
+                                    <h3 className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-zinc-400 mb-4">Billing Address</h3>
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                        <div>
+                                            <label className="mb-1.5 block text-[0.75rem] font-medium uppercase tracking-[0.1em] text-zinc-600">
+                                                First Name <span className="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                                value={billingForm.first_name}
+                                                onChange={(event) => updateBillingField('first_name', event.target.value)}
+                                                placeholder="John"
+                                                className="font-monstrate h-11 w-full border border-zinc-200 bg-white px-3 text-[0.9rem] normal-case text-zinc-900 outline-none focus:border-zinc-900"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="mb-1.5 block text-[0.75rem] font-medium uppercase tracking-[0.1em] text-zinc-600">
+                                                Last Name <span className="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                                value={billingForm.last_name}
+                                                onChange={(event) => updateBillingField('last_name', event.target.value)}
+                                                placeholder="Doe"
+                                                className="font-monstrate h-11 w-full border border-zinc-200 bg-white px-3 text-[0.9rem] normal-case text-zinc-900 outline-none focus:border-zinc-900"
+                                            />
+                                        </div>
+                                        <div className="sm:col-span-2">
+                                            <label className="mb-1.5 block text-[0.75rem] font-medium uppercase tracking-[0.1em] text-zinc-600">
+                                                Address Line 1 <span className="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                                value={billingForm.address_line_1}
+                                                onChange={(event) => updateBillingField('address_line_1', event.target.value)}
+                                                placeholder="123 Main Street"
+                                                className="font-monstrate h-11 w-full border border-zinc-200 bg-white px-3 text-[0.9rem] normal-case text-zinc-900 outline-none focus:border-zinc-900"
+                                            />
+                                        </div>
+                                        <div className="sm:col-span-2">
+                                            <label className="mb-1.5 block text-[0.75rem] font-medium uppercase tracking-[0.1em] text-zinc-600">
+                                                Address Line 2 <span className="text-zinc-300">(optional)</span>
+                                            </label>
+                                            <input
+                                                value={billingForm.address_line_2}
+                                                onChange={(event) => updateBillingField('address_line_2', event.target.value)}
+                                                placeholder="Apt, suite, unit, etc."
+                                                className="font-monstrate h-11 w-full border border-zinc-200 bg-white px-3 text-[0.9rem] normal-case text-zinc-900 outline-none focus:border-zinc-900"
+                                            />
+                                        </div>
+
+                                        {/* Billing State Combobox */}
+                                        <div ref={billingContainerRef} className="relative">
+                                            <label className="mb-1.5 block text-[0.75rem] font-medium uppercase tracking-[0.1em] text-zinc-600">
+                                                State <span className="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={isLoadingStates ? 'Loading states...' : billingStateQuery}
+                                                disabled={isLoadingStates}
+                                                placeholder="Type or select state"
+                                                onFocus={() => setIsBillingStateOpen(true)}
+                                                onChange={(event) => {
+                                                    const val = event.target.value;
+                                                    setBillingStateQuery(val);
+                                                    setIsBillingStateOpen(true);
+                                                    handleBillingStateChange(val);
+                                                }}
+                                                className="font-monstrate h-11 w-full border border-zinc-200 bg-white px-3 text-[0.9rem] normal-case text-zinc-900 outline-none focus:border-zinc-900"
+                                            />
+                                            {isBillingStateOpen && !isLoadingStates && filteredBillingStates.length > 0 && (
+                                                <ul className="font-monstrate absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border border-zinc-200 bg-white text-sm shadow-lg">
+                                                    {filteredBillingStates.map((state) => (
+                                                        <li
+                                                            key={state.state_code}
+                                                            onClick={() => {
+                                                                handleBillingStateChange(state.state_code);
+                                                                setBillingStateQuery(`${state.state_name} (${state.state_code})`);
+                                                                setIsBillingStateOpen(false);
+                                                            }}
+                                                            className="cursor-pointer px-3 py-2 text-zinc-800 hover:bg-zinc-100"
+                                                        >
+                                                            {state.state_name} <span className="text-zinc-500">({state.state_code})</span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            )}
+                                        </div>
+
+                                        <div>
+                                            <label className="mb-1.5 block text-[0.75rem] font-medium uppercase tracking-[0.1em] text-zinc-600">
+                                                City <span className="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={billingForm.city}
+                                                onChange={(event) => updateBillingField('city', event.target.value)}
+                                                placeholder={!billingForm.state ? 'Select state first' : 'Enter city'}
+                                                className="font-monstrate h-11 w-full border border-zinc-200 bg-white px-3 text-[0.9rem] normal-case text-zinc-900 outline-none focus:border-zinc-900"
+                                                disabled={!billingForm.state}
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="mb-1.5 block text-[0.75rem] font-medium uppercase tracking-[0.1em] text-zinc-600">
+                                                Zip Code <span className="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                                value={billingForm.postal_code}
+                                                onChange={(event) => updateBillingField('postal_code', event.target.value)}
+                                                placeholder="10001"
+                                                className="font-monstrate h-11 w-full border border-zinc-200 bg-white px-3 text-[0.9rem] normal-case text-zinc-900 outline-none focus:border-zinc-900"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="mb-1.5 block text-[0.75rem] font-medium uppercase tracking-[0.1em] text-zinc-600">
+                                                Country <span className="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                                value={billingForm.country}
+                                                onChange={(event) => updateBillingField('country', event.target.value)}
+                                                placeholder="United States"
+                                                className="font-monstrate h-11 w-full border border-zinc-200 bg-white px-3 text-[0.9rem] normal-case text-zinc-900 outline-none focus:border-zinc-900"
+                                                readOnly
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -1043,16 +1488,15 @@ function CheckoutForm() {
                                 onChange={(event) => updateField('notes', event.target.value)}
                                 placeholder="Special delivery instructions, gift messages, etc."
                                 rows={3}
-                                className="font-monstrate w-full resize-none border border-zinc-300 px-3 py-2.5 text-[0.9rem] normal-case text-zinc-900 outline-none focus:border-zinc-900"
+                                className="font-monstrate w-full resize-none border border-zinc-300 px-3 py-2.5 text-[0.9rem] normal-case text-zinc-900 outline-none placeholder:normal-case focus:border-zinc-900"
                             />
                         </div>
                     </div>
                 </div>
 
-                <aside className="bg-white p-5 shadow-sm sm:p-7">
+                <aside className="font-monstrate bg-white p-5 shadow-sm sm:p-7">
                     <h2 className="font-monstrate text-[1.5rem] uppercase tracking-[0.05em] text-zinc-900">Order Summary</h2>
 
-                
                     <div className="mt-6 space-y-4">
                         {items.map((item) => (
                             <article key={item.lineId} className="flex gap-3 border border-zinc-200 p-3 sm:p-4">
@@ -1079,7 +1523,7 @@ function CheckoutForm() {
                                             <button
                                                 type="button"
                                                 onClick={() => updateQuantity(item.lineId, item.quantity - 1)}
-                                                className="inline-flex h-8 w-8 items-center justify-center text-zinc-700"
+                                                className="font-monstrate inline-flex h-8 w-8 items-center justify-center text-zinc-700"
                                             >
                                                 -
                                             </button>
@@ -1089,7 +1533,7 @@ function CheckoutForm() {
                                             <button
                                                 type="button"
                                                 onClick={() => updateQuantity(item.lineId, item.quantity + 1)}
-                                                className="inline-flex h-8 w-8 items-center justify-center text-zinc-700"
+                                                className="font-monstrate inline-flex h-8 w-8 items-center justify-center text-zinc-700"
                                             >
                                                 +
                                             </button>
@@ -1098,7 +1542,7 @@ function CheckoutForm() {
                                         <button
                                             type="button"
                                             onClick={() => removeFromCart(item.lineId)}
-                                            className="text-[0.72rem] uppercase tracking-[0.12em] text-zinc-500 transition-colors hover:text-zinc-900"
+                                            className="font-monstrate text-[0.72rem] uppercase tracking-[0.12em] text-zinc-500 transition-colors hover:text-zinc-900"
                                         >
                                             Remove
                                         </button>
@@ -1115,9 +1559,13 @@ function CheckoutForm() {
                         </div>
                         <div className="flex items-center justify-between">
                             <span>Shipping</span>
-                            <span className={`transition-all duration-200 ${(!hasShippingQuote || isFetchingShipping) ? 'select-none blur-sm opacity-60' : ''}`}>
-                                {hasShippingQuote ? (shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`) : '$0.00'}
-                            </span>
+                            {isFetchingShipping || !hasShippingQuote ? (
+                                <span className="select-none blur-sm" aria-label="Calculating shipping">
+                                    $0.00
+                                </span>
+                            ) : (
+                                <span>{shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`}</span>
+                            )}
                         </div>
                         {!isFetchingShipping && shippingError ? (
                             <p className="text-xs text-red-600">{shippingError}</p>
@@ -1128,40 +1576,155 @@ function CheckoutForm() {
                         </div>
                     </div>
 
-                  
-                    <div className="mt-6">
-                        <h2 className="text-[0.92rem] font-semibold uppercase tracking-[0.16em] text-black">Payment Details</h2>
-                        <div className="mt-3">
-                            <label className="mb-1.5 block text-[0.75rem] font-medium uppercase tracking-[0.1em] text-zinc-600">
-                                Card Information <span className="text-red-500">*</span>
-                            </label>
-                            <div className="min-h-11 border border-zinc-200 bg-white px-3 py-3 transition-colors hover:border-zinc-400 focus-within:border-zinc-900">
-                                <CardElement options={cardElementOptions} />
-                            </div>
-                        </div>
-                    </div>
+                    {/* Payment */}
+                    <div className="mt-8">
+                        <h2 className="text-[1.15rem] font-semibold text-zinc-900">Payment</h2>
+                        <p className="mt-1 text-[0.85rem] text-zinc-500">All transactions are secure and encrypted.</p>
 
-                    <div className="mt-4">
-                        <p className="mb-1.5 text-[0.92rem] font-semibold text-black uppercase tracking-[0.16em]">
-                            We Accept
-                        </p>
-                        <div className="overflow-hidden border border-zinc-200 bg-white">
-                        <img
-                            src="/cardImage.png"
-                            alt="Accepted payment cards"
-                            className="h-10 w-full object-contain object-center px-2"
-                        />
+                        <div className="mt-4 space-y-3">
+                            <div
+                                className={`rounded-lg border ${
+                                    paymentMethod === 'card' ? 'border-zinc-900' : 'border-zinc-300'
+                                }`}
+                            >
+                                <label className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 rounded-t-lg bg-white px-4 py-4">
+                                    <span className="flex items-center gap-3 text-[0.9rem] font-medium text-zinc-900">
+                                        <input
+                                            type="radio"
+                                            name="payment_method"
+                                            checked={paymentMethod === 'card'}
+                                            onChange={() => setPaymentMethod('card')}
+                                            className="h-4 w-4 accent-zinc-900"
+                                        />
+                                        Credit / Debit Card
+                                    </span>
+                                    <div className="pl-7 sm:pl-0 scale-[0.85] origin-left sm:origin-right">
+                                        <CardBrandBadges brand={cardBrand} />
+                                    </div>
+                                </label>
+
+                                <div
+                                    className={`space-y-3 rounded-b-lg border-t border-zinc-200 bg-zinc-100 px-4 pb-4 pt-4 ${
+                                        paymentMethod === 'card' ? '' : 'hidden'
+                                    }`}
+                                >
+                                    {/* Card number */}
+                                    <div ref={setFieldRef('number')}>
+                                        <div className={cardBoxClass(Boolean(numberError), blinkingField === 'number')}>
+                                            <div className="min-w-0 flex-1">
+                                                <CardNumberElement
+                                                    options={{
+                                                        ...cardNumberOptions,
+                                                        placeholder: 'Card number',
+                                                    }}
+                                                    onChange={handleCardFieldChange('number')}
+                                                    onBlur={handleCardFieldBlur('number')}
+                                                />
+                                            </div>
+                                            <svg
+                                                className="h-4 w-4 shrink-0 text-zinc-500"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                strokeWidth="2"
+                                            >
+                                                <rect x="4" y="11" width="16" height="10" rx="2" />
+                                                <path d="M8 11V7a4 4 0 018 0v4" />
+                                            </svg>
+                                        </div>
+                                        {numberError ? (
+                                            <p className="mt-1.5 text-[0.85rem] text-red-600">{numberError}</p>
+                                        ) : null}
+                                    </div>
+
+                                    {/* Expiry + CVC */}
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div ref={setFieldRef('expiry')}>
+                                            <div className={cardBoxClass(Boolean(expiryError), blinkingField === 'expiry')}>
+                                                <div className="min-w-0 flex-1">
+                                                    <CardExpiryElement
+                                                        options={{
+                                                            ...cardExpiryOptions,
+                                                            placeholder: 'MM / YY',
+                                                        }}
+                                                        onChange={handleCardFieldChange('expiry')}
+                                                        onBlur={handleCardFieldBlur('expiry')}
+                                                    />
+                                                </div>
+                                            </div>
+                                            {expiryError ? (
+                                                <p className="mt-1.5 text-[0.85rem] text-red-600">{expiryError}</p>
+                                            ) : null}
+                                        </div>
+                                        <div ref={setFieldRef('cvc')}>
+                                            <div className={cardBoxClass(Boolean(cvcError), blinkingField === 'cvc')}>
+                                                <div className="min-w-0 flex-1">
+                                                    <CardCvcElement
+                                                        options={{
+                                                            ...cardCvcOptions,
+                                                            placeholder: 'CVC',
+                                                        }}
+                                                        onChange={handleCardFieldChange('cvc')}
+                                                        onBlur={handleCardFieldBlur('cvc')}
+                                                    />
+                                                </div>
+                                                <span
+                                                    title="3 or 4 digit code on your card"
+                                                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-zinc-500 text-[0.7rem] text-zinc-600"
+                                                >
+                                                    ?
+                                                </span>
+                                            </div>
+                                            {cvcError ? (
+                                                <p className="mt-1.5 text-[0.85rem] text-red-600">{cvcError}</p>
+                                            ) : null}
+                                        </div>
+                                    </div>
+
+                                    {/* Name on card */}
+                                    <div ref={setFieldRef('nameOnCard')}>
+                                        <div className={cardBoxClass(nameError, blinkingField === 'nameOnCard')}>
+                                            <div className="min-w-0 flex-1">
+                                                <input
+                                                    type="text"
+                                                    value={nameOnCard}
+                                                    onChange={(event) => setNameOnCard(event.target.value)}
+                                                    onBlur={() => setTouchedCardFields((prev) => ({ ...prev, nameOnCard: true }))}
+                                                    placeholder="Name on Card"
+                                                    autoComplete="cc-name"
+                                                    style={{ textTransform: 'none' }}
+                                                    className="w-full bg-transparent text-[0.95rem] text-zinc-900 outline-none placeholder:text-zinc-500 placeholder:normal-case border-none p-0 focus:ring-0"
+                                                />
+                                            </div>
+                                        </div>
+                                        {nameError ? (
+                                            <p className="mt-1.5 text-[0.85rem] text-red-600">Enter the name on your card</p>
+                                        ) : null}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
                     <button
                         type="button"
                         onClick={handlePlaceOrder}
-                        disabled={isSubmitting || !stripe || !elements || isFetchingShipping || (subtotal > 0 && hasCompleteShippingAddress && shippingError !== '')}
-                        className="mt-6 inline-flex h-11 w-full items-center justify-center bg-zinc-900 text-[0.78rem] font-semibold uppercase tracking-[0.14em] text-white transition-colors hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
+                        disabled={
+                            isSubmitting
+                            || !stripe
+                            || !elements
+                            || isFetchingShipping
+                            || paymentMethod !== 'card'
+                            || (subtotal > 0 && hasCompleteShippingAddress && shippingError !== '')
+                        }
+                        className="font-monstrate mt-6 inline-flex h-11 w-full items-center justify-center bg-zinc-900 text-[0.78rem] font-semibold uppercase tracking-[0.14em] text-white transition-colors hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                        {isSubmitting ? 'Processing Payment...' : !stripe || !elements ? 'Loading Secure Payment...' : 'Pay & Place Order'}
+                        {isSubmitting ? 'Processing Payment...' : !stripe || !elements ? 'Loading Secure Payment...' : 'Pay and place order'}
                     </button>
+
+                    <p className="mt-4 text-[0.75rem] text-zinc-500">
+                        By placing an order, you agree to our Terms of Use and acknowledge our Privacy Policy.
+                    </p>
                 </aside>
             </div>
         </section>
@@ -1171,6 +1734,21 @@ function CheckoutForm() {
 export default function CheckoutPage() {
     const [stripePromise, setStripePromise] = useState(null);
     const [isStripeLoading, setIsStripeLoading] = useState(true);
+
+    const elementsOptions = useMemo(
+        () => ({
+            fonts: [
+                {
+                    family: 'Monstrate',
+                    src: `url(${window.location.origin}${MONSTRATE_FONT_URL})`,
+                    weight: '400',
+                    style: 'normal',
+                    display: 'swap',
+                },
+            ],
+        }),
+        [],
+    );
 
     useEffect(() => {
         let isMounted = true;
@@ -1213,7 +1791,7 @@ export default function CheckoutPage() {
 
     if (isStripeLoading) {
         return (
-            <section className={`${featuresFontClass} font-monstrate bg-[#f7f7f5] px-5 py-16 sm:px-8 lg:px-12`}>
+            <section className={`${featuresFontClass} font-monstrate bg-[#f5efe6] px-5 py-16 sm:px-8 lg:px-12`}>
                 <div className="mx-auto w-full max-w-[900px] bg-white p-8 text-center shadow-sm">
                     <h1 className="font-monstrate text-[2rem] uppercase tracking-[0.04em] text-zinc-900 sm:text-[2.3rem]">
                         Checkout
@@ -1226,7 +1804,7 @@ export default function CheckoutPage() {
 
     if (!stripePromise) {
         return (
-            <section className={`${featuresFontClass} font-monstrate bg-[#f7f7f5] px-5 py-16 sm:px-8 lg:px-12`}>
+            <section className={`${featuresFontClass} font-monstrate bg-[#f5efe6] px-5 py-16 sm:px-8 lg:px-12`}>
                 <div className="mx-auto w-full max-w-[900px] bg-white p-8 text-center shadow-sm">
                     <h1 className="font-monstrate text-[2rem] uppercase tracking-[0.04em] text-zinc-900 sm:text-[2.3rem]">
                         Checkout
@@ -1240,7 +1818,7 @@ export default function CheckoutPage() {
     }
 
     return (
-        <Elements stripe={stripePromise}>
+        <Elements stripe={stripePromise} options={elementsOptions}>
             <CheckoutForm />
         </Elements>
     );

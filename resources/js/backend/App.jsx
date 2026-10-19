@@ -3,7 +3,12 @@ import { LoginForm } from '@/components/login-form';
 import { Toaster } from '@/components/ui/sonner';
 import { AppProvider } from '@/context/AppContext';
 import AppLayout from '@/layouts/AppLayout';
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom';
+
+function CustomerOrderRedirect() {
+    const { id } = useParams();
+    return <Navigate to={`/user/orders/${id}`} replace />;
+}
 
 function lazyWithRetry(importer, key) {
     return lazy(async () => {
@@ -29,6 +34,7 @@ function lazyWithRetry(importer, key) {
 }
 
 const Dashboard = lazyWithRetry(() => import('@/pages/dashboard'), 'dashboard');
+const CustomerDashboard = lazyWithRetry(() => import('@/pages/CustomerDashboard'), 'customer-dashboard');
 
 // size Management
 const Size  = lazyWithRetry(() => import('@/pages/Size/size'), 'size');
@@ -70,6 +76,7 @@ const EditProduct = lazyWithRetry(() => import('@/pages/Product/editProduct'), '
 // Order Management
 const Orders = lazyWithRetry(() => import('@/pages/Order/orders'), 'orders');
 const EditOrder = lazyWithRetry(() => import('@/pages/Order/editOrder'), 'edit-order');
+const CustomerOrderDetails = lazyWithRetry(() => import('@/pages/Order/CustomerOrderDetails'), 'customer-order-details');
 
 // JOOR Order Management
 const JoorOrders = lazyWithRetry(() => import('@/pages/JoorOrder/joorOrders'), 'joor-orders');
@@ -104,12 +111,17 @@ export default function App() {
                             }
                         />
 
-                        {/* Customer area: /user/dashboard, /user/orders */}
+                        {/* Customer area */}
                         <Route path="/user" element={<AppLayout />}>
-                            <Route path="dashboard" element={<Dashboard />} />
+                            <Route path="dashboard" element={<CustomerDashboard />} />
                             <Route path="orders" element={<Orders />} />
+                            <Route path="orders/:id" element={<CustomerOrderDetails />} />
                             <Route path="orders/:id/edit" element={<EditOrder />} />
                         </Route>
+                        <Route
+                            path="/customer/orders/:id"
+                            element={<CustomerOrderRedirect />}
+                        />
 
                         {/* user Managemnent */}
                         <Route path="/admin" element={<AppLayout />}>

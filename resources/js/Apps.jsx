@@ -23,6 +23,7 @@ const ResetPasswordPage = lazy(() => import('./frontend/pages/ResetPassword.jsx'
 const CheckoutPage = lazy(() => import('./frontend/pages/Checkout.jsx'));
 const OrderConfirmationPage = lazy(() => import('./frontend/pages/OrderConfirmation.jsx'));
 
+
 const SustainabilityPage = lazy(() => import('./frontend/pages/Sustainability.jsx'));
 
 const BRAND_NAME = window.APP_NAME || 'Viveren';
@@ -183,6 +184,9 @@ function AppRouter() {
                             <Route path="new-arrivals" element={withPageFallback(ShopPage)} />
                             <Route path="trending" element={withPageFallback(ShopPage)} />
                             <Route path="best-sellers" element={withPageFallback(ShopPage)} />
+                           
+                            
+                            
                             <Route path=":subCategorySlug/:grandChildSlug?" element={withPageFallback(ShopPage)} />
                             <Route path="product-details/:slug/:color?" element={withPageFallback(SingleProductPage)} />
                             <Route path="singleProduct" element={withPageFallback(SingleProductPage)} />

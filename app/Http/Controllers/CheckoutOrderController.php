@@ -170,6 +170,14 @@ class CheckoutOrderController extends Controller
             $query->where('status', $request->input('status'));
         }
 
+        if ($request->filled('from')) {
+            $query->whereDate('created_at', '>=', $request->input('from'));
+        }
+
+        if ($request->filled('to')) {
+            $query->whereDate('created_at', '<=', $request->input('to'));
+        }
+
         if ($request->filled('search')) {
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
@@ -190,6 +198,43 @@ class CheckoutOrderController extends Controller
         });
 
         return response()->json($orders);
+    }
+
+    public function customerRecentItems(Request $request): JsonResponse
+    {
+        $limit = max(1, min((int) $request->input('limit', 2), 10));
+
+        $orders = $this->customerScopedOrders($request)
+            ->latest()
+            ->limit(10)
+            ->get(['id', 'items', 'created_at']);
+
+        $items = [];
+
+        foreach ($orders as $order) {
+            $orderItems = is_string($order->items)
+                ? (json_decode($order->items, true) ?: [])
+                : (array) $order->items;
+
+            foreach ($orderItems as $index => $item) {
+                $items[] = [
+                    'id'        => $order->id . '-' . ($item['lineId'] ?? $index),
+                    'order_id'  => $order->id,
+                    'name'      => $item['name'] ?? '',
+                    'quantity'  => (int) ($item['quantity'] ?? 1),
+                    'price'     => (float) ($item['priceValue'] ?? 0),
+                    'image_url' => $item['image'] ?? null,
+                    'color'     => $item['selectedColor'] ?? null,
+                    'size'      => $item['selectedSize'] ?? null,
+                ];
+
+                if (count($items) >= $limit) {
+                    break 2;
+                }
+            }
+        }
+
+        return response()->json(['data' => $items]);
     }
 
     protected function resolveTrackingNumberForCustomerOrder(CheckoutOrder $order): ?string
@@ -213,6 +258,11 @@ class CheckoutOrderController extends Controller
         if (! $exists) {
             abort(403, 'Forbidden');
         }
+
+        $checkoutOrder->setAttribute(
+            'tracking_number',
+            $this->resolveTrackingNumberForCustomerOrder($checkoutOrder)
+        );
 
         return response()->json($checkoutOrder);
     }
