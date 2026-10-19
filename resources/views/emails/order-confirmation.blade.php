@@ -70,8 +70,8 @@
                             @endif
 
                             <p style="font-size: 13px; line-height: 1.6; color: #94a3b8; margin: 0;">
-                                Questions about your order? Reply to this email or contact us at
-                                <a href="mailto:hello@viveren.com" style="color: #0f172a; text-decoration: underline;">hello@viveren.com</a>.
+                                Questions about your order?Please Do not  reply to this email, Contact us at
+                                <a href="mailto:support@viveren.com" style="color: #0f172a; text-decoration: underline;">support@viveren.com</a>.
                             </p>
                         </td>
                     </tr>
