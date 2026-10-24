@@ -5,7 +5,7 @@ const AboutHeroSection = lazy(() => import('../components/AboutHeroSection.jsx')
 const About1971Section = lazy(() => import('../components/AboutSection.jsx'));
 const SustainabilitySection = lazy(() => import('../components/SustainabilitySection.jsx'));
 const FabricTechnologySection = lazy(() => import('../components/FabricandTechnology.jsx'));
-
+const LongevitySection = lazy(() => import('../components/DesignedForLongivity.jsx'));
 function LazySection({ children, heightClass, variant = 'generic', defer = true }) {
     const containerRef = useRef(null);
     const [isVisible, setIsVisible] = useState(() => !defer);
@@ -93,6 +93,11 @@ export default function AboutPage() {
                     <SustainabilitySection />
                 </LazySection>
             </div> */}
+             <div id="section-longevity">
+                <LazySection heightClass="h-[600px]" variant="generic" defer={false}>
+                    <LongevitySection />
+                </LazySection>
+            </div>
 
             <div id="section-fabric-technology">
                 <LazySection heightClass="h-[560px]" variant="split" defer={deferSections}>

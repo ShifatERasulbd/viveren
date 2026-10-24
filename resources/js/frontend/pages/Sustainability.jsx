@@ -70,12 +70,16 @@ export default function SustainabilityPage() {
                     <SustainabilityHeroSection />
                 </LazySection>
             </div>
-            <div id="section-sustainability">
+            {/* <div id="section-sustainability">
                 <LazySection heightClass="h-[560px]" variant="split" defer={deferSections}>
                     <SustainabilitySection />
                 </LazySection>
-            </div> 
-           
+            </div>  */}
+            <div id="section-longevity">
+                <LazySection heightClass="h-[600px]" variant="generic" defer={false}>
+                    <LongevitySection />
+                </LazySection>
+            </div>
             <div id="section-mindful-materials">
                 <LazySection heightClass="h-[600px]" variant="generic" defer={false}>
                     <MindfulMaterials />
