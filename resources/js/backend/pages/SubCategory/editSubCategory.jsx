@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import EditForm from '@/components/subcategory/editForm';
 import { useAppContext } from '@/context/AppContext';
 
-import { fetchSubCategory, fetchCategoriesForDropdown, updateSubCategory } from './api';
+import { fetchSubCategory, fetchCategoriesForDropdown, updateSubCategory, warnIfJoorSyncFailed } from './api';
 
 const initialForm = {
     name: '',
@@ -187,7 +187,7 @@ export default function EditSubCategory() {
         setLoadError('');
 
         try {
-            await updateSubCategory(id, {
+            const updated = await updateSubCategory(id, {
                 name: form.name.trim(),
                 slug: form.slug.trim(),
                 category_id: categoryId,
@@ -197,6 +197,10 @@ export default function EditSubCategory() {
             toast.success('SubCategory updated successfully.', {
                 style: { color: '#16a34a' },
             });
+            const joorWarning = warnIfJoorSyncFailed(updated);
+            if (joorWarning) {
+                toast.warning(joorWarning, { duration: 10000 });
+            }
             navigate('/admin/sub-category');
         } catch (error) {
             setErrors(error.payload?.errors || {});

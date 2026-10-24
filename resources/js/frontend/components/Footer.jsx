@@ -124,7 +124,7 @@ export default function Footer() {
         { label: 'Contact Us', href: '/contact' },
         { label: 'Shipping', href: '/shipping' },
         { label: 'Returns', href: '/shipping' },
-        { label: 'Size Guide', modalKey: 'size_guide' },
+        
     ], []);
 
     const houseLinks = useMemo(() => [

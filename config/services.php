@@ -92,6 +92,9 @@ return [
         'price_type_id' => env('JOOR_PRICE_TYPE_ID'),
         // JOOR Season Years ID required when creating a new linesheet (Collection) for a sub-category.
         'collection_season_id' => env('JOOR_COLLECTION_SEASON_ID'),
+        // Used only when the account has no Season yet and one must be auto-created (year defaults to current).
+        'collection_season_name' => env('JOOR_COLLECTION_SEASON_NAME', 'Core'),
+        'collection_season_year' => env('JOOR_COLLECTION_SEASON_YEAR'),
         // Web portal used to build "view in JOOR" links, shown alongside the
         // GET /orders/sku_line_items line-item breakdown.
         'portal_base_url' => env('JOOR_PORTAL_BASE_URL', 'https://sandbox.jooraccess.com'),

@@ -16,7 +16,7 @@ import {
 import SubCategoryTable from '@/components/subcategory/table';
 
 
-import { deleteSubCategory, fetchSubCategories } from './api';
+import { deleteSubCategory, fetchSubCategories, warnIfJoorSyncFailed } from './api';
 
 export default function SubCategories() {
     const navigate = useNavigate();
@@ -71,11 +71,15 @@ export default function SubCategories() {
         setErrorMessage('');
 
         try {
-            await deleteSubCategory(id);
+            const deleted = await deleteSubCategory(id);
             setSubCategories((previous) => previous.filter((c) => c.id !== id));
             toast.success('SubCategory deleted successfully.', {
                 style: { color: '#16a34a' },
             });
+            const joorWarning = warnIfJoorSyncFailed(deleted);
+            if (joorWarning) {
+                toast.warning(joorWarning, { duration: 10000 });
+            }
             setSubCategoryToDelete(null);
         } catch (error) {
             const message = error.message || 'Failed to delete subcategory.';

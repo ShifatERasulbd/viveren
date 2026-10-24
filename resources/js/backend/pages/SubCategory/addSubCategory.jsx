@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import AddForm from '@/components/subcategory/addForm';
 import { useAppContext } from '@/context/AppContext';
 
-import { createSubCategory, fetchCategoriesForDropdown } from './api';
+import { createSubCategory, fetchCategoriesForDropdown, warnIfJoorSyncFailed } from './api';
 
 const initialForm = {
     name: '',
@@ -158,7 +158,7 @@ export default function AddSubCategory() {
         setRequestError('');
 
         try {
-            await createSubCategory({
+            const created = await createSubCategory({
                 name: form.name.trim(),
                 slug: form.slug.trim(),
                 category_id: form.category_id.trim(),
@@ -168,6 +168,10 @@ export default function AddSubCategory() {
             toast.success('SubCategory created successfully.', {
                 style: { color: '#16a34a' },
             });
+            const joorWarning = warnIfJoorSyncFailed(created);
+            if (joorWarning) {
+                toast.warning(joorWarning, { duration: 10000 });
+            }
             navigate('/admin/sub-category');
         } catch (error) {
             setErrors(error.payload?.errors || {});

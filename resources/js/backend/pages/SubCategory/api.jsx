@@ -65,6 +65,15 @@ export async function deleteSubCategory(id){
     });
 }
 
+// Sub-category CRUD succeeds even when the JOOR linesheet sync fails, so surface that separately.
+export function warnIfJoorSyncFailed(payload) {
+    if (payload && payload.joor_synced === false) {
+        return `Saved locally, but the JOOR linesheet sync failed: ${payload.joor_sync_error || 'unknown error'}`;
+    }
+
+    return null;
+}
+
 export async function fetchCategoriesForDropdown() {
     const payload = await requestJson('/api/categories');
     return Array.isArray(payload) ? payload : [];

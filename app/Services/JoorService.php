@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Services;
@@ -330,7 +331,8 @@ class JoorService
     }
 
     // Uses JOOR_COLLECTION_SEASON_ID when configured, otherwise falls back to the first season
-    // returned by GET /seasons so linesheet creation doesn't hard-fail on a missing setting.
+    // returned by GET /seasons, and if the account has none yet, creates a default season
+    // (JOOR requires season_id on every new collection) so linesheet creation doesn't hard-fail.
     private function resolveCollectionSeasonId(): string
     {
         $configuredSeasonId = trim((string) $this->config('collection_season_id', ''));
@@ -349,12 +351,34 @@ class JoorService
         $firstSeasonId = data_get($seasons, '0.id');
 
         if (! is_scalar($firstSeasonId) || trim((string) $firstSeasonId) === '') {
-            throw new RuntimeException('JOOR collection season ID is required: set JOOR_COLLECTION_SEASON_ID, or configure at least one Season in JOOR.');
+            $firstSeasonId = $this->createDefaultSeason($query);
         }
 
         $this->joorDefaultSeasonIdCache = (string) $firstSeasonId;
 
         return $this->joorDefaultSeasonIdCache;
+    }
+
+    private function createDefaultSeason(array $query): string
+    {
+        $name = trim((string) $this->config('collection_season_name', '')) ?: 'Core';
+        $year = (int) ($this->config('collection_season_year') ?: now()->year);
+
+        $response = $this->request()->post($this->apiUrl('/seasons/bulk_create') . '?' . http_build_query($query), [[
+            'name' => $name,
+            'year' => $year,
+            'external_id' => 'viveren-' . strtolower($name) . '-' . $year,
+        ]]);
+        $body = $response->json() ?? [];
+        $seasonId = data_get($body, 'data.0.id');
+
+        if (! $response->successful() || ! is_scalar($seasonId) || trim((string) $seasonId) === '') {
+            throw new RuntimeException('JOOR has no Season to attach the linesheet to and creating one failed: '
+                . $response->status() . ' ' . json_encode($body['errors'] ?? $body)
+                . '. Set JOOR_COLLECTION_SEASON_ID or create a Season in JOOR.');
+        }
+
+        return (string) $seasonId;
     }
 
     private function hasNotFoundCollectionError(mixed $body): bool
