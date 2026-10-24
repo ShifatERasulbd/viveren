@@ -88,11 +88,11 @@ export default function AboutPage() {
                 </LazySection>
             </div>
 
-            <div id="section-sustainability">
+            {/* <div id="section-sustainability">
                 <LazySection heightClass="h-[560px]" variant="split" defer={deferSections}>
                     <SustainabilitySection />
                 </LazySection>
-            </div>
+            </div> */}
 
             <div id="section-fabric-technology">
                 <LazySection heightClass="h-[560px]" variant="split" defer={deferSections}>

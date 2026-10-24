@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
 
 import SectionSkeleton from '../components/SectionSkeleton.jsx';
-
+const SustainabilitySection = lazy(() => import('../components/SustainabilitySection.jsx'));
 const SustainabilityHeroSection = lazy(() => import('../components/SustainabilityHeroSection.jsx'));
 const LongevitySection = lazy(() => import('../components/DesignedForLongivity.jsx'));
 const MindfulMaterials = lazy(() => import('../components/ThoughtfullyChoosenMeterials.jsx'));
@@ -61,8 +61,7 @@ export default function SustainabilityPage() {
         }
     });
 
-    useEffect(() => {
-    }, []);
+    const deferSections = !isBuilderPreview;
 
     return (
         <div className="bg-background">
@@ -71,6 +70,11 @@ export default function SustainabilityPage() {
                     <SustainabilityHeroSection />
                 </LazySection>
             </div>
+            <div id="section-sustainability">
+                <LazySection heightClass="h-[560px]" variant="split" defer={deferSections}>
+                    <SustainabilitySection />
+                </LazySection>
+            </div> 
             <div id="section-longevity">
                 <LazySection heightClass="h-[600px]" variant="generic" defer={false}>
                     <LongevitySection />
@@ -95,4 +99,3 @@ export default function SustainabilityPage() {
         </div>
     );
 }
-
