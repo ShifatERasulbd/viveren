@@ -8,7 +8,7 @@ const FRAME = 'aspect-[3/4]';
 // object-contain = shows the whole image (may leave empty space)
 const FIT = 'object-cover object-top';
 
-function ZoomableGalleryImage({ image, index, isActive, isZoomed, zoomPosition, onSelect, onZoomMove }) {
+function ZoomableGalleryImage({ image, index, isActive, isZoomed, zoomPosition, onSelect, onZoomMove, className = '' }) {
     return (
         <div
             role="button"
@@ -17,7 +17,7 @@ function ZoomableGalleryImage({ image, index, isActive, isZoomed, zoomPosition, 
             onMouseMove={(event) => {
                 if (isZoomed) onZoomMove(event);
             }}
-            className={`relative w-full overflow-hidden border-b border-zinc-200 bg-white transition-all duration-200 ${FRAME} ${
+            className={`relative w-full overflow-hidden border-b border-zinc-200 bg-white transition-all duration-200 ${FRAME} ${className} ${
                 isZoomed ? 'cursor-zoom-out' : 'cursor-zoom-in'
             } ${isActive ? 'ring-1 ring-inset ring-zinc-900' : 'hover:opacity-95'}`}
         >
@@ -40,7 +40,7 @@ function ZoomableGalleryImage({ image, index, isActive, isZoomed, zoomPosition, 
     );
 }
 
-function GalleryVideo({ src, placeholder }) {
+function GalleryVideo({ src, placeholder, className = '' }) {
     const [isReady, setIsReady] = useState(false);
     const videoRef = useRef(null);
 
@@ -60,7 +60,7 @@ function GalleryVideo({ src, placeholder }) {
     };
 
     return (
-        <div className={`relative w-full overflow-hidden border-b border-zinc-200 bg-white ${FRAME}`}>
+        <div className={`relative w-full overflow-hidden border-b border-zinc-200 bg-white ${FRAME} ${className}`}>
             {!isReady && placeholder ? (
                 <img
                     src={placeholder}
@@ -110,9 +110,6 @@ export default function SingleProductMediaGallery({
         })),
     ];
 
-    const leftColumnItems = galleryItems.filter((_, index) => index % 2 === 0);
-    const rightColumnItems = galleryItems.filter((_, index) => index % 2 !== 0);
-
     const handleImageClick = (item) => {
         onSelectImage(item.image);
         setZoomedKey((current) => {
@@ -129,9 +126,20 @@ export default function SingleProductMediaGallery({
         setZoomPosition({ x: xPercent, y: yPercent });
     };
 
-    const renderItem = (item) => {
+    const renderItem = (item, position) => {
+        // Divider between the two columns lives on the item (inside its box),
+        // so every cell keeps exactly the same width and height.
+        const divider = position % 2 === 0 ? 'sm:border-r' : '';
+
         if (item.type === 'video') {
-            return <GalleryVideo key={item.key} src={primaryVideo} placeholder={videoPlaceholderImage} />;
+            return (
+                <GalleryVideo
+                    key={item.key}
+                    src={primaryVideo}
+                    placeholder={videoPlaceholderImage}
+                    className={divider}
+                />
+            );
         }
 
         return (
@@ -144,6 +152,7 @@ export default function SingleProductMediaGallery({
                 zoomPosition={zoomPosition}
                 onSelect={() => handleImageClick(item)}
                 onZoomMove={handleZoomMove}
+                className={divider}
             />
         );
     };
@@ -151,8 +160,7 @@ export default function SingleProductMediaGallery({
     return (
         <div className="w-full">
             <div className="grid grid-cols-1 gap-0 border border-zinc-200 sm:grid-cols-2">
-                <div className="border-zinc-200 sm:border-r">{leftColumnItems.map(renderItem)}</div>
-                <div>{rightColumnItems.map(renderItem)}</div>
+                {galleryItems.map(renderItem)}
             </div>
         </div>
     );
