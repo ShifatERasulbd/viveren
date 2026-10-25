@@ -1,5 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 
+// One frame size for every gallery item. Change here to resize all of them
+// (e.g. 'aspect-square', 'aspect-[4/5]', 'aspect-[2/3]').
+const FRAME = 'aspect-[3/4]';
+
+// object-cover  = fills the frame (edges may be trimmed)
+// object-contain = shows the whole image (may leave empty space)
+const FIT = 'object-cover object-top';
+
 function ZoomableGalleryImage({ image, index, isActive, isZoomed, zoomPosition, onSelect, onZoomMove }) {
     return (
         <div
@@ -9,14 +17,14 @@ function ZoomableGalleryImage({ image, index, isActive, isZoomed, zoomPosition, 
             onMouseMove={(event) => {
                 if (isZoomed) onZoomMove(event);
             }}
-            className={`relative w-full overflow-hidden border-b border-zinc-200 bg-white transition-all duration-200 ${
+            className={`relative w-full overflow-hidden border-b border-zinc-200 bg-white transition-all duration-200 ${FRAME} ${
                 isZoomed ? 'cursor-zoom-out' : 'cursor-zoom-in'
             } ${isActive ? 'ring-1 ring-inset ring-zinc-900' : 'hover:opacity-95'}`}
         >
             <img
                 src={image}
                 alt={`Product ${index + 1}`}
-                className="pointer-events-none block h-auto w-full object-cover object-center"
+                className={`pointer-events-none absolute inset-0 block size-full ${FIT}`}
             />
             {isZoomed ? (
                 <div
@@ -32,6 +40,49 @@ function ZoomableGalleryImage({ image, index, isActive, isZoomed, zoomPosition, 
     );
 }
 
+function GalleryVideo({ src, placeholder }) {
+    const [isReady, setIsReady] = useState(false);
+    const videoRef = useRef(null);
+
+    useEffect(() => {
+        setIsReady(false);
+    }, [src]);
+
+    const handleCanPlay = () => {
+        setIsReady(true);
+
+        const playPromise = videoRef.current?.play();
+        if (playPromise && typeof playPromise.catch === 'function') {
+            playPromise.catch(() => {
+                // Ignore autoplay interruptions (browser policy/network timing).
+            });
+        }
+    };
+
+    return (
+        <div className={`relative w-full overflow-hidden border-b border-zinc-200 bg-white ${FRAME}`}>
+            {!isReady && placeholder ? (
+                <img
+                    src={placeholder}
+                    alt="Product preview"
+                    className={`absolute inset-0 block size-full ${FIT}`}
+                />
+            ) : null}
+            <video
+                ref={videoRef}
+                src={src}
+                autoPlay
+                loop
+                muted
+                playsInline
+                controls
+                onCanPlay={handleCanPlay}
+                preload="metadata"
+                className={`absolute inset-0 block size-full ${FIT} ${isReady ? 'opacity-100' : 'opacity-0'}`}
+            />
+        </div>
+    );
+}
 
 export default function SingleProductMediaGallery({
     images,
@@ -42,16 +93,10 @@ export default function SingleProductMediaGallery({
     const safeImages = Array.isArray(images) && images.length > 0 ? images : [];
     const activeImage = selectedImage || safeImages[0];
     const videoPlaceholderImage = safeImages[0] || activeImage || '';
-    const [isVideoReady, setIsVideoReady] = useState(false);
-    const videoRef = useRef(null);
 
     // Tracks which single image box currently has in-place zoom enabled, plus its focus point.
     const [zoomedKey, setZoomedKey] = useState(null);
     const [zoomPosition, setZoomPosition] = useState({ x: 50, y: 50 });
-
-    useEffect(() => {
-        setIsVideoReady(false);
-    }, [primaryVideo]);
 
     if (!primaryVideo && !activeImage) return null;
 
@@ -84,112 +129,30 @@ export default function SingleProductMediaGallery({
         setZoomPosition({ x: xPercent, y: yPercent });
     };
 
-    const handleVideoCanPlay = () => {
-        setIsVideoReady(true);
-
-        if (!videoRef.current) {
-            return;
+    const renderItem = (item) => {
+        if (item.type === 'video') {
+            return <GalleryVideo key={item.key} src={primaryVideo} placeholder={videoPlaceholderImage} />;
         }
 
-        const playPromise = videoRef.current.play();
-        if (playPromise && typeof playPromise.catch === 'function') {
-            playPromise.catch(() => {
-                // Ignore autoplay interruptions (browser policy/network timing).
-            });
-        }
+        return (
+            <ZoomableGalleryImage
+                key={item.key}
+                image={item.image}
+                index={item.index}
+                isActive={activeImage === item.image}
+                isZoomed={zoomedKey === item.key}
+                zoomPosition={zoomPosition}
+                onSelect={() => handleImageClick(item)}
+                onZoomMove={handleZoomMove}
+            />
+        );
     };
 
     return (
         <div className="w-full">
             <div className="grid grid-cols-1 gap-0 border border-zinc-200 sm:grid-cols-2">
-                <div className="border-zinc-200 sm:border-r">
-                    {leftColumnItems.map((item) => {
-                        if (item.type === 'video') {
-                            return (
-                                <div key={item.key} className="relative overflow-hidden border-b border-zinc-200 bg-white">
-                                    {!isVideoReady && videoPlaceholderImage ? (
-                                        <img
-                                            src={videoPlaceholderImage}
-                                            alt="Product preview"
-                                            className="block h-auto w-full object-cover object-center"
-                                        />
-                                    ) : null}
-                                    <video
-                                        ref={videoRef}
-                                        src={primaryVideo}
-                                        autoPlay
-                                        loop
-                                        muted
-                                        playsInline
-                                        controls
-                                        onCanPlay={handleVideoCanPlay}
-                                        className={`block h-auto w-full object-cover object-center ${
-                                            isVideoReady ? 'opacity-100' : 'absolute inset-0 opacity-0'
-                                        }`}
-                                        preload="metadata"
-                                    />
-                                </div>
-                            );
-                        }
-
-                        return (
-                            <ZoomableGalleryImage
-                                key={item.key}
-                                image={item.image}
-                                index={item.index}
-                                isActive={activeImage === item.image}
-                                isZoomed={zoomedKey === item.key}
-                                zoomPosition={zoomPosition}
-                                onSelect={() => handleImageClick(item)}
-                                onZoomMove={handleZoomMove}
-                            />
-                        );
-                    })}
-                </div>
-
-                <div>
-                    {rightColumnItems.map((item) => {
-                        if (item.type === 'video') {
-                            return (
-                                <div key={item.key} className="relative overflow-hidden border-b border-zinc-200 bg-white">
-                                    {!isVideoReady && videoPlaceholderImage ? (
-                                        <img
-                                            src={videoPlaceholderImage}
-                                            alt="Product preview"
-                                            className="block h-auto w-full object-cover object-center"
-                                        />
-                                    ) : null}
-                                    <video
-                                        src={primaryVideo}
-                                        autoPlay
-                                        loop
-                                        muted
-                                        playsInline
-                                        controls
-                                        onCanPlay={handleVideoCanPlay}
-                                        className={`block h-auto w-full object-cover object-center ${
-                                            isVideoReady ? 'opacity-100' : 'absolute inset-0 opacity-0'
-                                        }`}
-                                        preload="metadata"
-                                    />
-                                </div>
-                            );
-                        }
-
-                        return (
-                            <ZoomableGalleryImage
-                                key={item.key}
-                                image={item.image}
-                                index={item.index}
-                                isActive={activeImage === item.image}
-                                isZoomed={zoomedKey === item.key}
-                                zoomPosition={zoomPosition}
-                                onSelect={() => handleImageClick(item)}
-                                onZoomMove={handleZoomMove}
-                            />
-                        );
-                    })}
-                </div>
+                <div className="border-zinc-200 sm:border-r">{leftColumnItems.map(renderItem)}</div>
+                <div>{rightColumnItems.map(renderItem)}</div>
             </div>
         </div>
     );
