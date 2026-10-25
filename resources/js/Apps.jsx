@@ -90,74 +90,6 @@ function ensureFaviconLink() {
     return link;
 }
 
-const FAVICON_SIZE = 64;
-const faviconCache = new Map();
-
-// Trims transparent/white margins and fits the image into a square canvas so
-// wide logos stay legible at tab-icon size.
-function buildSquareFavicon(src) {
-    if (faviconCache.has(src)) {
-        return faviconCache.get(src);
-    }
-
-    const promise = new Promise((resolve) => {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload = () => {
-            try {
-                const srcCanvas = document.createElement('canvas');
-                srcCanvas.width = img.naturalWidth;
-                srcCanvas.height = img.naturalHeight;
-                const srcCtx = srcCanvas.getContext('2d');
-                srcCtx.drawImage(img, 0, 0);
-
-                const { data, width, height } = srcCtx.getImageData(0, 0, srcCanvas.width, srcCanvas.height);
-                let minX = width, minY = height, maxX = -1, maxY = -1;
-                for (let y = 0; y < height; y += 1) {
-                    for (let x = 0; x < width; x += 1) {
-                        const i = (y * width + x) * 4;
-                        const isBlank = data[i + 3] < 16 || (data[i] > 240 && data[i + 1] > 240 && data[i + 2] > 240);
-                        if (!isBlank) {
-                            if (x < minX) minX = x;
-                            if (x > maxX) maxX = x;
-                            if (y < minY) minY = y;
-                            if (y > maxY) maxY = y;
-                        }
-                    }
-                }
-                if (maxX < 0) {
-                    minX = 0; minY = 0; maxX = width - 1; maxY = height - 1;
-                }
-
-                const cropW = maxX - minX + 1;
-                const cropH = maxY - minY + 1;
-                const scale = Math.min(FAVICON_SIZE / cropW, FAVICON_SIZE / cropH);
-                const drawW = cropW * scale;
-                const drawH = cropH * scale;
-
-                const out = document.createElement('canvas');
-                out.width = FAVICON_SIZE;
-                out.height = FAVICON_SIZE;
-                const outCtx = out.getContext('2d');
-                outCtx.imageSmoothingQuality = 'high';
-                outCtx.drawImage(
-                    srcCanvas,
-                    minX, minY, cropW, cropH,
-                    (FAVICON_SIZE - drawW) / 2, (FAVICON_SIZE - drawH) / 2, drawW, drawH,
-                );
-                resolve(out.toDataURL('image/png'));
-            } catch {
-                resolve(src);
-            }
-        };
-        img.onerror = () => resolve(src);
-        img.src = src;
-    });
-
-    faviconCache.set(src, promise);
-    return promise;
-}
-
 function DocumentBrandingManager() {
     const { pathname } = useLocation();
     const [settings, setSettings] = React.useState(() => getSettingsPayload() || {});
@@ -179,13 +111,10 @@ function DocumentBrandingManager() {
         const pageLabel = resolvePageLabel(pathname);
         document.title = `${pageLabel} | ${BRAND_NAME}`;
 
-        const favicon = normalizeAssetPath(settings?.favicon || settings?.header_logo || '');
+        const favicon = normalizeAssetPath(settings?.header_logo || '');
         if (favicon) {
-            buildSquareFavicon(favicon).then((href) => {
-                const faviconLink = ensureFaviconLink();
-                faviconLink.type = 'image/png';
-                faviconLink.href = href;
-            });
+            const faviconLink = ensureFaviconLink();
+            faviconLink.href = favicon;
         }
 
         // Track page view with Google Analytics
@@ -260,9 +189,6 @@ function AppRouter() {
                             <Route path="new-arrivals" element={withPageFallback(ShopPage)} />
                             <Route path="trending" element={withPageFallback(ShopPage)} />
                             <Route path="best-sellers" element={withPageFallback(ShopPage)} />
-                           
-                            
-                            
                             <Route path=":subCategorySlug/:grandChildSlug?" element={withPageFallback(ShopPage)} />
                             <Route path="product-details/:slug/:color?" element={withPageFallback(SingleProductPage)} />
                             <Route path="singleProduct" element={withPageFallback(SingleProductPage)} />
