@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-export default function Brand({ headerLogo, onClick, siteName }) {
+export default function Brand({ faviconLogo, headerLogo, onClick, siteName }) {
     const isCustomerDashboard = typeof window !== 'undefined' && window.location.pathname.startsWith('/user');
 
     const handleClick = (event) => {
@@ -18,9 +18,16 @@ export default function Brand({ headerLogo, onClick, siteName }) {
         <Link
             to="/"
             onClick={handleClick}
-            className="site-header-brand absolute left-1/2 -translate-x-1/2 flex min-w-0 items-center transition-opacity hover:opacity-80 xl:relative xl:left-auto xl:translate-x-0 xl:col-start-1 xl:justify-self-start"
+            className="site-header-brand absolute left-1/2 -translate-x-1/2 flex min-w-0 items-center gap-2 transition-opacity hover:opacity-80 xl:relative xl:left-auto xl:translate-x-0 xl:col-start-1 xl:justify-self-start"
             aria-label="Home"
         >
+            {faviconLogo ? (
+                <img
+                    src={faviconLogo}
+                    alt=""
+                    className="size-7 shrink-0 object-contain sm:size-8"
+                />
+            ) : null}
             {headerLogo ? (
                 <img
                     src={headerLogo}

@@ -479,6 +479,7 @@ export default function Header() {
         ).trim();
     }, [siteSettings]);
 
+    const faviconLogo = useMemo(() => resolveMediaUrl(siteSettings?.favicon || ''), [siteSettings]);
     const headerLogo = useMemo(() => resolveMediaUrl(siteSettings?.header_logo || ''), [siteSettings]);
     const headerText = String(heroHeaderText || '').trim();
 
@@ -507,7 +508,12 @@ export default function Header() {
                         </button>
                     </div>
 
-                    <Brand headerLogo={headerLogo} onClick={handleLogoClick} siteName={siteSettings?.site_name} />
+                    <Brand
+                        faviconLogo={faviconLogo}
+                        headerLogo={headerLogo}
+                        onClick={handleLogoClick}
+                        siteName={siteSettings?.site_name}
+                    />
 
                     <MainNav
                         navigationItems={navigationItems}
