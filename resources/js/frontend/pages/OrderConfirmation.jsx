@@ -260,7 +260,6 @@ export default function OrderConfirmationPage() {
         const navy = [31, 47, 67];
         const muted = [105, 112, 121];
         const gold = [174, 143, 91];
-        const light = [245, 246, 247];
         const columns = {
             item: margin + 12,
             qty: pageWidth - margin - 166,
@@ -334,27 +333,6 @@ export default function OrderConfirmationPage() {
         doc.line(margin, 104, pageWidth - margin, 104);
 
         cursorY = 124;
-        doc.setFillColor(...light);
-        doc.roundedRect(margin, cursorY, contentWidth, 62, 5, 5, 'F');
-        const metaColumns = [margin + 14, margin + 184, margin + 354];
-        const metadata = [
-            ['ORDER STATUS', order.status || 'Processing'],
-            ['COURIER', order.courier_service || '-'],
-            ['TRACKING NUMBER', order.courier_reference || '-'],
-        ];
-        metadata.forEach(([label, value], index) => {
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(8);
-            doc.setTextColor(...muted);
-            doc.text(label, metaColumns[index], cursorY + 22);
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(10);
-            doc.setTextColor(...navy);
-            const wrapped = doc.splitTextToSize(String(value), 150);
-            doc.text(wrapped.slice(0, 2), metaColumns[index], cursorY + 41);
-        });
-
-        cursorY += 89;
         const cardGap = 14;
         const cardWidth = (contentWidth - cardGap) / 2;
         const customerLines = [
