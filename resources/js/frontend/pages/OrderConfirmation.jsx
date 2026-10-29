@@ -499,14 +499,7 @@ export default function OrderConfirmationPage() {
                     </div>
                 </div>
 
-                <div className="mt-10 grid gap-4 sm:grid-cols-3">
-                    <Link
-                        to="/shop"
-                        className="font-monstrate inline-flex h-12 items-center justify-center gap-2 rounded bg-zinc-900 px-6 text-[0.85rem] font-semibold uppercase tracking-[0.14em] text-white transition-colors hover:bg-black"
-                    >
-                        <ShoppingBag className="size-4" />
-                        Continue Shopping
-                    </Link>
+                <div className="mt-10 grid gap-4 sm:grid-cols-2">
                     <button
                         type="button"
                         onClick={handleDownloadInvoice}
@@ -534,17 +527,13 @@ export default function OrderConfirmationPage() {
                                 <ReceiptText className="size-5" />
                                 Invoice
                             </h2>
-                            <div className="flex items-center gap-3">
-                                <button
-                                    type="button"
-                                    onClick={handleDownloadInvoice}
-                                    className="font-monstrate inline-flex items-center gap-2 rounded border border-zinc-300 bg-white px-3 py-2 text-[0.74rem] font-semibold uppercase tracking-[0.12em] text-zinc-900 transition-colors hover:border-zinc-900 hover:bg-zinc-100"
-                                >
-                                    <Download className="size-4" />
-                                    Download PDF
-                                </button>
-                                <span className="text-sm text-zinc-600">Generated on {createdDate}</span>
-                            </div>
+                            <Link
+                                to="/shop"
+                                className="font-monstrate inline-flex h-12 items-center justify-center gap-2 rounded bg-zinc-900 px-6 text-[0.85rem] font-semibold uppercase tracking-[0.14em] text-white transition-colors hover:bg-black"
+                            >
+                                <ShoppingBag className="size-4" />
+                                Continue Shopping
+                            </Link>
                         </div>
 
                         <div className="mt-5 grid gap-3 text-sm text-zinc-700 sm:grid-cols-2 lg:grid-cols-4">
