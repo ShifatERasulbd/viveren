@@ -499,23 +499,6 @@ export default function OrderConfirmationPage() {
                     </div>
                 </div>
 
-                <div className="mt-10 grid gap-4 sm:grid-cols-2">
-                    <button
-                        type="button"
-                        onClick={handleDownloadInvoice}
-                        className="font-monstrate inline-flex h-12 items-center justify-center gap-2 rounded border border-zinc-300 bg-white px-6 text-[0.85rem] font-semibold uppercase tracking-[0.14em] text-zinc-900 transition-colors hover:border-zinc-900 hover:bg-zinc-50"
-                    >
-                        <Download className="size-4" />
-                        Download Invoice
-                    </button>
-                    <Link
-                        to="/shop"
-                        className="font-monstrate inline-flex h-12 items-center justify-center rounded border border-zinc-300 px-6 text-[0.85rem] font-semibold uppercase tracking-[0.14em] text-zinc-900 transition-colors hover:border-zinc-900 hover:bg-zinc-50"
-                    >
-                        Shop More
-                    </Link>
-                </div>
-
                 {isLoadingOrder ? (
                     <div className="mt-10 rounded-2xl border border-zinc-200 bg-zinc-50 px-5 py-6 text-sm text-zinc-600">
                         Loading full order invoice...
@@ -527,13 +510,23 @@ export default function OrderConfirmationPage() {
                                 <ReceiptText className="size-5" />
                                 Invoice
                             </h2>
-                            <Link
-                                to="/shop"
-                                className="font-monstrate inline-flex h-12 items-center justify-center gap-2 rounded bg-zinc-900 px-6 text-[0.85rem] font-semibold uppercase tracking-[0.14em] text-white transition-colors hover:bg-black"
-                            >
-                                <ShoppingBag className="size-4" />
-                                Continue Shopping
-                            </Link>
+                            <div className="flex flex-wrap items-center gap-3">
+                                <button
+                                    type="button"
+                                    onClick={handleDownloadInvoice}
+                                    className="font-monstrate inline-flex h-12 items-center justify-center gap-2 rounded border border-zinc-300 bg-white px-6 text-[0.85rem] font-semibold uppercase tracking-[0.14em] text-zinc-900 transition-colors hover:border-zinc-900 hover:bg-zinc-50"
+                                >
+                                    <Download className="size-4" />
+                                    Download Invoice
+                                </button>
+                                <Link
+                                    to="/shop"
+                                    className="font-monstrate inline-flex h-12 items-center justify-center gap-2 rounded bg-zinc-900 px-6 text-[0.85rem] font-semibold uppercase tracking-[0.14em] text-white transition-colors hover:bg-black"
+                                >
+                                    <ShoppingBag className="size-4" />
+                                    Continue Shopping
+                                </Link>
+                            </div>
                         </div>
 
                         <div className="mt-5 grid gap-3 text-sm text-zinc-700 sm:grid-cols-2 lg:grid-cols-4">
