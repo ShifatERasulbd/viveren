@@ -56,7 +56,8 @@ export function useOrdersList(fetcher, user) {
             .then((data) => {
                 if (cancelled) return;
                 setOrders(data.data ?? []);
-                setMeta(data.meta ?? {});
+                // Laravel's paginator returns total/current_page/last_page at the top level, not under `meta`
+                setMeta(data.meta ?? { total: data.total, current_page: data.current_page, last_page: data.last_page });
             })
             .catch((err) => !cancelled && toast.error(err.message || 'Failed to load orders'))
             .finally(() => !cancelled && setIsLoading(false));

@@ -202,6 +202,7 @@ class CheckoutOrderController extends Controller
             $trackingNumber = $this->resolveTrackingNumberForCustomerOrder($order);
 
             $order->setAttribute('tracking_number', $trackingNumber);
+            $order->setAttribute('cancellable_until', $this->customerCancelDeadline($order)?->toJSON());
 
             return $order;
         });

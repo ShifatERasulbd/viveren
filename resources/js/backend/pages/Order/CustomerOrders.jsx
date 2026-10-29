@@ -15,6 +15,7 @@ import { STATUS_DOT, STATUS_OPTIONS, StatusBadge, Pagination, useOrdersList, cap
 const CANCELLABLE = ['pending', 'approved', 'processing'];
 const money = (n) => `$${Number(n).toFixed(2)}`;
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString() : '');
+const canCancel = (o) => CANCELLABLE.includes(o.status) && Date.parse(o.cancellable_until) > Date.now();
 
 function useOutsideClick(ref, onOutside) {
     useEffect(() => {
@@ -34,14 +35,14 @@ function DateRangeFilter({ range, onChange }) {
         : 'All dates';
 
     return (
-        <div ref={ref} className="relative">
+        <div ref={ref} className="relative min-w-0">
             <button
                 onClick={() => setOpen((o) => !o)}
-                className="flex h-9 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 shadow-sm"
+                className="flex h-9 max-w-full items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 shadow-sm"
             >
-                <Calendar className="h-4 w-4 text-zinc-500" />
-                {label}
-                <ChevronDown className="h-4 w-4 text-zinc-400" />
+                <Calendar className="h-4 w-4 shrink-0 text-zinc-500" />
+                <span className="truncate">{label}</span>
+                <ChevronDown className="h-4 w-4 shrink-0 text-zinc-400" />
             </button>
             {open && (
                 <div className="absolute right-0 z-20 mt-1 w-64 rounded-lg border border-zinc-200 bg-white p-3 shadow-lg">
@@ -121,7 +122,7 @@ function RecentItems({ items, onDetails }) {
             {items.length === 0 ? (
                 <p className="py-6 text-center text-sm text-zinc-400">No recent items</p>
             ) : (
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     {items.slice(0, 2).map((item) => (
                         <div key={item.id} className="flex items-center gap-3">
                             <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-stone-100">
@@ -175,23 +176,24 @@ export default function CustomerOrders() {
     }
 
     const { orders } = list;
+    const emptyText = list.isLoading ? 'Loading…' : orders.length === 0 ? 'No orders found' : '';
 
     return (
         <div className="space-y-5">
             {/* Top row */}
-            <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
                 <RecentItems items={recent} onDetails={openOrder} />
 
                 <div>
                     <div className="flex items-start justify-between gap-3">
-                        <div>
+                        <div className="shrink-0">
                             <h1 className="text-2xl font-semibold text-zinc-900">Orders</h1>
                             <p className="mt-0.5 text-xs text-zinc-500">{list.meta?.total ?? 0} total orders</p>
                         </div>
                         <DateRangeFilter range={list.range} onChange={list.onRangeChange} />
                     </div>
                     <div className="mt-4 flex items-center gap-3">
-                        <div className="relative flex-1">
+                        <div className="relative min-w-0 flex-1">
                             <input
                                 type="search"
                                 value={list.searchInput}
@@ -206,14 +208,52 @@ export default function CustomerOrders() {
                 </div>
             </div>
 
-            {/* Table */}
-            <div className="max-h-[480px] overflow-auto rounded-xl bg-white shadow-sm">
+            {/* Phones: one card per order */}
+            <ul className="divide-y divide-zinc-100 rounded-xl bg-white shadow-sm md:hidden">
+                {emptyText ? (
+                    <li className="px-4 py-10 text-center text-sm text-zinc-400">{emptyText}</li>
+                ) : orders.map((o) => (
+                    <li key={o.id} className="p-4">
+                        <div className="flex items-start justify-between gap-3">
+                            <button onClick={() => openOrder(o.id)} className="min-w-0 text-left">
+                                <p className="truncate font-mono text-xs text-zinc-700">{o.order_number}</p>
+                                <p className="mt-1 text-xs text-zinc-500">
+                                    {fmtDate(o.created_at)} · {o.items_count} {o.items_count === 1 ? 'item' : 'items'}
+                                </p>
+                            </button>
+                            <StatusBadge status={o.status} pill />
+                        </div>
+                        <div className="mt-3 flex items-center justify-between gap-3">
+                            <span className="text-sm font-semibold text-zinc-900">{money(o.total)}</span>
+                            <div className="flex items-center gap-2">
+                                {canCancel(o) && (
+                                    <button
+                                        onClick={() => setCancelId(o.id)}
+                                        className="h-8 rounded-md border border-red-200 px-3 text-xs font-medium text-red-700 hover:bg-red-50"
+                                    >
+                                        Cancel
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => openOrder(o.id)}
+                                    className="h-8 rounded-md bg-gradient-to-r from-[#2f4d73] to-[#1b2e4b] px-3 text-xs font-medium text-white"
+                                >
+                                    View
+                                </button>
+                            </div>
+                        </div>
+                    </li>
+                ))}
+            </ul>
+
+            {/* Tablet and up: table (customer name and email only on wide screens) */}
+            <div className="hidden max-h-[480px] overflow-auto rounded-xl bg-white shadow-sm md:block">
                 <table className="min-w-full text-sm">
                     <thead className="sticky top-0 z-10 bg-white">
                         <tr className="border-b border-zinc-200 text-zinc-800">
                             <th className="px-4 py-3 text-left font-semibold">Order #</th>
-                            <th className="px-4 py-3 text-left font-semibold">Customer</th>
-                            <th className="px-4 py-3 text-left font-semibold">Email</th>
+                            <th className="hidden px-4 py-3 text-left font-semibold xl:table-cell">Customer</th>
+                            <th className="hidden px-4 py-3 text-left font-semibold xl:table-cell">Email</th>
                             <th className="px-4 py-3 text-right font-semibold">Items</th>
                             <th className="px-4 py-3 text-right font-semibold">Total</th>
                             <th className="px-4 py-3 text-left font-semibold">Status</th>
@@ -222,27 +262,25 @@ export default function CustomerOrders() {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-100">
-                        {list.isLoading ? (
-                            <tr><td colSpan={8} className="px-4 py-10 text-center text-zinc-400">Loading…</td></tr>
-                        ) : orders.length === 0 ? (
-                            <tr><td colSpan={8} className="px-4 py-10 text-center text-zinc-400">No orders found</td></tr>
+                        {emptyText ? (
+                            <tr><td colSpan={8} className="px-4 py-10 text-center text-zinc-400">{emptyText}</td></tr>
                         ) : orders.map((o) => (
                             <tr key={o.id} className="hover:bg-zinc-50">
-                                <td className="px-4 py-3 font-mono text-xs text-zinc-700">{o.order_number}</td>
-                                <td className="px-4 py-3 text-zinc-800">{o.first_name} {o.last_name}</td>
-                                <td className="px-4 py-3 text-zinc-700">{o.email}</td>
+                                <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-zinc-700">{o.order_number}</td>
+                                <td className="hidden px-4 py-3 text-zinc-800 xl:table-cell">{o.first_name} {o.last_name}</td>
+                                <td className="hidden px-4 py-3 text-zinc-700 xl:table-cell">{o.email}</td>
                                 <td className="px-4 py-3 text-right text-zinc-700">{o.items_count}</td>
                                 <td className="px-4 py-3 text-right font-medium text-zinc-800">{money(o.total)}</td>
                                 <td className="px-4 py-3"><StatusBadge status={o.status} pill /></td>
-                                <td className="px-4 py-3 text-zinc-700">{fmtDate(o.created_at)}</td>
+                                <td className="whitespace-nowrap px-4 py-3 text-zinc-700">{fmtDate(o.created_at)}</td>
                                 <td className="px-4 py-3">
                                     <div className="flex items-center justify-end gap-3 text-zinc-500">
                                         <button title="View order" onClick={() => openOrder(o.id)} className="hover:text-zinc-900">
                                             <Eye className="h-4 w-4" />
                                         </button>
                                         <button
-                                            title="Cancel order"
-                                            disabled={!CANCELLABLE.includes(o.status)}
+                                            title={canCancel(o) ? 'Cancel order' : 'Cancellation not available'}
+                                            disabled={!canCancel(o)}
                                             onClick={() => setCancelId(o.id)}
                                             className="hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:text-zinc-500"
                                         >
