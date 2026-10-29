@@ -24,6 +24,9 @@ class CheckoutOrderController extends Controller
 
     private const STRIPE_FIXED_FEE = 0.30;
 
+    // Customers can cancel their own order only this long after placing it.
+    private const CUSTOMER_CANCEL_WINDOW_MINUTES = 30;
+
     private ?array $colorNameById = null;
 
     private ?array $sizeNameById = null;
@@ -269,6 +272,10 @@ class CheckoutOrderController extends Controller
             'tracking_number',
             $this->resolveTrackingNumberForCustomerOrder($checkoutOrder)
         );
+        $checkoutOrder->setAttribute(
+            'cancellable_until',
+            $this->customerCancelDeadline($checkoutOrder)?->toJSON()
+        );
 
         return response()->json($checkoutOrder);
     }
@@ -289,12 +296,24 @@ class CheckoutOrderController extends Controller
             ], 422);
         }
 
+        $deadline = $this->customerCancelDeadline($ownedOrder);
+        if (! $deadline || now()->gt($deadline)) {
+            return response()->json([
+                'message' => 'Orders can only be cancelled within '.self::CUSTOMER_CANCEL_WINDOW_MINUTES.' minutes of being placed.',
+            ], 422);
+        }
+
         $ownedOrder->update(['status' => 'cancelled']);
 
         return response()->json([
             'message' => 'Order cancelled successfully',
             'order' => $ownedOrder->fresh(),
         ]);
+    }
+
+    private function customerCancelDeadline(CheckoutOrder $order): ?\Carbon\CarbonInterface
+    {
+        return $order->created_at?->copy()->addMinutes(self::CUSTOMER_CANCEL_WINDOW_MINUTES);
     }
 
     public function publicShow(Request $request, string $orderNumber): JsonResponse

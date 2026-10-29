@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { GoogleLogin } from '@react-oauth/google';
 import { Link } from 'react-router-dom';
 
+import { isProfileIncomplete } from '../../backend/lib/customerProfile';
+
 function readCookie(name) {
     const escapedName = name.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
     const match = document.cookie.match(new RegExp(`(?:^|; )${escapedName}=([^;]*)`));
@@ -139,23 +141,27 @@ export default function AuthLoginForm() {
     }
 
     async function resolveRedirectPath(userFromPayload) {
-    let userType = userFromPayload?.user_type;
+    let user = userFromPayload;
 
     // Fallback (e.g. Google login): ask the API who just logged in
-    if (!userType) {
+    if (!user?.user_type) {
         try {
             const response = await fetch('/api/user', {
                 credentials: 'include',
                 headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
             });
-            const data = await response.json().catch(() => null);
-            userType = data?.user_type;
+            user = await response.json().catch(() => null);
         } catch {
             // keep default
         }
     }
 
-    return userType === 'customer' ? '/user/dashboard' : '/admin/dashboard';
+    if (user?.user_type !== 'customer') {
+        return '/admin/dashboard';
+    }
+
+    // Send customers without a name (e.g. first email-code login) to finish their profile
+    return isProfileIncomplete(user) ? '/user/edit-profile' : '/user/dashboard';
 }
 
 

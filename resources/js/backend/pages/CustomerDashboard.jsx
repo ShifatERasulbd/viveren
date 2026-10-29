@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Droplets, Leaf, Recycle, Star } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Droplets, Leaf, Recycle, Star, UserCircle2 } from 'lucide-react';
 
 import { useAppContext } from '@/context/AppContext';
 import { requestJson } from '@/lib/apiClient';
+import { isProfileIncomplete } from '@/lib/customerProfile';
 import { bootstrapPublicSettings } from '../../utils/siteSettings';
 import { fetchCustomerOrders } from './Order/api';
 
@@ -180,6 +181,21 @@ export default function CustomerDashboard() {
                 <h1 className="font-serif text-3xl text-zinc-900 sm:text-4xl">Welcome back, {name}</h1>
                 <p className="mt-1 text-sm text-zinc-800">Let&apos;s explore your VIVEREN curated experience.</p>
             </section>
+
+            {isProfileIncomplete(user) && (
+                <section className="flex flex-col gap-4 rounded-xl border border-[#b89b5e] bg-[#fbf7ee] p-5 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-start gap-3">
+                        <UserCircle2 className="mt-0.5 size-5 shrink-0 text-[#b89b5e]" />
+                        <div>
+                            <h2 className="font-serif text-lg text-zinc-900">Complete your profile</h2>
+                            <p className="mt-1 text-sm text-zinc-700">Add your name so it appears on your orders and is filled in for you at checkout.</p>
+                        </div>
+                    </div>
+                    <Link to="/user/edit-profile" className="shrink-0 self-start rounded-md bg-zinc-900 px-4 py-2 text-xs font-medium text-white hover:bg-black sm:self-center">
+                        Complete Profile
+                    </Link>
+                </section>
+            )}
 
             <div className="grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1.2fr)_minmax(0,0.9fr)]">
                 {/* Recent Orders */}

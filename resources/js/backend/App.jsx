@@ -35,6 +35,7 @@ function lazyWithRetry(importer, key) {
 
 const Dashboard = lazyWithRetry(() => import('@/pages/dashboard'), 'dashboard');
 const CustomerDashboard = lazyWithRetry(() => import('@/pages/CustomerDashboard'), 'customer-dashboard');
+const EditProfile = lazyWithRetry(() => import('@/pages/EditProfile'), 'edit-profile');
 
 // size Management
 const Size  = lazyWithRetry(() => import('@/pages/Size/size'), 'size');
@@ -114,6 +115,7 @@ export default function App() {
                         {/* Customer area */}
                         <Route path="/user" element={<AppLayout />}>
                             <Route path="dashboard" element={<CustomerDashboard />} />
+                            <Route path="edit-profile" element={<EditProfile />} />
                             <Route path="orders" element={<Orders />} />
                             <Route path="orders/:id" element={<CustomerOrderDetails />} />
                             <Route path="orders/:id/edit" element={<EditOrder />} />

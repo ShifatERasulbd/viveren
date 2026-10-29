@@ -89,8 +89,21 @@ export default function CustomerOrderDetails() {
     const [notFound, setNotFound] = useState(false);
     const [confirmCancel, setConfirmCancel] = useState(false);
     const [isCancelling, setIsCancelling] = useState(false);
+    const [now, setNow] = useState(() => Date.now());
+
+    const isCancellableStatus = CANCELLABLE.includes(order?.status);
+    const cancelDeadline = order?.cancellable_until ? Date.parse(order.cancellable_until) : 0;
+    const cancelMinutesLeft = Math.ceil((cancelDeadline - now) / 60000);
+    const canCancel = isCancellableStatus && cancelMinutesLeft > 0;
 
     useEffect(() => { setPageTitle('Order Details'); }, [setPageTitle]);
+
+    // Keep the countdown fresh and hide the button once the cancel window closes
+    useEffect(() => {
+        if (!canCancel) return undefined;
+        const timer = setInterval(() => setNow(Date.now()), 15000);
+        return () => clearInterval(timer);
+    }, [canCancel]);
 
     function load() {
         setIsLoading(true);
@@ -160,13 +173,23 @@ export default function CustomerOrderDetails() {
                         Placed on {new Date(order.created_at).toLocaleString()}
                     </p>
                 </div>
-                {CANCELLABLE.includes(order.status) && (
-                    <button
-                        onClick={() => setConfirmCancel(true)}
-                        className="h-9 rounded-lg border border-red-300 bg-red-50 px-4 text-sm font-medium text-red-700 hover:bg-red-100"
-                    >
-                        Cancel order
-                    </button>
+                {canCancel ? (
+                    <div className="flex flex-col items-end gap-1">
+                        <button
+                            onClick={() => setConfirmCancel(true)}
+                            className="h-9 rounded-lg border border-red-300 bg-red-50 px-4 text-sm font-medium text-red-700 hover:bg-red-100"
+                        >
+                            Cancel order
+                        </button>
+                        <p className="text-xs text-zinc-500">
+                            Available for {cancelMinutesLeft} more {cancelMinutesLeft === 1 ? 'minute' : 'minutes'}
+                        </p>
+                    </div>
+                ) : isCancellableStatus && (
+                    <p className="max-w-[240px] text-right text-xs text-zinc-500">
+                        The cancellation window for this order has closed.{' '}
+                        <a href="/contact" className="underline hover:text-zinc-900">Contact us</a> if you need help.
+                    </p>
                 )}
             </div>
 

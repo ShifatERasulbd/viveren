@@ -8,6 +8,7 @@ use App\Http\Controllers\CollectionController;
 use App\Http\Controllers\ColorController;
 use App\Http\Controllers\CheckoutOrderController;
 use App\Http\Controllers\CompliancePageController;
+use App\Http\Controllers\CustomerProfileController;
 use App\Http\Controllers\JoorOrderController;
 use App\Http\Controllers\AboutHeroController;
 use App\Http\Controllers\AboutGivingBackController;
@@ -105,6 +106,7 @@ Route::middleware('auth:sanctum')->group(function () {
 		Route::get('/customer/orders/recent-items', [CheckoutOrderController::class, 'customerRecentItems']);
 		Route::get('/customer/orders/{checkoutOrder}', [CheckoutOrderController::class, 'customerShow']);
 		Route::put('/customer/orders/{checkoutOrder}/cancel', [CheckoutOrderController::class, 'customerCancel']);
+		Route::put('/customer/profile', [CustomerProfileController::class, 'update']);
 	});
 
 	Route::middleware('user-type:admin')->group(function () {

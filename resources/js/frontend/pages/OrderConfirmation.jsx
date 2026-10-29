@@ -87,26 +87,27 @@ function resolveLogoUrl(value = '') {
     return `/${path.replace(/^\/+/, '')}`;
 }
 
-function loadLogoImage(source) {
+function loadImageData(source, { subject = 'image', maxSize = Infinity } = {}) {
     return new Promise((resolve, reject) => {
         const image = new Image();
         image.crossOrigin = 'anonymous';
         image.onload = () => {
             try {
+                const scale = Math.min(1, maxSize / Math.max(image.naturalWidth, image.naturalHeight));
                 const canvas = document.createElement('canvas');
-                canvas.width = image.naturalWidth;
-                canvas.height = image.naturalHeight;
-                canvas.getContext('2d').drawImage(image, 0, 0);
+                canvas.width = Math.round(image.naturalWidth * scale);
+                canvas.height = Math.round(image.naturalHeight * scale);
+                canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
                 resolve({
                     data: canvas.toDataURL('image/png'),
-                    width: image.naturalWidth,
-                    height: image.naturalHeight,
+                    width: canvas.width,
+                    height: canvas.height,
                 });
             } catch {
-                reject(new Error('The configured header logo could not be prepared for the invoice.'));
+                reject(new Error(`The ${subject} could not be prepared for the invoice.`));
             }
         };
-        image.onerror = () => reject(new Error('The configured header logo could not be loaded.'));
+        image.onerror = () => reject(new Error(`The ${subject} could not be loaded.`));
         image.src = source;
     });
 }
@@ -266,17 +267,23 @@ export default function OrderConfirmationPage() {
             price: pageWidth - margin - 104,
             total: pageWidth - margin - 12,
         };
+        const thumbnail = { width: 42, height: 56, gap: 12 };
+        const itemTextX = columns.item + thumbnail.width + thumbnail.gap;
         let cursorY = 0;
         let logoImage = null;
         const logoUrl = resolveLogoUrl(siteSettings?.header_logo);
 
         if (logoUrl) {
             try {
-                logoImage = await loadLogoImage(logoUrl);
+                logoImage = await loadImageData(logoUrl, { subject: 'configured header logo' });
             } catch (error) {
                 toast.warning(`${error.message} The invoice will be downloaded without it.`);
             }
         }
+
+        const itemImages = await Promise.all(invoiceItems.map((item) => (
+            item?.image ? loadImageData(toImageUrl(item.image), { maxSize: 240 }).catch(() => null) : null
+        )));
 
         const drawTableHeader = () => {
             doc.setFillColor(...navy);
@@ -380,24 +387,39 @@ export default function OrderConfirmationPage() {
                 item?.selectedColor ? `Color: ${item.selectedColor}` : '',
                 item?.selectedSize ? `Size: ${item.selectedSize}` : '',
             ].filter(Boolean).join('  |  ');
-            const itemWidth = columns.qty - columns.item - 22;
+            const itemWidth = columns.qty - itemTextX - 22;
             const wrappedName = doc.splitTextToSize(String(item?.name || `Item ${index + 1}`), itemWidth);
             const wrappedDetails = details ? doc.splitTextToSize(details, itemWidth) : [];
-            const rowHeight = Math.max(42, 16 + ((wrappedName.length + wrappedDetails.length) * 12));
+            const rowHeight = Math.max(thumbnail.height + 16, 16 + ((wrappedName.length + wrappedDetails.length) * 12));
 
             if (cursorY + rowHeight > pageHeight - 56) {
                 addPageWithTableHeader();
             }
 
+            const itemImage = itemImages[index];
+            if (itemImage) {
+                const scale = Math.min(thumbnail.width / itemImage.width, thumbnail.height / itemImage.height);
+                const imageWidth = itemImage.width * scale;
+                const imageHeight = itemImage.height * scale;
+                doc.addImage(
+                    itemImage.data,
+                    'PNG',
+                    columns.item + ((thumbnail.width - imageWidth) / 2),
+                    cursorY + 8 + ((thumbnail.height - imageHeight) / 2),
+                    imageWidth,
+                    imageHeight,
+                );
+            }
+
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(9);
             doc.setTextColor(...navy);
-            doc.text(wrappedName, columns.item, cursorY + 15);
+            doc.text(wrappedName, itemTextX, cursorY + 15);
             if (wrappedDetails.length > 0) {
                 doc.setFont('helvetica', 'normal');
                 doc.setFontSize(8);
                 doc.setTextColor(...muted);
-                doc.text(wrappedDetails, columns.item, cursorY + 15 + (wrappedName.length * 12));
+                doc.text(wrappedDetails, itemTextX, cursorY + 15 + (wrappedName.length * 12));
             }
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(9);
