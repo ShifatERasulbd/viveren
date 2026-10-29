@@ -7,6 +7,7 @@ import { useCart } from '../context/CartContext';
 import ProductVariantModal from './ProductVariantModal.jsx';
 import { featuresFontClass } from '../utils/typography';
 import { sectionTypography } from '../utils/sectionTypography';
+import ResponsiveImage from './ResponsiveImage.jsx';
 
 const fallbackImage = '/uploads/heroes/images/hero1.webp';
 
@@ -311,8 +312,9 @@ function RelatedProductCard({ product, onAddToCart, colorLookup = {}, colorNameB
         <article className="group w-full cursor-pointer">
             <div className="relative aspect-[3/4] overflow-hidden bg-zinc-100">
                 <Link to={productLink} className="block">
-                <img
+                <ResponsiveImage
                     src={imageSource}
+                    sizes="(min-width: 1024px) 25vw, 50vw"
                     alt={product.name}
                     className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
                 />

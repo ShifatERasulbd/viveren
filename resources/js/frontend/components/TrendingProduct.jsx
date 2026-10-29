@@ -11,6 +11,7 @@ import { ChevronLeft, ChevronRight, Eye, Heart } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCart } from '../context/CartContext';
 import ProductVariantModal from './ProductVariantModal.jsx';
+import ResponsiveImage from './ResponsiveImage.jsx';
 
 const FALLBACK_IMAGE = '/uploads/heroes/images/hero1.webp';
 
@@ -260,8 +261,9 @@ function ProductCard({ product, colorLookup = {}, colorNameLookup = {}, onAddToC
         <article className="group w-full overflow-hidden border border-zinc-200">
             <Link to={productLink} className="block">
                 <div className="relative aspect-[1/2] w-full overflow-hidden bg-zinc-100 sm:aspect-[2/3]">
-                    <img
+                    <ResponsiveImage
                         src={imageSrc}
+                        sizes="(min-width: 1024px) 25vw, 50vw"
                         alt={product.name}
                         className="h-full w-full object-contain object-center transition-transform duration-500 group-hover:scale-105 sm:object-cover"
                     />

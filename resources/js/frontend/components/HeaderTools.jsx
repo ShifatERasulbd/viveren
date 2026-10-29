@@ -1,10 +1,16 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { isActivePath } from '../utils/activePath';
 
-const buttonBaseClassName = 'inline-flex size-11 items-center justify-center rounded-full text-zinc-950 transition-colors hover:bg-white/70 hover:text-zinc-700';
+const buttonBaseClassName = 'inline-flex size-11 cursor-pointer items-center justify-center rounded-full text-zinc-950 transition-colors hover:bg-white/70 hover:text-zinc-700';
+
+// Pages that belong to the Account icon
+const ACCOUNT_PATHS = ['/login', '/register', '/reset-password', '/user'];
 
 export default function HeaderTools({ utilityIcons, itemCount, openSearch, handleOpenCart }) {
+    const { pathname } = useLocation();
     const isCustomerDashboard = typeof window !== 'undefined' && window.location.pathname.startsWith('/user');
+    const isAccountActive = ACCOUNT_PATHS.some((path) => isActivePath(pathname, path));
 
     const renderAction = ({ label, icon: Icon, href }) => {
         const commonIcon = <Icon className="size-5" strokeWidth={1.75} />;
@@ -36,7 +42,8 @@ export default function HeaderTools({ utilityIcons, itemCount, openSearch, handl
                     key={label}
                     to={href}
                     aria-label={label}
-                    className={buttonBaseClassName}
+                    aria-current={isAccountActive ? 'page' : undefined}
+                    className={`${buttonBaseClassName} ${isAccountActive ? 'bg-zinc-100' : ''}`}
                     onClick={(event) => {
                         if (isCustomerDashboard) {
                             event.preventDefault();

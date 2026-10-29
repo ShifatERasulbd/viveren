@@ -6,6 +6,7 @@ import {
   resolveHeroFontSize,
 } from '../../utils/heroTypography';
 import { sectionTypography } from '../utils/sectionTypography';
+import ResponsiveImage from './ResponsiveImage.jsx';
 
 function splitHeroTitle(value, mode = 'double') {
   const title = String(value || '').trim();
@@ -159,7 +160,7 @@ export default function Hero() {
 
   const renderBackground = useMemo(() => {
     if (isLoading) return <div className="absolute inset-0 -z-30 h-full w-full bg-neutral-900" />;
-    return <img src={heroImage} alt="Hero background" className="hero-media absolute inset-0 -z-30 h-full w-full object-cover object-center" />;
+    return <ResponsiveImage src={heroImage} sizes="100vw" fetchPriority="high" alt="Hero background" className="hero-media absolute inset-0 -z-30 h-full w-full object-cover object-center" />;
   }, [heroImage, isLoading]);
 
   return (

@@ -7,6 +7,8 @@ import { Navigation, Autoplay } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/navigation';
 
+import ResponsiveImage from './ResponsiveImage.jsx';
+
 function CollectionCard({ name, slug, image, isBuilderPreview, index }) {
     const routeSegment = String(slug || name || '').trim();
     const href = `/collection/${encodeURIComponent(routeSegment)}`;
@@ -15,9 +17,10 @@ function CollectionCard({ name, slug, image, isBuilderPreview, index }) {
         <Link to={href} className="group block h-full">
             <div className="relative aspect-[3/4] overflow-hidden bg-zinc-100 border-x border-zinc-200">
                 {image && (
-                    <img 
-                        src={image} 
-                        alt={name} 
+                    <ResponsiveImage
+                        src={image}
+                        sizes="(min-width: 768px) 33vw, 100vw"
+                        alt={name}
                         loading="lazy" 
                         className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" 
                     />

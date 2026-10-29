@@ -10,6 +10,7 @@ import HeaderTools from './HeaderTools';
 import MobileMenu from './MobileMenu';
 import { getSettingsPayload, onSettingsUpdated } from '../../utils/siteSettings';
 import { useCart } from '../context/CartContext';
+import { prefetchShopData } from '../utils/shopDataCache';
 import { timelessFontClass } from '../utils/typography';
 
 function resolveMediaUrl(value = '') {
@@ -231,6 +232,22 @@ export default function Header() {
         }, 20);
         return () => window.clearTimeout(timerId);
     }, [isSearchOpen]);
+
+    // Once the current page has settled, load the shop's code and data so opening the shop is instant
+    useEffect(() => {
+        const warmShop = () => {
+            prefetchShopData();
+            import('../pages/ShopPage.jsx').catch(() => {});
+        };
+
+        if ('requestIdleCallback' in window) {
+            const idleId = window.requestIdleCallback(warmShop, { timeout: 4000 });
+            return () => window.cancelIdleCallback(idleId);
+        }
+
+        const timerId = window.setTimeout(warmShop, 2000);
+        return () => window.clearTimeout(timerId);
+    }, []);
 
     useEffect(() => {
         const unsubscribe = onSettingsUpdated((payload) => {
@@ -498,7 +515,7 @@ export default function Header() {
                     <div className="flex items-center justify-start xl:col-start-1 xl:hidden">
                         <button
                             type="button"
-                            className="inline-flex size-11 items-center justify-center rounded-full text-zinc-950 transition-colors hover:bg-white/70"
+                            className="inline-flex size-11 cursor-pointer items-center justify-center rounded-full text-zinc-950 transition-colors hover:bg-white/70"
                             aria-label="Open menu"
                             aria-expanded={isMobileMenuOpen}
                             aria-controls="mobile-menu-drawer"

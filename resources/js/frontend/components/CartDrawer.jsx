@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Minus, Plus, ShoppingBag, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import ResponsiveImage from './ResponsiveImage.jsx';
 
 const fallbackImage = '';
 
@@ -91,8 +92,9 @@ export default function CartDrawer() {
                                 key={item.lineId}
                                 className="flex gap-3 border border-zinc-200 p-3"
                             >
-                                <img
+                                <ResponsiveImage
                                     src={toImageUrl(item.image)}
+                                    sizes="64px"
                                     alt={item.name}
                                     className="h-20 w-16 object-cover"
                                 />

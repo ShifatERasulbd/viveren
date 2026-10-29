@@ -1,5 +1,8 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { isActivePath } from '../utils/activePath';
+
+const activeLinkClassName = 'underline decoration-[1.5px] underline-offset-[6px]';
 
 export default function MainNav({
     navigationItems,
@@ -14,6 +17,7 @@ export default function MainNav({
     shopMegaMenuCaption,
     shopMegaMenuHref,
 }) {
+    const { pathname } = useLocation();
     const isCustomerDashboard = typeof window !== 'undefined' && window.location.pathname.startsWith('/user');
 
     const handleLinkClick = (href) => (event) => {
@@ -36,6 +40,7 @@ export default function MainNav({
             ) : (
                 navigationItems.map((item) => {
                     const navKey = `${String(item?.id ?? '')}-${String(item?.label ?? '')}-${String(item?.href ?? '')}`;
+                    const isActive = isActivePath(pathname, item.href);
 
                     return item.isShop ? (
                         <div
@@ -53,8 +58,9 @@ export default function MainNav({
                             <Link
                                 to={item.href}
                                 onClick={handleLinkClick(item.href)}
-                                className="site-header-nav-link flex items-center h-full text-[14px] font-medium uppercase tracking-[0.12em] text-zinc-950 transition-opacity hover:opacity-60"
+                                className={`site-header-nav-link flex items-center h-full text-[14px] font-medium uppercase tracking-[0.12em] text-zinc-950 transition-opacity hover:opacity-60 ${isActive ? activeLinkClassName : ''}`}
                                 style={{ fontFamily: 'Montserrat, sans-serif' }}
+                                aria-current={isActive ? 'page' : undefined}
                                 aria-expanded={isShopMegaMenuOpen}
                                 aria-haspopup="menu"
                             >
@@ -129,8 +135,9 @@ export default function MainNav({
                             key={navKey}
                             to={item.href}
                             onClick={handleLinkClick(item.href)}
-                            className="site-header-nav-link text-[14px] font-medium uppercase tracking-[0.12em] text-zinc-950 transition-opacity hover:opacity-60"
+                            className={`site-header-nav-link text-[14px] font-medium uppercase tracking-[0.12em] text-zinc-950 transition-opacity hover:opacity-60 ${isActive ? activeLinkClassName : ''}`}
                             style={{ fontFamily: 'Montserrat, sans-serif' }}
+                            aria-current={isActive ? 'page' : undefined}
                         >
                             {item.label}
                         </Link>

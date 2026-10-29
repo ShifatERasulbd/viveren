@@ -1,6 +1,7 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { X, UserCircle2, Plus } from 'lucide-react';
+import { isActivePath } from '../utils/activePath';
 
 export default function MobileMenu({
     isMobileMenuOpen,
@@ -16,6 +17,7 @@ export default function MobileMenu({
     supportPhone,
     itemCount,
 }) {
+    const { pathname } = useLocation();
     const isCustomerDashboard = typeof window !== 'undefined' && window.location.pathname.startsWith('/user');
 
     const handleLinkClick = (href) => (event) => {
@@ -66,12 +68,13 @@ export default function MobileMenu({
                                 const childItems = itemKey ? mobileSubCategoriesByItem.get(itemKey) || [] : [];
                                 const hasChildren = childItems.length > 0;
                                 const isExpanded = Boolean(itemKey && expandedMobileItems[itemKey]);
+                                const isActive = isActivePath(pathname, item.href);
 
                                 return (
                                     <li key={`mobile-${item.label}`} className="border-b border-zinc-200/80">
                                         <div className="flex items-center justify-between gap-2 px-1 py-4">
-                                            <Link to={item.href} onClick={(event) => { closeMobileMenu(); handleLinkClick(item.href)(event); }} className="min-w-0 flex-1 text-[0.88rem] font-semibold uppercase tracking-[0.04em] text-zinc-900">
-                                                <span>{item.label}</span>
+                                            <Link to={item.href} aria-current={isActive ? 'page' : undefined} onClick={(event) => { closeMobileMenu(); handleLinkClick(item.href)(event); }} className="min-w-0 flex-1 text-[0.88rem] font-semibold uppercase tracking-[0.04em] text-zinc-900">
+                                                <span className={isActive ? 'underline decoration-[1.5px] underline-offset-[6px]' : ''}>{item.label}</span>
                                             </Link>
 
                                             {hasChildren ? (

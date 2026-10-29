@@ -5,6 +5,8 @@ import { toast } from 'sonner';
 
 import { useCart } from '../context/CartContext';
 import { featuresFontClass } from '../utils/typography';
+import { resizedImageUrl } from '../utils/imageVariants';
+import { SHOP_PRODUCTS_ENDPOINT, fetchShopData, readCachedShopData } from '../utils/shopDataCache';
 import ProductVariantModal from './ProductVariantModal.jsx';
 import ShopSidebar from './ShopSidebar.jsx';
 import { sectionTypography } from '../utils/sectionTypography';
@@ -886,28 +888,40 @@ function ProductCard({ product, colorLookup = {}, colorNameLookup = {}, onAddToC
             setIsImageLoaded(true);
         }, 3000);
 
-        const probe = new Image();
-        probe.onload = () => {
-            if (cancelled) {
-                return;
-            }
+        // Try the downsized copy first, then the full-size original
+        const candidates = [resizedImageUrl(imageSrc, CARD_WIDTH), imageSrc].filter(Boolean);
 
-            clearTimeout(timeoutId);
-            setResolvedImageSrc(imageSrc);
-            setIsImageLoaded(true);
+        const tryCandidate = (index) => {
+            const probe = new Image();
+            probe.onload = () => {
+                if (cancelled) {
+                    return;
+                }
+
+                clearTimeout(timeoutId);
+                setResolvedImageSrc(candidates[index]);
+                setIsImageLoaded(true);
+            };
+
+            probe.onerror = () => {
+                if (cancelled) {
+                    return;
+                }
+
+                if (index + 1 < candidates.length) {
+                    tryCandidate(index + 1);
+                    return;
+                }
+
+                clearTimeout(timeoutId);
+                setResolvedImageSrc(PLACEHOLDER_IMAGE);
+                setIsImageLoaded(true);
+            };
+
+            probe.src = candidates[index];
         };
 
-        probe.onerror = () => {
-            if (cancelled) {
-                return;
-            }
-
-            clearTimeout(timeoutId);
-            setResolvedImageSrc(PLACEHOLDER_IMAGE);
-            setIsImageLoaded(true);
-        };
-
-        probe.src = imageSrc;
+        tryCandidate(0);
 
         return () => {
             cancelled = true;
@@ -1356,135 +1370,125 @@ export default function ShopCatalogSection() {
     useEffect(() => {
         let ignore = false;
 
-        async function loadShopData() {
-            try {
-                if (!ignore) {
-                    setIsLoading(true);
-                }
+        function applyShopData([sizesPayload, categoriesPayload, subCategoriesPayload, grandChildsPayload, productsPayload, collectionsPayload, colorsPayload]) {
+            const colorList = Array.isArray(colorsPayload)
+                ? colorsPayload
+                : (Array.isArray(colorsPayload?.data) ? colorsPayload.data : []);
 
-                const productsEndpoint = isNewArrivalsView ? '/api/public/new-arrivals' : '/api/public/shop-products';
+            const nextColorLookup = Object.fromEntries(
+                colorList
+                    .map(normalizeColorLookupEntry)
+                    .filter(Boolean),
+            );
 
-                const [sizesRes, categoriesRes, subCategoriesRes, grandChildsRes, productsRes, collectionsRes, colorsRes] = await Promise.all([
-                    fetch('/api/public/sizes', { headers: { Accept: 'application/json' } }),
-                    fetch('/api/public/categories', { headers: { Accept: 'application/json' } }),
-                    fetch('/api/public/sub-categories', { headers: { Accept: 'application/json' } }),
-                    fetch('/api/public/grand-childs', { headers: { Accept: 'application/json' } }),
-                    fetch(productsEndpoint, { headers: { Accept: 'application/json' } }),
-                    fetch('/api/public/collections', { headers: { Accept: 'application/json' } }),
-                    fetch('/api/public/colors', { headers: { Accept: 'application/json' } }),
-                ]);
+            const nextColorNameLookup = Object.fromEntries(
+                colorList
+                    .map(normalizeColorNameLookupEntry)
+                    .filter(Boolean),
+            );
 
-                const [sizesPayload, categoriesPayload, subCategoriesPayload, grandChildsPayload, productsPayload, collectionsPayload, colorsPayload] = await Promise.all([
-                    sizesRes.ok ? sizesRes.json() : [],
-                    categoriesRes.ok ? categoriesRes.json() : [],
-                    subCategoriesRes.ok ? subCategoriesRes.json() : [],
-                    grandChildsRes.ok ? grandChildsRes.json() : [],
-                    productsRes.ok ? productsRes.json() : [],
-                    collectionsRes.ok ? collectionsRes.json() : [],
-                    colorsRes.ok ? colorsRes.json() : [],
-                ]);
+            const nextSizeOptions = normalizeSizeOptions(sizesPayload);
+            const nextSizeNameLookup = Object.fromEntries(
+                nextSizeOptions
+                    .map((item) => [String(item.id), String(item.name)]),
+            );
+            const nextSizeIdByNameLookup = Object.fromEntries(
+                nextSizeOptions
+                    .map((item) => [String(item.name).trim().toLowerCase(), String(item.id)]),
+            );
 
-                if (ignore) {
-                    return;
-                }
+            const normalizedProducts = normalizeProducts(
+                productsPayload,
+                nextColorNameLookup,
+                nextSizeNameLookup,
+                nextSizeIdByNameLookup,
+                { skipVariantExpansion: isNewArrivalsView },
+            );
 
-                const colorList = Array.isArray(colorsPayload)
-                    ? colorsPayload
-                    : (Array.isArray(colorsPayload?.data) ? colorsPayload.data : []);
-
-                const nextColorLookup = Object.fromEntries(
-                    colorList
-                        .map(normalizeColorLookupEntry)
-                        .filter(Boolean),
-                );
-
-                const nextColorNameLookup = Object.fromEntries(
-                    colorList
-                        .map(normalizeColorNameLookupEntry)
-                        .filter(Boolean),
-                );
-
-                const nextSizeOptions = normalizeSizeOptions(sizesPayload);
-                const nextSizeNameLookup = Object.fromEntries(
-                    nextSizeOptions
-                        .map((item) => [String(item.id), String(item.name)]),
-                );
-                const nextSizeIdByNameLookup = Object.fromEntries(
-                    nextSizeOptions
-                        .map((item) => [String(item.name).trim().toLowerCase(), String(item.id)]),
-                );
-
-                const normalizedProducts = normalizeProducts(
-                    productsPayload,
-                    nextColorNameLookup,
-                    nextSizeNameLookup,
-                    nextSizeIdByNameLookup,
-                    { skipVariantExpansion: isNewArrivalsView },
-                );
-
-                setSizeOptions(nextSizeOptions);
-                setSizeNameLookup(nextSizeNameLookup);
-                setSizeIdByNameLookup(nextSizeIdByNameLookup);
-                setAllCategories(Array.isArray(categoriesPayload) ? categoriesPayload : []);
-                setAllSubCategories(Array.isArray(subCategoriesPayload) ? subCategoriesPayload : []);
-                setAllGrandChilds(Array.isArray(grandChildsPayload) ? grandChildsPayload : []);
-                setCategoryOptions(normalizeGrandChildOptions(grandChildsPayload));
-                setProducts(normalizedProducts);
-                setColorLookup(nextColorLookup);
-                setColorNameLookup(nextColorNameLookup);
-                setCollectionItems(
-                    Array.isArray(collectionsPayload?.items)
-                        ? collectionsPayload.items.map((item) => ({
-                            slug: String(item?.slug || '').trim(),
-                            name: String(item?.name || '').trim(),
-                            productIds: Array.isArray(item?.productIds)
-                                ? item.productIds
+            setSizeOptions(nextSizeOptions);
+            setSizeNameLookup(nextSizeNameLookup);
+            setSizeIdByNameLookup(nextSizeIdByNameLookup);
+            setAllCategories(Array.isArray(categoriesPayload) ? categoriesPayload : []);
+            setAllSubCategories(Array.isArray(subCategoriesPayload) ? subCategoriesPayload : []);
+            setAllGrandChilds(Array.isArray(grandChildsPayload) ? grandChildsPayload : []);
+            setCategoryOptions(normalizeGrandChildOptions(grandChildsPayload));
+            setProducts(normalizedProducts);
+            setColorLookup(nextColorLookup);
+            setColorNameLookup(nextColorNameLookup);
+            setCollectionItems(
+                Array.isArray(collectionsPayload?.items)
+                    ? collectionsPayload.items.map((item) => ({
+                        slug: String(item?.slug || '').trim(),
+                        name: String(item?.name || '').trim(),
+                        productIds: Array.isArray(item?.productIds)
+                            ? item.productIds
+                                .map((value) => Number(value))
+                                .filter((value) => Number.isInteger(value) && value > 0)
+                            : Array.isArray(item?.product_ids)
+                                ? item.product_ids
                                     .map((value) => Number(value))
                                     .filter((value) => Number.isInteger(value) && value > 0)
-                                : Array.isArray(item?.product_ids)
-                                    ? item.product_ids
-                                        .map((value) => Number(value))
-                                        .filter((value) => Number.isInteger(value) && value > 0)
-                                : [],
-                        }))
-                        : [],
-                );
+                            : [],
+                    }))
+                    : [],
+            );
 
-                const prices = normalizedProducts
-                    .map((item) => Number(item.priceValue))
-                    .filter((value) => Number.isFinite(value));
+            const prices = normalizedProducts
+                .map((item) => Number(item.priceValue))
+                .filter((value) => Number.isFinite(value));
 
-                if (prices.length > 0) {
-                    const minDb = Math.min(...prices);
-                    const maxDb = Math.max(...prices);
-                    setMinPrice(minDb.toFixed(2));
-                    setMaxPrice(maxDb.toFixed(2));
-                    setHighestDbPrice(maxDb.toFixed(2));
-                } else {
-                    setMinPrice('0.00');
-                    setMaxPrice('0.00');
-                    setHighestDbPrice('0.00');
-                }
-
-            } catch {
-                if (ignore) {
-                    return;
-                }
-
-                setSizeOptions([]);
-                setSizeNameLookup({});
-                setSizeIdByNameLookup({});
-                setAllCategories([]);
-                setAllSubCategories([]);
-                setAllGrandChilds([]);
-                setCategoryOptions([]);
-                setProducts([]);
-                setCollectionItems([]);
-                setColorLookup({});
-                setColorNameLookup({});
+            if (prices.length > 0) {
+                const minDb = Math.min(...prices);
+                const maxDb = Math.max(...prices);
+                setMinPrice(minDb.toFixed(2));
+                setMaxPrice(maxDb.toFixed(2));
+                setHighestDbPrice(maxDb.toFixed(2));
+            } else {
                 setMinPrice('0.00');
                 setMaxPrice('0.00');
                 setHighestDbPrice('0.00');
+            }
+        }
+
+        function applyEmptyShopData() {
+            setSizeOptions([]);
+            setSizeNameLookup({});
+            setSizeIdByNameLookup({});
+            setAllCategories([]);
+            setAllSubCategories([]);
+            setAllGrandChilds([]);
+            setCategoryOptions([]);
+            setProducts([]);
+            setCollectionItems([]);
+            setColorLookup({});
+            setColorNameLookup({});
+            setMinPrice('0.00');
+            setMaxPrice('0.00');
+            setHighestDbPrice('0.00');
+        }
+
+        async function loadShopData() {
+            const productsEndpoint = isNewArrivalsView ? '/api/public/new-arrivals' : SHOP_PRODUCTS_ENDPOINT;
+            const cached = readCachedShopData(productsEndpoint);
+
+            // Show the session's last copy right away, then refresh it in the background
+            if (cached) {
+                applyShopData(cached.payloads);
+                setIsLoading(false);
+            } else {
+                setIsLoading(true);
+            }
+
+            try {
+                const fresh = await fetchShopData(productsEndpoint);
+                // Skip identical data so the visitor's filters (e.g. price range) aren't reset
+                if (!ignore && fresh.raw !== cached?.raw) {
+                    applyShopData(fresh.payloads);
+                }
+            } catch {
+                if (!ignore && !cached) {
+                    applyEmptyShopData();
+                }
             }
 
             if (!ignore) {

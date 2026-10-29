@@ -11,3 +11,8 @@ Artisan::command('inspire', function () {
 Schedule::command('products:sync-inventory')
     ->everyTenMinutes()
     ->withoutOverlapping();
+
+// Picks up images uploaded through pages other than the product form (heroes, about page, ...)
+Schedule::command('images:resize')
+    ->hourly()
+    ->withoutOverlapping();

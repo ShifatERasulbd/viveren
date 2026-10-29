@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\Settings;
 use App\Models\Size;
 use App\Services\JoorService;
+use App\Support\ImageUploadOptimizer;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\UploadedFile;
@@ -950,7 +951,18 @@ class ProductController extends Controller
 
         $file->move($directory, $filename);
 
-        return '/' . trim($relativeDirectory, '/') . '/' . $filename;
+        $publicPath = '/' . trim($relativeDirectory, '/') . '/' . $filename;
+
+        // Build the storefront's downsized copies after the response is sent, so saving stays fast
+        \Illuminate\Support\defer(function () use ($publicPath) {
+            try {
+                app(ImageUploadOptimizer::class)->createResizedCopies($publicPath);
+            } catch (Throwable $exception) {
+                report($exception);
+            }
+        });
+
+        return $publicPath;
     }
 
     private function deleteUploadedFile(?string $path): void
@@ -972,6 +984,8 @@ class ProductController extends Controller
             if (File::exists($absolutePath)) {
                 File::delete($absolutePath);
             }
+
+            app(ImageUploadOptimizer::class)->deleteResizedCopies($path);
         }
     }
 

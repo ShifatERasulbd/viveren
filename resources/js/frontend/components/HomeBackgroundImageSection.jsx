@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState, useRef, startTransition } from 'react';
 import { motion, useInView } from 'framer-motion';
 
 import { timelessFontClass } from '../utils/typography';
+import ResponsiveImage from './ResponsiveImage.jsx';
 
 const HOME_BACKGROUND_PREVIEW_UPDATE_EVENT = 'TIMLESS_PAGE_BUILDER_HOME_BACKGROUND_PREVIEW_UPDATE';
 const HOME_BACKGROUND_PREVIEW_REQUEST_EVENT = 'TIMLESS_PAGE_BUILDER_REQUEST_HOME_BACKGROUND_PREVIEW';
@@ -169,8 +170,9 @@ export default function HomeBackgroundImageSection() {
                                     }
                                 }}
                             >
-                                <img
+                                <ResponsiveImage
                                     src={resolveImageUrl(item.image)}
+                                    sizes="(min-width: 768px) 50vw, 100vw"
                                     alt={item.title || 'Home background item'}
                                     className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
                                     loading={index === 0 ? 'eager' : 'lazy'}

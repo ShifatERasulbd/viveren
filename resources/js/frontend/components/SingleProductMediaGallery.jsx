@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
+import ResponsiveImage from './ResponsiveImage.jsx';
+
 // One frame size for every gallery item. Change here to resize all of them
 // (e.g. 'aspect-square', 'aspect-[4/5]', 'aspect-[2/3]').
 const FRAME = 'aspect-[3/4]';
@@ -21,8 +23,10 @@ function ZoomableGalleryImage({ image, index, isActive, isZoomed, zoomPosition, 
                 isZoomed ? 'cursor-zoom-out' : 'cursor-zoom-in'
             } ${isActive ? 'ring-1 ring-inset ring-zinc-900' : 'hover:opacity-95'}`}
         >
-            <img
+            {/* The zoomed view below keeps the full-size original */}
+            <ResponsiveImage
                 src={image}
+                sizes="(min-width: 1024px) 50vw, 100vw"
                 alt={`Product ${index + 1}`}
                 className={`pointer-events-none absolute inset-0 block size-full ${FIT}`}
             />

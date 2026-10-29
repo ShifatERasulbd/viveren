@@ -1,6 +1,8 @@
 import { Minus, Plus, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
+import ResponsiveImage from './ResponsiveImage.jsx';
+
 const fallbackImage = '/uploads/heroes/images/hero1.webp';
 
 function toAbsoluteImageUrl(path) {
@@ -396,8 +398,9 @@ export default function ProductVariantModal({
                 </button>
 
                 <div className="bg-zinc-100">
-                    <img
+                    <ResponsiveImage
                         src={mainImage}
+                        sizes="(min-width: 1024px) 50vw, 100vw"
                         alt={name}
                         className="h-[240px] w-full object-cover object-top sm:h-[300px] lg:h-[620px]"
                     />
@@ -411,7 +414,7 @@ export default function ProductVariantModal({
                                     onClick={() => setActiveImageIndex(index)}
                                     className={`overflow-hidden border ${activeImageIndex === index ? 'border-zinc-900' : 'border-zinc-200'}`}
                                 >
-                                    <img src={image} alt={`${name} ${index + 1}`} className="h-16 w-full object-cover" />
+                                    <ResponsiveImage src={image} sizes="96px" alt={`${name} ${index + 1}`} className="h-16 w-full object-cover" />
                                 </button>
                             ))}
                         </div>

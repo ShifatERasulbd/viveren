@@ -1,14 +1,16 @@
 import { Link } from 'react-router-dom';
 
 import { featuresFontClass } from '../utils/typography';
+import ResponsiveImage from './ResponsiveImage.jsx';
 
 const heroImage = '/uploads/heroes/images/hero1.webp';
 
 export default function ShopHeroSection() {
     return (
         <section className={`${featuresFontClass} relative isolate overflow-hidden border-b border-zinc-200 bg-zinc-950 text-white`}>
-            <img
+            <ResponsiveImage
                 src={heroImage}
+                sizes="100vw"
                 alt="Timeless shop hero"
                 className="absolute inset-0 -z-20 h-full w-full object-cover object-center"
             />
