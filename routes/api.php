@@ -8,6 +8,7 @@ use App\Http\Controllers\CollectionController;
 use App\Http\Controllers\ColorController;
 use App\Http\Controllers\CheckoutOrderController;
 use App\Http\Controllers\CompliancePageController;
+use App\Http\Controllers\CustomerCartController;
 use App\Http\Controllers\CustomerProfileController;
 use App\Http\Controllers\JoorOrderController;
 use App\Http\Controllers\AboutHeroController;
@@ -108,6 +109,9 @@ Route::middleware('auth:sanctum')->group(function () {
 		Route::get('/customer/orders/{checkoutOrder}', [CheckoutOrderController::class, 'customerShow']);
 		Route::put('/customer/orders/{checkoutOrder}/cancel', [CheckoutOrderController::class, 'customerCancel']);
 		Route::put('/customer/profile', [CustomerProfileController::class, 'update']);
+		Route::get('/customer/cart', [CustomerCartController::class, 'index']);
+		Route::put('/customer/cart', [CustomerCartController::class, 'replace']);
+		Route::post('/customer/cart/merge', [CustomerCartController::class, 'merge']);
 	});
 
 	Route::middleware('user-type:admin')->group(function () {

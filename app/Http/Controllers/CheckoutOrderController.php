@@ -971,6 +971,10 @@ class CheckoutOrderController extends Controller
             'processingFee' => $processingFee,
             'processingfee' => $processingFee,
             'total' => (float) $order->total,
+            'payment_provider' => $order->payment_provider,
+            'payment_status' => $order->payment_status,
+            // Stripe PaymentIntent ID (pi_...); null for non-Stripe orders such as JOOR.
+            'payment_intent_id' => $order->payment_intent_id,
             'courier_service' => $order->courier_service,
             'courier_reference' => $order->courier_reference,
             'courier_sync_status' => $order->courier_sync_status,

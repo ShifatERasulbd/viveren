@@ -1,8 +1,127 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 const CART_STORAGE_KEY = 'frontend-cart-items-v1';
+// Id of the logged-in customer whose saved cart the stored items mirror; absent for a guest cart.
+const CART_OWNER_STORAGE_KEY = 'frontend-cart-owner-v1';
+const CART_SYNC_DELAY_MS = 400;
 
 const CartContext = createContext(null);
+
+function readCookie(name) {
+    const escapedName = name.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+    const match = document.cookie.match(new RegExp(`(?:^|; )${escapedName}=([^;]*)`));
+    return match ? decodeURIComponent(match[1]) : '';
+}
+
+function readStoredCart() {
+    try {
+        const parsed = JSON.parse(window.localStorage.getItem(CART_STORAGE_KEY) || '[]');
+        return Array.isArray(parsed) ? parsed : [];
+    } catch {
+        return [];
+    }
+}
+
+function readStoredCartOwner() {
+    try {
+        return window.localStorage.getItem(CART_OWNER_STORAGE_KEY) || '';
+    } catch {
+        return '';
+    }
+}
+
+function writeStoredCartOwner(ownerId) {
+    try {
+        if (ownerId) {
+            window.localStorage.setItem(CART_OWNER_STORAGE_KEY, ownerId);
+        } else {
+            window.localStorage.removeItem(CART_OWNER_STORAGE_KEY);
+        }
+    } catch {
+        // Ignore persistence failures.
+    }
+}
+
+function customerCartRequest(method, path, body, { keepalive = false } = {}) {
+    const xsrfToken = readCookie('XSRF-TOKEN');
+
+    return fetch(path, {
+        method,
+        credentials: 'include',
+        keepalive,
+        headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            ...(xsrfToken ? { 'X-XSRF-TOKEN': xsrfToken } : {}),
+        },
+        body,
+    });
+}
+
+async function fetchLoggedInCustomer() {
+    const response = await fetch('/api/user', {
+        credentials: 'include',
+        headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+    });
+
+    if (response.status === 401) {
+        return null;
+    }
+
+    if (!response.ok) {
+        throw new Error('Unable to resolve the logged-in user');
+    }
+
+    const user = await response.json().catch(() => null);
+    return user?.user_type === 'customer' && user?.id ? user : null;
+}
+
+// Resolves { customerId, items } where items is the cart to show (null keeps the local cart),
+// or null when the account state could not be determined.
+async function resolveAccountCart(localItems) {
+    const storedOwnerId = readStoredCartOwner();
+
+    let customer;
+    try {
+        customer = await fetchLoggedInCustomer();
+    } catch {
+        return null;
+    }
+
+    if (!customer) {
+        // The stored cart mirrors a customer who has logged out; it stays saved on their account.
+        if (storedOwnerId) {
+            writeStoredCartOwner('');
+            return { customerId: '', items: [] };
+        }
+
+        return { customerId: '', items: null };
+    }
+
+    const customerId = String(customer.id);
+    // A guest cart is added to the account; a cart already mirroring this account is refreshed from it.
+    const guestItems = storedOwnerId ? [] : localItems;
+
+    try {
+        const response = guestItems.length > 0
+            ? await customerCartRequest('POST', '/api/customer/cart/merge', JSON.stringify({ items: guestItems }))
+            : await customerCartRequest('GET', '/api/customer/cart');
+
+        const payload = await response.json().catch(() => null);
+        if (!response.ok || !Array.isArray(payload?.items)) {
+            return null;
+        }
+
+        writeStoredCartOwner(customerId);
+        return { customerId, items: payload.items };
+    } catch {
+        return null;
+    }
+}
+
+// Shared across mounts so StrictMode's double-run effect cannot merge the guest cart twice.
+let pendingAccountCart = null;
 
 function toNumberPrice(value) {
     if (Number.isFinite(Number(value))) {
@@ -146,10 +265,16 @@ function normalizeCartItem(product, options = {}, colorNameById = {}, sizeNameBy
 }
 
 export function CartProvider({ children }) {
-    const [items, setItems] = useState([]);
+    const [items, setItems] = useState(readStoredCart);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [colorNameById, setColorNameById] = useState({});
     const [sizeNameById, setSizeNameById] = useState({});
+    // Customer id whose saved cart is loaded; cart changes are only synced to the server while set.
+    const [syncedCustomerId, setSyncedCustomerId] = useState('');
+    const itemsRef = useRef(items);
+    const lastSyncedBodyRef = useRef(null);
+    const pendingSyncBodyRef = useRef(null);
+    const syncQueueRef = useRef(Promise.resolve());
 
     useEffect(() => {
         let ignore = false;
@@ -205,28 +330,95 @@ export function CartProvider({ children }) {
     }, []);
 
     useEffect(() => {
-        try {
-            const raw = window.localStorage.getItem(CART_STORAGE_KEY);
-            if (!raw) {
-                return;
-            }
+        itemsRef.current = items;
 
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed)) {
-                setItems(parsed);
-            }
-        } catch {
-            // Keep empty cart when storage is unavailable.
-        }
-    }, []);
-
-    useEffect(() => {
         try {
             window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
         } catch {
             // Ignore persistence failures.
         }
     }, [items]);
+
+    // Login and logout both reload the page, so the cart is reconciled with the account once per load.
+    useEffect(() => {
+        let ignore = false;
+
+        pendingAccountCart ??= resolveAccountCart(itemsRef.current);
+        pendingAccountCart.then((result) => {
+            if (ignore) {
+                return;
+            }
+
+            // A later remount reads the account again instead of reusing this result.
+            pendingAccountCart = null;
+            if (!result) {
+                return;
+            }
+
+            if (result.items) {
+                lastSyncedBodyRef.current = JSON.stringify({ items: result.items });
+                setItems(result.items);
+            }
+            setSyncedCustomerId(result.customerId);
+        });
+
+        return () => {
+            ignore = true;
+        };
+    }, []);
+
+    function flushCartSync({ keepalive = false } = {}) {
+        if (pendingSyncBodyRef.current === null) {
+            return;
+        }
+
+        if (keepalive) {
+            // The page is going away, so this cannot wait behind earlier requests.
+            const body = pendingSyncBodyRef.current;
+            pendingSyncBodyRef.current = null;
+            customerCartRequest('PUT', '/api/customer/cart', body, { keepalive: true }).catch(() => {});
+            return;
+        }
+
+        // Requests run one at a time so an older cart can never overwrite a newer one.
+        syncQueueRef.current = syncQueueRef.current.then(async () => {
+            const body = pendingSyncBodyRef.current;
+            if (body === null) {
+                return;
+            }
+
+            pendingSyncBodyRef.current = null;
+            try {
+                const response = await customerCartRequest('PUT', '/api/customer/cart', body);
+                if (response.ok) {
+                    lastSyncedBodyRef.current = body;
+                }
+            } catch {
+                // The next cart change sends the full cart again.
+            }
+        });
+    }
+
+    useEffect(() => {
+        if (!syncedCustomerId) {
+            return undefined;
+        }
+
+        const body = JSON.stringify({ items });
+        if (body === lastSyncedBodyRef.current) {
+            return undefined;
+        }
+
+        pendingSyncBodyRef.current = body;
+        const timer = setTimeout(() => flushCartSync(), CART_SYNC_DELAY_MS);
+        return () => clearTimeout(timer);
+    }, [items, syncedCustomerId]);
+
+    useEffect(() => {
+        const handlePageHide = () => flushCartSync({ keepalive: true });
+        window.addEventListener('pagehide', handlePageHide);
+        return () => window.removeEventListener('pagehide', handlePageHide);
+    }, []);
 
     function addToCart(product, options = {}) {
         const nextItem = normalizeCartItem(product, options, colorNameById, sizeNameById);
