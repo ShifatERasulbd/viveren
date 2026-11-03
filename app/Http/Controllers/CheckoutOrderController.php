@@ -918,6 +918,20 @@ class CheckoutOrderController extends Controller
         ]);
     }
 
+    public function publicExternalUpdateStatus(Request $request, CheckoutOrder $checkoutOrder): JsonResponse
+    {
+        $validated = $request->validate([
+            'status' => 'required|string|in:pending,approved,processing,shipped,delivered,cancelled,refunded',
+        ]);
+
+        $checkoutOrder->update(['status' => $validated['status']]);
+
+        return response()->json([
+            'success' => true,
+            'order' => $this->formatExternalOrder($checkoutOrder->fresh()),
+        ]);
+    }
+
     protected function formatExternalOrder(CheckoutOrder $order): array
     {
         $deliveryCost = (float) ($order->delivery_cost ?? $order->shipping);
