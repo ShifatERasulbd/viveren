@@ -55,6 +55,25 @@ export async function cancelCustomerOrder(id) {
     });
 }
 
+export async function fetchCustomerReturnOptions(id) {
+    return requestJson(`/api/customer/orders/${id}/return-options`);
+}
+
+// Multipart because a damaged-product claim carries a video. Responds with the return fee payment to complete.
+export async function requestCustomerReturn(id, formData) {
+    return requestJson(`/api/customer/orders/${id}/return`, {
+        method: 'POST',
+        body: formData,
+    });
+}
+
+export async function confirmCustomerReturn(id, paymentIntentId) {
+    return requestJson(`/api/customer/orders/${id}/return/confirm`, {
+        method: 'POST',
+        body: JSON.stringify({ payment_intent_id: paymentIntentId }),
+    });
+}
+
 
 export async function fetchCustomerOrder(id) {
     return requestJson(`/api/customer/orders/${id}`);

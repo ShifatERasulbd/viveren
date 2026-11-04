@@ -51,6 +51,14 @@ function Tracker({ status }) {
         );
     }
 
+    if (status === 'return_requested') {
+        return (
+            <div className="rounded-lg bg-orange-50 px-4 py-3 text-sm font-medium text-orange-800">
+                You've requested a return for this order. We'll review it and refund your original payment method once it's approved.
+            </div>
+        );
+    }
+
     const current = Math.max(0, STEPS.indexOf(status));
 
     return (

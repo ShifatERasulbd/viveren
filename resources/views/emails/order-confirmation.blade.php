@@ -34,7 +34,11 @@
                         <td style="padding: 0 40px 40px 40px;">
                             <h2 style="font-size: 28px; font-family: Georgia, serif; font-weight: normal; color: #0f172a; margin-top: 0; margin-bottom: 16px; line-height: 1.2;">Thank you for your order!</h2>
                             <p style="font-size: 15px; line-height: 1.6; color: #475569; margin-top: 0; margin-bottom: 32px;">
-                                Hi {{ $order->first_name }},Thank you for your purchase! We’ve received your order and confirmed your payment. Your order is moving forward for fulfillment and we’ll notify you the shipping confirmation and tracking details once your order is ready for dispatch.
+                                Hi {{ $order->first_name }}, thank you for your purchase! We’ve received your order and confirmed your payment. Your order is moving forward for fulfillment and we’ll notify you with the tracking details once your order is ready for dispatch.
+                            </p>
+
+                            <p style="font-size: 14px; line-height: 1.6; color: #92400e; background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px 16px; margin-top: 0; margin-bottom: 32px;">
+                                <strong>Please record an unboxing video when you receive your order.</strong> We'll need it to process any claim for a damaged product.
                             </p>
 
                             <!-- Shipping Address -->
@@ -71,7 +75,7 @@
 
                             <p style="font-size: 13px; line-height: 1.6; color: #94a3b8; margin: 0;">
                                 Questions about your order?Please Do not  reply to this email, Contact us at
-                                <a href="mailto:support@viveren.com" style="color: #0f172a; text-decoration: underline;">support@viveren.com</a>.
+                                <a href="mailto:support@viveren.com" style="color: #0f172a; text-decoration: underline;">support@viveren.com</a> To manage your orders please visit <a href="https://viveren.com/user/orders" style="color: #0f172a; text-decoration: underline;">Your Orders</a>..
                             </p>
                         </td>
                     </tr>

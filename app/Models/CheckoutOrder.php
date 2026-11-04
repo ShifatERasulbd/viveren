@@ -42,6 +42,15 @@ class CheckoutOrder extends Model
         'shipstation_order_id',
         'shipstation_synced_at',
         'status',
+        'return_reason',
+        'return_comments',
+        'return_replacements',
+        'return_video_path',
+        'return_fee',
+        'return_fee_payment_intent_id',
+        'return_fee_paid_at',
+        'return_requested_at',
+        'return_status',
     ];
 
     protected function casts(): array
@@ -55,6 +64,10 @@ class CheckoutOrder extends Model
             'total' => 'decimal:2',
             'ups_synced_at' => 'datetime',
             'shipstation_synced_at' => 'datetime',
+            'return_replacements' => 'array',
+            'return_fee' => 'decimal:2',
+            'return_fee_paid_at' => 'datetime',
+            'return_requested_at' => 'datetime',
         ];
     }
 

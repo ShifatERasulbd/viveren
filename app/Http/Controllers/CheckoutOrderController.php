@@ -2,18 +2,24 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\OrderCancelledMail;
 use App\Mail\OrderConfirmationMail;
+use App\Mail\ReturnRequestedMail;
 use App\Models\CheckoutOrder;
 use App\Models\Color;
 use App\Models\Product;
 use App\Models\Size;
 use App\Services\InvalidShippingAddressException;
+use App\Services\ReturnFeeService;
 use App\Services\ShippingRateService;
 use App\Services\VeeqoShippingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Stripe\StripeClient;
 
 class CheckoutOrderController extends Controller
@@ -27,6 +33,11 @@ class CheckoutOrderController extends Controller
     // Customers can cancel their own order only this long after placing it.
     private const CUSTOMER_CANCEL_WINDOW_MINUTES = 30;
 
+    private const RETURN_REASONS = ['change_of_mind', 'size_issue', 'color_mismatch', 'damaged_product'];
+
+    // 100 MB, kept under the server's upload_max_filesize
+    private const RETURN_VIDEO_MAX_KB = 102400;
+
     private ?array $colorNameById = null;
 
     private ?array $sizeNameById = null;
@@ -34,6 +45,7 @@ class CheckoutOrderController extends Controller
     public function __construct(
         private readonly ShippingRateService $shippingRateService,
         private readonly VeeqoShippingService $veeqoShippingService,
+        private readonly ReturnFeeService $returnFeeService,
     )
     {
     }
@@ -115,13 +127,16 @@ class CheckoutOrderController extends Controller
             ]);
 
             // Never surface raw carrier/Veeqo errors to the customer.
-            $message = $exception instanceof InvalidShippingAddressException
+            $isInvalidAddress = $exception instanceof InvalidShippingAddressException;
+            $message = $isInvalidAddress
                 ? $exception->getMessage()
                 : 'Unable to fetch shipping rates at the moment. Please try again.';
 
             return response()->json([
                 'message' => $message,
                 'error' => $message,
+                // Lets checkout tell a carrier-rejected address apart from a Veeqo outage.
+                'invalid_address' => $isInvalidAddress,
             ], 422);
         }
 
@@ -283,13 +298,7 @@ class CheckoutOrderController extends Controller
 
     public function customerCancel(Request $request, CheckoutOrder $checkoutOrder): JsonResponse
     {
-        $ownedOrder = $this->customerScopedOrders($request)
-            ->whereKey($checkoutOrder->id)
-            ->first();
-
-        if (! $ownedOrder) {
-            abort(403, 'Forbidden');
-        }
+        $ownedOrder = $this->customerOwnedOrderOrFail($request, $checkoutOrder);
 
         if (! in_array($ownedOrder->status, ['pending', 'approved', 'processing'], true)) {
             return response()->json([
@@ -306,10 +315,284 @@ class CheckoutOrderController extends Controller
 
         $ownedOrder->update(['status' => 'cancelled']);
 
+        // Notify the customer. A mail failure must never undo the cancellation.
+        try {
+            Mail::to($ownedOrder->email)->send(new OrderCancelledMail($ownedOrder));
+        } catch (\Throwable $exception) {
+            Log::error('Order cancellation email failed', [
+                'order_number' => $ownedOrder->order_number,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+
         return response()->json([
             'message' => 'Order cancelled successfully',
             'order' => $ownedOrder->fresh(),
         ]);
+    }
+
+    // Items on the order with the sizes a customer can swap to (in stock, same color).
+    public function customerReturnOptions(Request $request, CheckoutOrder $checkoutOrder): JsonResponse
+    {
+        $ownedOrder = $this->customerOwnedOrderOrFail($request, $checkoutOrder);
+
+        $items = collect(is_array($ownedOrder->items) ? $ownedOrder->items : [])
+            ->filter(fn ($item) => is_array($item))
+            ->map(fn (array $item, int $index) => [
+                'index' => $index,
+                'name' => (string) ($item['name'] ?? 'Item'),
+                'color' => trim((string) ($item['selectedColor'] ?? '')),
+                'size' => trim((string) ($item['selectedSize'] ?? '')),
+                'sizes' => $this->replacementSizeOptions($item),
+            ])
+            ->values();
+
+        return response()->json(['items' => $items]);
+    }
+
+    public function customerRequestReturn(Request $request, CheckoutOrder $checkoutOrder): JsonResponse
+    {
+        $validated = $request->validate([
+            'reason' => ['required', Rule::in(self::RETURN_REASONS)],
+            'comments' => 'nullable|string|max:1000',
+            'replace_size' => 'required_if:reason,size_issue|boolean',
+            'replacements' => 'nullable|array',
+            'replacements.*.item_index' => 'required|integer',
+            'replacements.*.size' => 'required|string|max:50',
+            'video' => 'required_if:reason,damaged_product|file|mimetypes:video/*|max:'.self::RETURN_VIDEO_MAX_KB,
+        ], [
+            'video.required_if' => 'Please upload your unboxing video for a damaged product claim.',
+        ]);
+
+        $ownedOrder = $this->customerOwnedOrderOrFail($request, $checkoutOrder);
+
+        if ($ownedOrder->status !== 'delivered') {
+            return response()->json([
+                'message' => 'Only delivered orders can be returned.',
+            ], 422);
+        }
+
+        $replacements = null;
+        if ($validated['reason'] === 'size_issue' && $request->boolean('replace_size')) {
+            $replacements = $this->resolveSizeReplacements($ownedOrder, $validated['replacements'] ?? []);
+            if ($replacements === []) {
+                return response()->json([
+                    'message' => 'Choose an available replacement size for at least one item.',
+                ], 422);
+            }
+        }
+
+        // Start the fee payment before saving anything, so a Stripe failure leaves no half-made return
+        try {
+            $payment = $this->returnFeeService->start($ownedOrder);
+        } catch (\Throwable $exception) {
+            Log::error('Return fee payment could not be started', [
+                'order_number' => $ownedOrder->order_number,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'Unable to start the return fee payment. Please try again.',
+            ], 502);
+        }
+
+        $videoPath = null;
+        if ($validated['reason'] === 'damaged_product') {
+            $video = $request->file('video');
+            // Extension comes from the detected MIME type, never the client filename, so nothing executable lands in public/
+            $filename = now()->format('YmdHis').'-'.Str::random(10).'.'.($video->extension() ?: 'mp4');
+            $video->move(public_path('uploads/returns'), $filename);
+            $videoPath = '/uploads/returns/'.$filename;
+        }
+
+        // A resubmitted (still unpaid) return replaces the earlier attempt's video
+        $previousVideoPath = $ownedOrder->return_video_path;
+
+        // Details are saved now; the order only becomes a return request once the fee is paid.
+        $ownedOrder->update([
+            'return_reason' => $validated['reason'],
+            'return_comments' => trim((string) ($validated['comments'] ?? '')) ?: null,
+            'return_replacements' => $replacements,
+            'return_video_path' => $videoPath,
+            'return_fee_payment_intent_id' => $payment['id'],
+        ]);
+
+        if ($previousVideoPath && $previousVideoPath !== $videoPath) {
+            File::delete(public_path(ltrim($previousVideoPath, '/')));
+        }
+
+        if ($payment['paid']) {
+            $this->markReturnFeePaid($ownedOrder);
+        }
+
+        return response()->json([
+            'message' => $payment['paid'] ? 'Return request submitted' : 'Pay the return fee to submit your return',
+            'payment' => [
+                'client_secret' => $payment['client_secret'],
+                'amount' => ReturnFeeService::AMOUNT_CENTS / 100,
+                'paid' => $payment['paid'],
+            ],
+            'order' => $ownedOrder->fresh(),
+        ]);
+    }
+
+    public function customerConfirmReturn(Request $request, CheckoutOrder $checkoutOrder): JsonResponse
+    {
+        $validated = $request->validate([
+            'payment_intent_id' => 'required|string|max:255',
+        ]);
+
+        $ownedOrder = $this->customerOwnedOrderOrFail($request, $checkoutOrder);
+
+        if ($ownedOrder->return_fee_payment_intent_id !== $validated['payment_intent_id']) {
+            return response()->json([
+                'message' => 'This payment does not match the return request.',
+            ], 422);
+        }
+
+        // Already confirmed (e.g. a retried request): nothing more to do
+        if ($ownedOrder->return_fee_paid_at === null) {
+            if ($ownedOrder->status !== 'delivered') {
+                return response()->json([
+                    'message' => 'Only delivered orders can be returned.',
+                ], 422);
+            }
+
+            try {
+                $paid = $this->returnFeeService->isPaid($validated['payment_intent_id']);
+            } catch (\Throwable $exception) {
+                Log::error('Return fee payment could not be verified', [
+                    'order_number' => $ownedOrder->order_number,
+                    'error' => $exception->getMessage(),
+                ]);
+
+                return response()->json([
+                    'message' => 'Unable to verify the return fee payment. Please try again.',
+                ], 502);
+            }
+
+            if (! $paid) {
+                return response()->json([
+                    'message' => 'The return fee payment has not gone through yet.',
+                ], 422);
+            }
+
+            $this->markReturnFeePaid($ownedOrder);
+        }
+
+        return response()->json([
+            'message' => 'Return request submitted',
+            'order' => $ownedOrder->fresh(),
+        ]);
+    }
+
+    // An admin reviews the request, then ships the replacement or marks the order refunded.
+    private function markReturnFeePaid(CheckoutOrder $order): void
+    {
+        $order->update([
+            'status' => 'return_requested',
+            'return_fee' => ReturnFeeService::AMOUNT_CENTS / 100,
+            'return_fee_paid_at' => now(),
+            'return_requested_at' => now(),
+        ]);
+
+        // Let the customer know it went through. A mail failure must never undo a paid return request.
+        try {
+            Mail::to($order->email)->send(new ReturnRequestedMail($order));
+        } catch (\Throwable $exception) {
+            Log::error('Return request email failed', [
+                'order_number' => $order->order_number,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+    }
+
+    private function customerOwnedOrderOrFail(Request $request, CheckoutOrder $order): CheckoutOrder
+    {
+        $ownedOrder = $this->customerScopedOrders($request)
+            ->whereKey($order->id)
+            ->first();
+
+        if (! $ownedOrder) {
+            abort(403, 'Forbidden');
+        }
+
+        return $ownedOrder;
+    }
+
+    /**
+     * Keeps only swaps to a different size that is actually available for that item.
+     *
+     * @param  array<int, array{item_index: int, size: string}>  $requested
+     * @return array<int, array<string, mixed>>
+     */
+    private function resolveSizeReplacements(CheckoutOrder $order, array $requested): array
+    {
+        $items = is_array($order->items) ? $order->items : [];
+
+        return collect($requested)
+            ->map(function (array $row) use ($items) {
+                $index = (int) $row['item_index'];
+                $item = $items[$index] ?? null;
+                $toSize = trim((string) $row['size']);
+
+                if (! is_array($item)) {
+                    return null;
+                }
+
+                $fromSize = trim((string) ($item['selectedSize'] ?? ''));
+                if (strcasecmp($toSize, $fromSize) === 0 || ! in_array($toSize, $this->replacementSizeOptions($item), true)) {
+                    return null;
+                }
+
+                return [
+                    'item_index' => $index,
+                    'name' => (string) ($item['name'] ?? 'Item'),
+                    'color' => trim((string) ($item['selectedColor'] ?? '')),
+                    'from_size' => $fromSize,
+                    'to_size' => $toSize,
+                ];
+            })
+            ->filter()
+            ->unique('item_index')
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function replacementSizeOptions(array $item): array
+    {
+        $product = $this->resolveProductForQuoteItem($item);
+        if (! $product) {
+            return [];
+        }
+
+        $sizeNameById = $this->sizeNameById();
+        $rows = is_array($product->variant_rows) ? $product->variant_rows : [];
+
+        if ($rows === []) {
+            return collect(explode(',', (string) $product->size))
+                ->map(fn ($id) => $this->resolveVariantDisplayValue($id, $sizeNameById))
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+        }
+
+        $colorNameById = $this->colorNameById();
+        $color = strtolower(trim((string) ($item['selectedColor'] ?? '')));
+
+        return collect($rows)
+            ->filter(fn ($row) => is_array($row) && (int) ($row['stock'] ?? 0) > 0)
+            ->filter(fn (array $row) => $color === ''
+                || strtolower($this->resolveVariantDisplayValue((string) ($row['color'] ?? ''), $colorNameById)) === $color)
+            ->map(fn (array $row) => $this->resolveVariantDisplayValue((string) ($row['size'] ?? ''), $sizeNameById))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 
     private function customerCancelDeadline(CheckoutOrder $order): ?\Carbon\CarbonInterface
@@ -358,7 +641,7 @@ class CheckoutOrderController extends Controller
             'postal_code'     => 'nullable|string|max:40',
             'country'         => 'nullable|string|max:120',
             'notes'           => 'nullable|string|max:3000',
-            'status'          => 'nullable|string|in:pending,approved,processing,shipped,delivered,cancelled,refunded',
+            'status'          => 'nullable|string|in:pending,approved,processing,shipped,delivered,cancelled,refunded,return_requested',
         ]);
 
         $checkoutOrder->update($validated);
@@ -381,7 +664,7 @@ class CheckoutOrderController extends Controller
         $validated = $request->validate([
             'ids'    => 'required|array|min:1',
             'ids.*'  => 'integer',
-            'status' => 'required|string|in:pending,approved,processing,shipped,delivered,cancelled,refunded',
+            'status' => 'required|string|in:pending,approved,processing,shipped,delivered,cancelled,refunded,return_requested',
         ]);
 
         CheckoutOrder::whereIn('id', $validated['ids'])->update(['status' => $validated['status']]);
@@ -522,6 +805,9 @@ class CheckoutOrderController extends Controller
             'delivery_cost' => $shipping,
             'tax' => $tax,
             'stripe_charge' => $stripeCharge,
+            'payment_provider' => $order->payment_provider,
+            'payment_status' => $order->payment_status,
+            'payment_intent_id' => $order->payment_intent_id,
             'processing_fee' => self::PROCESSING_FEE,
         ], 201);
     }
@@ -814,6 +1100,9 @@ class CheckoutOrderController extends Controller
             'stripe_charge' => $stripeCharge,
             'stripeCharge' => $stripeCharge,
             'stripecharge' => $stripeCharge,
+            'payment_provider' => $order->payment_provider,
+            'payment_status' => $order->payment_status,
+            'payment_intent_id' => $order->payment_intent_id,
             'processing_fee' => $processingFee,
             'processingFee' => $processingFee,
             'processingfee' => $processingFee,
@@ -921,7 +1210,7 @@ class CheckoutOrderController extends Controller
     public function publicExternalUpdateStatus(Request $request, CheckoutOrder $checkoutOrder): JsonResponse
     {
         $validated = $request->validate([
-            'status' => 'required|string|in:pending,approved,processing,shipped,delivered,cancelled,refunded',
+            'status' => 'required|string|in:pending,approved,processing,shipped,delivered,cancelled,refunded,return_requested',
         ]);
 
         $checkoutOrder->update(['status' => $validated['status']]);

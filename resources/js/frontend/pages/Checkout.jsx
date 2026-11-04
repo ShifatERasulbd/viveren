@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-    CardCvcElement,
-    CardExpiryElement,
     CardNumberElement,
     Elements,
     useElements,
@@ -11,6 +9,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
+import CardPaymentFields, { cardElementsOptions } from '../components/CardPaymentFields';
 import { useCart } from '../context/CartContext';
 import { normalizeCountryCode } from '../utils/shipping';
 import { featuresFontClass } from '../utils/typography';
@@ -18,10 +17,6 @@ import { featuresFontClass } from '../utils/typography';
 const fallbackImage = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='300' viewBox='0 0 240 300'%3E%3Crect width='100%25' height='100%25' fill='%23eef0f3'/%3E%3C/svg%3E";
 const STRIPE_PERCENT_RATE = 0.029;
 const STRIPE_FIXED_FEE = 0.3;
-
-// Set this to the real path of your Monstrate font file (must be served with CORS headers).
-const MONSTRATE_FONT_URL = '/fonts/monstrate.woff2';
-const STRIPE_FONT_FAMILY = 'Monstrate, Arial, sans-serif';
 
 function roundCurrency(value) {
     const numericValue = Number(value);
@@ -32,219 +27,9 @@ function roundCurrency(value) {
     return Math.round((numericValue + Number.EPSILON) * 100) / 100;
 }
 
-// Safe money parser (handles numbers, "12.50", "$12.50", bad values)
-function parseMoney(value) {
-    if (value === null || value === undefined || value === '') {
-        return null;
-    }
-
-    if (typeof value === 'number') {
-        return Number.isFinite(value) ? value : null;
-    }
-
-    const cleaned = String(value).replace(/[^0-9.\-]/g, '');
-    if (cleaned === '') {
-        return null;
-    }
-
-    const parsed = Number(cleaned);
-    return Number.isFinite(parsed) ? parsed : null;
-}
-
 function calculateStripeCharge(baseAmount) {
     const amount = Math.max(0, Number(baseAmount) || 0);
     return roundCurrency((amount * STRIPE_PERCENT_RATE) + STRIPE_FIXED_FEE);
-}
-
-function normalizeServiceCode(value, fallback = '02') {
-    const raw = String(value ?? '').trim();
-    const resolved = raw || fallback;
-
-    if (/^\d+$/.test(resolved)) {
-        return resolved.padStart(2, '0');
-    }
-
-    return resolved.toUpperCase();
-}
-
-function normalizeShippingOption(option, index) {
-    const code = normalizeServiceCode(option?.code, '02');
-    // Read `price` first (same field the backend uses), then `amount`
-    const amount = parseMoney(option?.price) ?? parseMoney(option?.amount) ?? 0;
-    const safeAmount = amount >= 0 ? amount : 0;
-    const description = String(option?.description || '').trim();
-
-    return {
-        ...option,
-        code,
-        amount: safeAmount,
-        label: description || (index === 0 ? 'Standard' : index === 1 ? 'Express' : 'Super Express'),
-    };
-}
-
-const baseElementStyle = {
-    style: {
-        base: {
-            color: '#18181b',
-            fontFamily: STRIPE_FONT_FAMILY,
-            fontSize: '15px',
-            '::placeholder': {
-                color: '#71717a',
-                textTransform: 'none',
-            },
-        },
-        invalid: {
-            color: '#dc2626',
-        },
-    },
-};
-
-const cardNumberOptions = {
-    ...baseElementStyle,
-    placeholder: 'Card number',
-    showIcon: false,
-    disableLink: true,
-};
-const cardExpiryOptions = { ...baseElementStyle, placeholder: 'Expiration date (MM / YY)' };
-const cardCvcOptions = { ...baseElementStyle, placeholder: 'Security code' };
-
-const KNOWN_BRANDS = ['visa', 'mastercard', 'amex'];
-
-const OTHER_BRANDS = [
-    {
-        id: 'discover',
-        name: 'Discover',
-        logo: (
-            <span className="flex flex-col items-center leading-none">
-                <span className="text-[0.36rem] font-black tracking-tight text-zinc-800">DISCOVER</span>
-                <span className="mt-0.5 h-1.5 w-5 rounded-full bg-gradient-to-r from-[#ff6000] to-[#f9a01b]" />
-            </span>
-        ),
-    },
-    {
-        id: 'diners',
-        name: 'Diners Club',
-        logo: (
-            <span className="flex h-4 w-4 items-center justify-center rounded-full border-[3px] border-[#0079be] bg-white">
-                <span className="h-2 w-[2px] bg-[#0079be]" />
-            </span>
-        ),
-    },
-    {
-        id: 'elo',
-        name: 'Elo',
-        logo: <span className="text-[0.7rem] font-black lowercase leading-none tracking-tighter text-zinc-900">elo</span>,
-    },
-    {
-        id: 'jcb',
-        name: 'JCB',
-        logo: (
-            <span className="flex gap-px">
-                <span className="flex h-3.5 w-2.5 items-center justify-center rounded-sm bg-[#0b4ea2] text-[0.4rem] font-bold text-white">J</span>
-                <span className="flex h-3.5 w-2.5 items-center justify-center rounded-sm bg-[#d4112f] text-[0.4rem] font-bold text-white">C</span>
-                <span className="flex h-3.5 w-2.5 items-center justify-center rounded-sm bg-[#00954f] text-[0.4rem] font-bold text-white">B</span>
-            </span>
-        ),
-    },
-    {
-        id: 'unionpay',
-        name: 'UnionPay',
-        logo: (
-            <span className="flex h-full w-full items-center justify-center bg-gradient-to-r from-[#e21836] via-[#00447c] to-[#007b84]">
-                <span className="text-[0.36rem] font-bold leading-none tracking-tight text-white">UnionPay</span>
-            </span>
-        ),
-    },
-];
-
-function CardBrandBadges({ brand }) {
-    const isKnown = KNOWN_BRANDS.includes(brand);
-    const activeOtherBrand = OTHER_BRANDS.find((item) => item.id === brand);
-    const isOther = brand !== 'unknown' && !isKnown;
-
-    // Treat Amex, Visa, and Mastercard as single brands when they are active
-    const isSingleBrand = brand === 'visa' || brand === 'mastercard' || brand === 'amex' || (!isKnown && brand !== 'unknown');
-
-    const fade = (id) =>
-        brand !== 'unknown' && brand !== id ? 'opacity-30 grayscale' : 'opacity-100';
-
-    const showVisa = !isSingleBrand || brand === 'visa';
-    const showMastercard = !isSingleBrand || brand === 'mastercard';
-    const showAmex = !isSingleBrand || brand === 'amex';
-
-    return (
-        <span className="flex items-center gap-1.5">
-            {activeOtherBrand ? (
-                <span className="flex items-center gap-1.5">
-                    <span
-                        title={activeOtherBrand.name}
-                        className="flex h-6 w-9 items-center justify-center overflow-hidden rounded border border-zinc-300 bg-white shadow-sm"
-                    >
-                        {activeOtherBrand.logo}
-                    </span>
-                    <span className="text-[0.7rem] font-bold uppercase text-zinc-800">
-                        {activeOtherBrand.name}
-                    </span>
-                </span>
-            ) : (
-                <>
-                    {showVisa && (
-                        <span className={`rounded bg-[#1434cb] px-2 py-1 text-[0.65rem] font-bold italic text-white transition ${fade('visa')}`}>
-                            VISA
-                        </span>
-                    )}
-
-                    {showMastercard && (
-                        <span className={`flex h-6 w-9 items-center justify-center rounded border border-zinc-200 bg-white transition ${fade('mastercard')}`}>
-                            <span className="h-3.5 w-3.5 rounded-full bg-[#eb001b]" />
-                            <span className="-ml-1.5 h-3.5 w-3.5 rounded-full bg-[#f79e1b] opacity-90" />
-                        </span>
-                    )}
-
-                    {showAmex && (
-                        <span className={`rounded bg-[#1f72cd] px-1.5 py-1 text-[0.6rem] font-bold text-white transition ${fade('amex')}`}>
-                            AMEX
-                        </span>
-                    )}
-
-                    {!isSingleBrand && (
-                        <span className="group relative">
-                            <button
-                                type="button"
-                                aria-label="Show other accepted cards"
-                                onClick={(event) => event.preventDefault()}
-                                className={`rounded border px-1.5 py-1 text-[0.65rem] transition ${
-                                    isOther ? 'border-zinc-900 text-zinc-900' : 'border-zinc-200 text-zinc-600'
-                                } ${brand !== 'unknown' && !isOther ? 'opacity-30' : ''} hover:border-zinc-900 hover:text-zinc-900`}
-                            >
-                                +5
-                            </button>
-
-                            <span
-                                role="tooltip"
-                                className="pointer-events-none invisible absolute bottom-full right-[-6px] z-30 mb-2 w-[168px] rounded-md bg-[#1a1a1a] p-2 opacity-0 shadow-lg transition group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100"
-                            >
-                                <span className="flex flex-wrap gap-1.5">
-                                    {OTHER_BRANDS.map((item) => (
-                                        <span
-                                            key={item.id}
-                                            title={item.name}
-                                            className={`flex h-5 w-8 items-center justify-center overflow-hidden rounded-[3px] bg-white transition ${
-                                                brand !== 'unknown' && brand !== item.id ? 'opacity-40' : 'opacity-100'
-                                            }`}
-                                        >
-                                            {item.logo}
-                                        </span>
-                                    ))}
-                                </span>
-                                <span className="absolute -bottom-1 right-[15px] h-2 w-2 rotate-45 bg-[#1a1a1a]" />
-                            </span>
-                        </span>
-                    )}
-                </>
-            )}
-        </span>
-    );
 }
 
 function toImageUrl(value) {
@@ -339,13 +124,9 @@ function CheckoutForm() {
         }
     }
 
-    const [quotedShipping, setQuotedShipping] = useState(0);
-    const [shippingOptions, setShippingOptions] = useState([]);
-    const [selectedShippingOptionCode, setSelectedShippingOptionCode] = useState('02');
     const [selectedDeliveryDate, setSelectedDeliveryDate] = useState('');
     const [selectedDeliveryTime, setSelectedDeliveryTime] = useState('');
     const [isFetchingShipping, setIsFetchingShipping] = useState(false);
-    const [hasShippingQuote, setHasShippingQuote] = useState(false);
     const [shippingError, setShippingError] = useState('');
     const [stateOptions, setStateOptions] = useState([]);
     const [isLoadingStates, setIsLoadingStates] = useState(false);
@@ -480,26 +261,8 @@ function CheckoutForm() {
         && String(form.country || '').trim(),
     ), [form.state, form.city, form.postal_code, form.country]);
 
-    const selectedShippingOption = useMemo(
-        () => shippingOptions.find((option) => option.code === normalizeServiceCode(selectedShippingOptionCode, '02')) || null,
-        [shippingOptions, selectedShippingOptionCode],
-    );
-
-    // Shipping falls back to the API quote when the option amount is missing/zero
-    const shipping = useMemo(() => {
-        if (!hasShippingQuote) {
-            return 0;
-        }
-
-        // Use the selected option's price when it is a real positive number...
-        const optionAmount = Number(selectedShippingOption?.amount);
-        if (Number.isFinite(optionAmount) && optionAmount > 0) {
-            return roundCurrency(optionAmount);
-        }
-
-        // ...otherwise fall back to the price returned by the quote API.
-        return roundCurrency(parseMoney(quotedShipping) ?? 0);
-    }, [hasShippingQuote, selectedShippingOption, quotedShipping]);
+    // Viveren ships for free, so shipping is never charged.
+    const shipping = 0;
 
     const subtotalAmount = useMemo(() => roundCurrency(subtotal), [subtotal]);
     const baseTotal = useMemo(() => roundCurrency(subtotalAmount + shipping), [subtotalAmount, shipping]);
@@ -558,14 +321,6 @@ function CheckoutForm() {
         }
 
         return '';
-    }
-
-    function cardBoxClass(hasError, isBlinking) {
-        return `font-monstrate flex h-14 w-full items-center rounded-lg border bg-white px-3.5 transition-colors ${
-            hasError || isBlinking
-                ? 'border-red-600 ring-1 ring-red-600'
-                : 'border-zinc-300 hover:border-zinc-500 focus-within:border-zinc-900 focus-within:ring-1 focus-within:ring-zinc-900'
-        } ${isBlinking ? 'animate-[pulse_0.5s_ease-in-out_infinite]' : ''}`;
     }
 
     function validateFormValues(values) {
@@ -710,17 +465,10 @@ function CheckoutForm() {
         };
     }, []);
 
+    // Shipping is free, so the Veeqo quote is only used to check the carriers can deliver to the
+    // address. Only an undeliverable address stops checkout; a Veeqo outage must not.
     useEffect(() => {
-        if (subtotal <= 0) {
-            setQuotedShipping(0);
-            setHasShippingQuote(false);
-            setShippingError('');
-            return undefined;
-        }
-
-        if (!hasCompleteShippingAddress) {
-            setQuotedShipping(0);
-            setHasShippingQuote(false);
+        if (subtotal <= 0 || !hasCompleteShippingAddress) {
             setShippingError('');
             return undefined;
         }
@@ -728,8 +476,6 @@ function CheckoutForm() {
         const controller = new AbortController();
         setIsFetchingShipping(true);
         setShippingError('');
-
-        const requestServiceCode = normalizeServiceCode(selectedShippingOptionCode, '02');
 
         const quotePayload = {
             subtotal,
@@ -741,7 +487,6 @@ function CheckoutForm() {
             state: form.state,
             postal_code: form.postal_code,
             country: form.country,
-            service_code: requestServiceCode,
             delivery_date: selectedDeliveryDate || undefined,
             delivery_time: selectedDeliveryTime || undefined,
             items: normalizedItems,
@@ -761,41 +506,14 @@ function CheckoutForm() {
 
                 const payload = await response.json().catch(() => ({}));
 
-                if (!response.ok) {
-                    throw new Error(payload?.error || payload?.message || 'Unable to fetch shipping rates');
+                if (!response.ok && payload?.invalid_address) {
+                    setShippingError(payload?.error || payload?.message || 'Please check your shipping address.');
                 }
-
-                const nextOptions = (Array.isArray(payload?.shipping_options) ? payload.shipping_options : [])
-                    .map((option, index) => normalizeShippingOption(option, index))
-                    .filter((option) => option.code !== '');
-
-                if (nextOptions.length > 0) {
-                    setShippingOptions(nextOptions);
-
-                    const selectedCodeFromPayload = normalizeServiceCode(payload?.selected_service_code, '02');
-                    const firstCode = normalizeServiceCode(nextOptions[0]?.code, '02');
-
-                    setSelectedShippingOptionCode((current) => {
-                        const currentCode = normalizeServiceCode(current, '02');
-                        const stillExists = currentCode !== '' && nextOptions.some((option) => option.code === currentCode);
-                        if (stillExists) {
-                            return currentCode;
-                        }
-
-                        return selectedCodeFromPayload || firstCode;
-                    });
-                }
-
-                setQuotedShipping(parseMoney(payload?.shipping) ?? 0);
-                setHasShippingQuote(true);
             } catch (error) {
+                // Network failure: nothing to tell the customer, and shipping is free either way.
                 if (error?.name === 'AbortError') {
                     return;
                 }
-
-                setShippingError(error?.message || 'Unable to fetch shipping rates');
-                setQuotedShipping(0);
-                setHasShippingQuote(false);
             } finally {
                 setIsFetchingShipping(false);
             }
@@ -806,8 +524,6 @@ function CheckoutForm() {
             clearTimeout(timer);
             setIsFetchingShipping(false);
         };
-    // Note: selectedShippingOptionCode is intentionally excluded below — Veeqo issues a new
-    // ephemeral rate code on every quote, so including it here would refetch in an infinite loop.
     }, [form.city, form.country, form.postal_code, form.state, hasCompleteShippingAddress, normalizedItems, selectedDeliveryDate, selectedDeliveryTime, subtotal]);
 
     const deliveryDates = useMemo(() => {
@@ -1559,28 +1275,7 @@ function CheckoutForm() {
                         </div>
                         <div className="flex items-center justify-between">
                             <span>Shipping</span>
-                            {!hasCompleteShippingAddress && subtotal > 0 ? (
-                                <span className="text-right text-[0.8rem] text-zinc-500">Enter the shipping address</span>
-                            ) : isFetchingShipping || (!hasShippingQuote && !shippingError) ? (
-                                <span className="inline-flex items-center text-zinc-500" aria-label="Calculating shipping">
-                                    Calculating
-                                    <span className="inline-flex w-4 justify-start">
-                                        {[0, 1, 2].map((dot) => (
-                                            <span
-                                                key={dot}
-                                                className="animate-bounce"
-                                                style={{ animationDelay: `${dot * 0.15}s` }}
-                                            >
-                                                .
-                                            </span>
-                                        ))}
-                                    </span>
-                                </span>
-                            ) : !hasShippingQuote ? (
-                                <span className="text-zinc-400">--</span>
-                            ) : (
-                                <span>{shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`}</span>
-                            )}
+                            <span>Free</span>
                         </div>
                         {!isFetchingShipping && shippingError ? (
                             <p className="text-xs text-red-600">{shippingError}</p>
@@ -1597,127 +1292,24 @@ function CheckoutForm() {
                         <p className="mt-1 text-[0.85rem] text-zinc-500">All transactions are secure and encrypted.</p>
 
                         <div className="mt-4 space-y-3">
-                            <div
-                                className={`rounded-lg border ${
-                                    paymentMethod === 'card' ? 'border-zinc-900' : 'border-zinc-300'
-                                }`}
-                            >
-                                <label className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 rounded-t-lg bg-white px-4 py-4">
-                                    <span className="flex items-center gap-3 text-[0.9rem] font-medium text-zinc-900">
-                                        <input
-                                            type="radio"
-                                            name="payment_method"
-                                            checked={paymentMethod === 'card'}
-                                            onChange={() => setPaymentMethod('card')}
-                                            className="h-4 w-4 accent-zinc-900"
-                                        />
-                                        Credit / Debit Card
-                                    </span>
-                                    <div className="pl-7 sm:pl-0 scale-[0.85] origin-left sm:origin-right">
-                                        <CardBrandBadges brand={cardBrand} />
-                                    </div>
-                                </label>
-
-                                <div
-                                    className={`space-y-3 rounded-b-lg border-t border-zinc-200 bg-zinc-100 px-4 pb-4 pt-4 ${
-                                        paymentMethod === 'card' ? '' : 'hidden'
-                                    }`}
-                                >
-                                    {/* Card number */}
-                                    <div ref={setFieldRef('number')}>
-                                        <div className={cardBoxClass(Boolean(numberError), blinkingField === 'number')}>
-                                            <div className="min-w-0 flex-1">
-                                                <CardNumberElement
-                                                    options={{
-                                                        ...cardNumberOptions,
-                                                        placeholder: 'Card number',
-                                                    }}
-                                                    onChange={handleCardFieldChange('number')}
-                                                    onBlur={handleCardFieldBlur('number')}
-                                                />
-                                            </div>
-                                            <svg
-                                                className="h-4 w-4 shrink-0 text-zinc-500"
-                                                viewBox="0 0 24 24"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                strokeWidth="2"
-                                            >
-                                                <rect x="4" y="11" width="16" height="10" rx="2" />
-                                                <path d="M8 11V7a4 4 0 018 0v4" />
-                                            </svg>
-                                        </div>
-                                        {numberError ? (
-                                            <p className="mt-1.5 text-[0.85rem] text-red-600">{numberError}</p>
-                                        ) : null}
-                                    </div>
-
-                                    {/* Expiry + CVC */}
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div ref={setFieldRef('expiry')}>
-                                            <div className={cardBoxClass(Boolean(expiryError), blinkingField === 'expiry')}>
-                                                <div className="min-w-0 flex-1">
-                                                    <CardExpiryElement
-                                                        options={{
-                                                            ...cardExpiryOptions,
-                                                            placeholder: 'MM / YY',
-                                                        }}
-                                                        onChange={handleCardFieldChange('expiry')}
-                                                        onBlur={handleCardFieldBlur('expiry')}
-                                                    />
-                                                </div>
-                                            </div>
-                                            {expiryError ? (
-                                                <p className="mt-1.5 text-[0.85rem] text-red-600">{expiryError}</p>
-                                            ) : null}
-                                        </div>
-                                        <div ref={setFieldRef('cvc')}>
-                                            <div className={cardBoxClass(Boolean(cvcError), blinkingField === 'cvc')}>
-                                                <div className="min-w-0 flex-1">
-                                                    <CardCvcElement
-                                                        options={{
-                                                            ...cardCvcOptions,
-                                                            placeholder: 'CVC',
-                                                        }}
-                                                        onChange={handleCardFieldChange('cvc')}
-                                                        onBlur={handleCardFieldBlur('cvc')}
-                                                    />
-                                                </div>
-                                                <span
-                                                    title="3 or 4 digit code on your card"
-                                                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-zinc-500 text-[0.7rem] text-zinc-600"
-                                                >
-                                                    ?
-                                                </span>
-                                            </div>
-                                            {cvcError ? (
-                                                <p className="mt-1.5 text-[0.85rem] text-red-600">{cvcError}</p>
-                                            ) : null}
-                                        </div>
-                                    </div>
-
-                                    {/* Name on card */}
-                                    <div ref={setFieldRef('nameOnCard')}>
-                                        <div className={cardBoxClass(nameError, blinkingField === 'nameOnCard')}>
-                                            <div className="min-w-0 flex-1">
-                                                <input
-                                                    type="text"
-                                                    value={nameOnCard}
-                                                    onChange={(event) => setNameOnCard(event.target.value)}
-                                                    onBlur={() => setTouchedCardFields((prev) => ({ ...prev, nameOnCard: true }))}
-                                                    placeholder="Name on Card"
-                                                    autoComplete="cc-name"
-                                                    style={{ textTransform: 'none' }}
-                                                    className="w-full bg-transparent text-[0.95rem] text-zinc-900 outline-none placeholder:text-zinc-500 placeholder:normal-case border-none p-0 focus:ring-0"
-                                                />
-                                            </div>
-                                        </div>
-                                        {nameError ? (
-                                            <p className="mt-1.5 text-[0.85rem] text-red-600">Enter the name on your card</p>
-                                        ) : null}
-                                    </div>
-                                </div>
-                            </div>
+                            <CardPaymentFields
+                                brand={cardBrand}
+                                errors={{
+                                    number: numberError,
+                                    expiry: expiryError,
+                                    cvc: cvcError,
+                                    nameOnCard: nameError ? 'Enter the name on your card' : '',
+                                }}
+                                nameOnCard={nameOnCard}
+                                onNameOnCardChange={setNameOnCard}
+                                onNameOnCardBlur={() => setTouchedCardFields((prev) => ({ ...prev, nameOnCard: true }))}
+                                onFieldChange={handleCardFieldChange}
+                                onFieldBlur={handleCardFieldBlur}
+                                selected={paymentMethod === 'card'}
+                                onSelect={() => setPaymentMethod('card')}
+                                fieldRef={setFieldRef}
+                                blinkingField={blinkingField}
+                            />
                         </div>
                     </div>
 
@@ -1768,20 +1360,7 @@ export default function CheckoutPage() {
     const [stripePromise, setStripePromise] = useState(null);
     const [isStripeLoading, setIsStripeLoading] = useState(true);
 
-    const elementsOptions = useMemo(
-        () => ({
-            fonts: [
-                {
-                    family: 'Monstrate',
-                    src: `url(${window.location.origin}${MONSTRATE_FONT_URL})`,
-                    weight: '400',
-                    style: 'normal',
-                    display: 'swap',
-                },
-            ],
-        }),
-        [],
-    );
+    const elementsOptions = useMemo(() => cardElementsOptions(), []);
 
     useEffect(() => {
         let isMounted = true;

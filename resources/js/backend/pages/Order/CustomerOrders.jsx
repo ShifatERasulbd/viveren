@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Calendar, ChevronDown, Eye, Search, Trash2 } from 'lucide-react';
+import { Calendar, ChevronDown, Eye, Search } from 'lucide-react';
 
 import {
     AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -10,12 +10,39 @@ import {
 import { useAppContext } from '@/context/AppContext';
 
 import { cancelCustomerOrder, fetchCustomerOrders, fetchCustomerRecentItems } from './api';
+import ReturnRequestDialog from './ReturnRequestDialog';
 import { STATUS_DOT, STATUS_OPTIONS, StatusBadge, Pagination, useOrdersList, cap } from './shared';
 
 const CANCELLABLE = ['pending', 'approved', 'processing'];
 const money = (n) => `$${Number(n).toFixed(2)}`;
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString() : '');
 const canCancel = (o) => CANCELLABLE.includes(o.status) && Date.parse(o.cancellable_until) > Date.now();
+const canReturn = (o) => o.status === 'delivered';
+
+// Cancel and return never overlap: cancel is for unshipped orders, return only for delivered ones
+function OrderActions({ order, onCancel, onReturn }) {
+    if (canCancel(order)) {
+        return (
+            <button
+                onClick={() => onCancel(order.id)}
+                className="h-8 rounded-md border border-red-200 px-3 text-xs font-medium text-red-700 hover:bg-red-50"
+            >
+                Cancel
+            </button>
+        );
+    }
+    if (canReturn(order)) {
+        return (
+            <button
+                onClick={() => onReturn(order)}
+                className="h-8 whitespace-nowrap rounded-md border border-zinc-300 px-3 text-xs font-medium text-zinc-800 hover:bg-zinc-100"
+            >
+                Return &amp; Refund
+            </button>
+        );
+    }
+    return null;
+}
 
 function useOutsideClick(ref, onOutside) {
     useEffect(() => {
@@ -153,6 +180,7 @@ export default function CustomerOrders() {
     const list = useOrdersList(fetchCustomerOrders, user);
     const [recent, setRecent] = useState([]);
     const [cancelId, setCancelId] = useState(null);
+    const [returnOrder, setReturnOrder] = useState(null);
 
     useEffect(() => { setPageTitle('My Orders'); }, [setPageTitle]);
 
@@ -226,14 +254,7 @@ export default function CustomerOrders() {
                         <div className="mt-3 flex items-center justify-between gap-3">
                             <span className="text-sm font-semibold text-zinc-900">{money(o.total)}</span>
                             <div className="flex items-center gap-2">
-                                {canCancel(o) && (
-                                    <button
-                                        onClick={() => setCancelId(o.id)}
-                                        className="h-8 rounded-md border border-red-200 px-3 text-xs font-medium text-red-700 hover:bg-red-50"
-                                    >
-                                        Cancel
-                                    </button>
-                                )}
+                                <OrderActions order={o} onCancel={setCancelId} onReturn={setReturnOrder} />
                                 <button
                                     onClick={() => openOrder(o.id)}
                                     className="h-8 rounded-md bg-gradient-to-r from-[#2f4d73] to-[#1b2e4b] px-3 text-xs font-medium text-white"
@@ -274,18 +295,11 @@ export default function CustomerOrders() {
                                 <td className="px-4 py-3"><StatusBadge status={o.status} pill /></td>
                                 <td className="whitespace-nowrap px-4 py-3 text-zinc-700">{fmtDate(o.created_at)}</td>
                                 <td className="px-4 py-3">
-                                    <div className="flex items-center justify-end gap-3 text-zinc-500">
-                                        <button title="View order" onClick={() => openOrder(o.id)} className="hover:text-zinc-900">
+                                    <div className="flex items-center justify-end gap-3">
+                                        <button title="View order" onClick={() => openOrder(o.id)} className="text-zinc-500 hover:text-zinc-900">
                                             <Eye className="h-4 w-4" />
                                         </button>
-                                        <button
-                                            title={canCancel(o) ? 'Cancel order' : 'Cancellation not available'}
-                                            disabled={!canCancel(o)}
-                                            onClick={() => setCancelId(o.id)}
-                                            className="hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:text-zinc-500"
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </button>
+                                        <OrderActions order={o} onCancel={setCancelId} onReturn={setReturnOrder} />
                                     </div>
                                 </td>
                             </tr>
@@ -310,6 +324,15 @@ export default function CustomerOrders() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {returnOrder && (
+                <ReturnRequestDialog
+                    key={returnOrder.id}
+                    order={returnOrder}
+                    onClose={() => setReturnOrder(null)}
+                    onSubmitted={list.reload}
+                />
+            )}
         </div>
     );
 }

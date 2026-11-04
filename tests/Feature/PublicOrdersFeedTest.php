@@ -47,4 +47,15 @@ class PublicOrdersFeedTest extends TestCase
             ->assertOk()
             ->assertJsonPath('order.payment_intent_id', 'pi_test_123');
     }
+
+    public function test_customer_order_endpoint_includes_stripe_payment_id(): void
+    {
+        $order = $this->createStripeOrder();
+
+        $this->getJson("/api/public/orders/{$order->order_number}?email={$order->email}")
+            ->assertOk()
+            ->assertJsonPath('order.payment_provider', 'stripe')
+            ->assertJsonPath('order.payment_status', 'paid')
+            ->assertJsonPath('order.payment_intent_id', 'pi_test_123');
+    }
 }

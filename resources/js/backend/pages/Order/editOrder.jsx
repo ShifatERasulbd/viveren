@@ -5,8 +5,9 @@ import { toast } from 'sonner';
 import { useAppContext } from '@/context/AppContext';
 
 import { fetchOrder, updateOrder } from './api';
+import { RETURN_REASONS } from './shared';
 
-const STATUS_OPTIONS = ['pending', 'approved', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'];
+const STATUS_OPTIONS = ['pending', 'approved', 'processing', 'shipped', 'delivered', 'return_requested', 'cancelled', 'refunded'];
 
 function Field({ label, required, error, children }) {
     return (
@@ -222,7 +223,7 @@ export default function EditOrder() {
                             className="h-9 w-full rounded border border-zinc-300 bg-white px-3 text-sm text-zinc-800 outline-none focus:border-zinc-700"
                         >
                             {STATUS_OPTIONS.map((s) => (
-                                <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                                <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, ' ')}</option>
                             ))}
                         </select>
 
@@ -234,6 +235,41 @@ export default function EditOrder() {
                             {isSaving ? 'Saving…' : 'Save Changes'}
                         </button>
                     </section>
+
+                    {/* Customer return request */}
+                    {order.return_reason && (
+                        <section className="rounded border border-orange-200 bg-orange-50 p-5">
+                            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-orange-700">Return Request</h2>
+                            <p className="mb-2 text-xs text-orange-700">
+                                {order.return_fee_paid_at
+                                    ? `Requested ${new Date(order.return_requested_at).toLocaleString()} · $${Number(order.return_fee).toFixed(2)} return fee paid`
+                                    : 'Started by the customer, but the return fee has not been paid yet'}
+                            </p>
+                            <p className="text-sm font-medium text-zinc-900">
+                                {RETURN_REASONS[order.return_reason] ?? order.return_reason}
+                                {order.return_reason === 'size_issue' && (
+                                    <span className="font-normal text-zinc-600">
+                                        {order.return_replacements?.length ? ' · size exchange' : ' · refund'}
+                                    </span>
+                                )}
+                            </p>
+                            {order.return_replacements?.length > 0 && (
+                                <ul className="mt-2 space-y-1 text-sm text-zinc-800">
+                                    {order.return_replacements.map((r) => (
+                                        <li key={r.item_index}>
+                                            {r.name}{r.color && ` (${r.color})`}: {r.from_size} → <strong>{r.to_size}</strong>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                            {order.return_video_path && (
+                                <video src={order.return_video_path} controls preload="metadata" className="mt-3 w-full rounded bg-black" />
+                            )}
+                            {order.return_comments && (
+                                <p className="mt-3 whitespace-pre-line text-sm text-zinc-700">{order.return_comments}</p>
+                            )}
+                        </section>
+                    )}
 
                     {/* Order summary */}
                     <section className="rounded border border-zinc-200 bg-white p-5">

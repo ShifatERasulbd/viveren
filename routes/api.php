@@ -24,6 +24,7 @@ use App\Http\Controllers\HomeBackgroundSectionController;
 use App\Http\Controllers\OurStorySectionController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PublicApiKeyController;
+use App\Http\Controllers\ReturnRequestFeedController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\SizeController;
 use App\Http\Controllers\SubCategoryController;
@@ -87,6 +88,11 @@ Route::middleware('public-api-key')->prefix('/public/orders-feed')->group(functi
 	Route::get('/{checkoutOrder}', [CheckoutOrderController::class, 'publicExternalShow']);
 	Route::put('/{checkoutOrder}/status', [CheckoutOrderController::class, 'publicExternalUpdateStatus']);
 });
+Route::middleware('public-api-key')->prefix('/public/return-requests-feed')->group(function () {
+	Route::get('/', [ReturnRequestFeedController::class, 'publicExternalIndex']);
+	Route::get('/{id}', [ReturnRequestFeedController::class, 'publicExternalShow'])->whereNumber('id');
+	Route::put('/{id}/status', [ReturnRequestFeedController::class, 'publicExternalUpdateStatus'])->whereNumber('id');
+});
 Route::post('/create-payment-intent', [StripeController::class, 'createPaymentIntent']);
 Route::post('auth/google/callback', [GoogleAuthController::class, 'handleGoogleCallback']);
 Route::post('/shipping/orders', [ShipStationController::class, 'storeOrder']);
@@ -108,6 +114,10 @@ Route::middleware('auth:sanctum')->group(function () {
 		Route::get('/customer/orders/recent-items', [CheckoutOrderController::class, 'customerRecentItems']);
 		Route::get('/customer/orders/{checkoutOrder}', [CheckoutOrderController::class, 'customerShow']);
 		Route::put('/customer/orders/{checkoutOrder}/cancel', [CheckoutOrderController::class, 'customerCancel']);
+		Route::get('/customer/orders/{checkoutOrder}/return-options', [CheckoutOrderController::class, 'customerReturnOptions']);
+		// POST, not PUT: PHP only parses multipart uploads (the damage video) on POST
+		Route::post('/customer/orders/{checkoutOrder}/return', [CheckoutOrderController::class, 'customerRequestReturn']);
+		Route::post('/customer/orders/{checkoutOrder}/return/confirm', [CheckoutOrderController::class, 'customerConfirmReturn']);
 		Route::put('/customer/profile', [CustomerProfileController::class, 'update']);
 		Route::get('/customer/cart', [CustomerCartController::class, 'index']);
 		Route::put('/customer/cart', [CustomerCartController::class, 'replace']);

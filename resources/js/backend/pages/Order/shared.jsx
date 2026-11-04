@@ -1,35 +1,44 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
-export const STATUS_OPTIONS = ['pending', 'approved', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'];
+export const STATUS_OPTIONS = ['pending', 'approved', 'processing', 'shipped', 'delivered', 'return_requested', 'cancelled', 'refunded'];
 
 const STATUS_COLORS = {
-    pending:    'bg-yellow-100 text-yellow-800',
-    approved:   'bg-emerald-100 text-emerald-800',
-    processing: 'bg-blue-100 text-blue-800',
-    shipped:    'bg-indigo-100 text-indigo-800',
-    delivered:  'bg-green-100 text-green-800',
-    cancelled:  'bg-red-100 text-red-800',
-    refunded:   'bg-zinc-100 text-zinc-700',
+    pending:          'bg-yellow-100 text-yellow-800',
+    approved:         'bg-emerald-100 text-emerald-800',
+    processing:       'bg-blue-100 text-blue-800',
+    shipped:          'bg-indigo-100 text-indigo-800',
+    delivered:        'bg-green-100 text-green-800',
+    return_requested: 'bg-orange-100 text-orange-800',
+    cancelled:        'bg-red-100 text-red-800',
+    refunded:         'bg-zinc-100 text-zinc-700',
 };
 
 export const STATUS_DOT = {
-    pending:    'bg-yellow-400',
-    approved:   'bg-emerald-500',
-    processing: 'bg-amber-400',
-    shipped:    'bg-green-600',
-    delivered:  'bg-green-500',
-    cancelled:  'bg-red-500',
-    refunded:   'bg-zinc-400',
+    pending:          'bg-yellow-400',
+    approved:         'bg-emerald-500',
+    processing:       'bg-amber-400',
+    shipped:          'bg-green-600',
+    delivered:        'bg-green-500',
+    return_requested: 'bg-orange-500',
+    cancelled:        'bg-red-500',
+    refunded:         'bg-zinc-400',
 };
 
-export const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+export const RETURN_REASONS = {
+    change_of_mind:  'Change of mind',
+    size_issue:      'Size issue',
+    color_mismatch:  'Color mismatch',
+    damaged_product: 'Damaged product',
+};
+
+export const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, ' ');
 
 export function StatusBadge({ status, pill = false }) {
     const cls = STATUS_COLORS[status] || 'bg-zinc-100 text-zinc-700';
     return (
-        <span className={`inline-flex items-center px-2.5 py-0.5 text-xs font-medium capitalize ${pill ? 'rounded-full' : 'rounded'} ${cls}`}>
-            {status}
+        <span className={`inline-flex items-center whitespace-nowrap px-2.5 py-0.5 text-xs font-medium capitalize ${pill ? 'rounded-full' : 'rounded'} ${cls}`}>
+            {String(status ?? '').replace(/_/g, ' ')}
         </span>
     );
 }
