@@ -200,12 +200,17 @@ export default function SingleProductDetailsPanel({
     }, [product?.color_variant_size_charts, selectedColor, colorRecords]);
 
     const accordionItems = useMemo(() => {
-        return [
+        const items = [
             { key: 'description', title: 'Product Description', content: product?.description || '' },
             { key: 'fit', title: 'Fit', content: product?.fit || '' },
             { key: 'fabric', title: 'Fabric & Care', content: product?.fabric_and_care || '' },
             { key: 'composition', title: 'Product Composition', content: product?.product_composition || '' },
         ];
+
+        // Hide "Fit" when it has no value
+        return items.filter(
+            (item) => item.key !== 'fit' || String(item.content).trim() !== '',
+        );
     }, [product]);
 
     const hasMultipleSizeCharts = resolvedSizeChartImages.length > 1;
@@ -410,11 +415,7 @@ export default function SingleProductDetailsPanel({
                     >
                         Add
                     </button>
-
-                   
                 </div>
-
-             
 
                 <p className="text-[0.82rem] uppercase tracking-[0.04em] text-zinc-500">Free delivery to store</p>
 
