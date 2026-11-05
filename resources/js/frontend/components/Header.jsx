@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { Menu, Search, ShoppingCart, UserRound } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import SearchProducts from './search';
@@ -109,7 +110,10 @@ export default function Header() {
     function openSearch() {
         closeShopMenuImmediately();
         closeMobileMenu();
-        setIsSearchOpen(true);
+        // Render the panel now and focus inside the click itself, so the caret is ready to type
+        // and phones (iOS in particular) open the keyboard.
+        flushSync(() => setIsSearchOpen(true));
+        searchInputRef.current?.focus();
     }
 
     function closeSearch() {
@@ -224,14 +228,6 @@ export default function Header() {
             setExpandedMobileSubItems({});
         }
     }, [isMobileMenuOpen]);
-
-    useEffect(() => {
-        if (!isSearchOpen) return;
-        const timerId = window.setTimeout(() => {
-            searchInputRef.current?.focus();
-        }, 20);
-        return () => window.clearTimeout(timerId);
-    }, [isSearchOpen]);
 
     // Once the current page has settled, load the shop's code and data so opening the shop is instant
     useEffect(() => {

@@ -9,11 +9,13 @@ export default function SearchProducts({
     setSearchQuery,
 }) {
     return (
+        // Opening doesn't animate visibility, so the input is focusable the moment the panel opens;
+        // closing does, so the panel stays visible while it fades out.
         <div
-            className={`fixed left-1/2 top-[96px] z-[1410] w-[calc(100vw-2rem)] max-w-[720px] -translate-x-1/2 rounded-xl border border-zinc-200 bg-white p-4 shadow-[0_28px_80px_rgba(0,0,0,0.25)] transition-all duration-200 ${
+            className={`fixed left-1/2 top-[96px] z-[1410] w-[calc(100vw-2rem)] max-w-[720px] -translate-x-1/2 rounded-xl border border-zinc-200 bg-white p-4 shadow-[0_28px_80px_rgba(0,0,0,0.25)] duration-200 ${
                 isSearchOpen
-                    ? 'visible translate-y-0 opacity-100 pointer-events-auto'
-                    : 'invisible -translate-y-2 opacity-0 pointer-events-none'
+                    ? 'visible translate-y-0 opacity-100 pointer-events-auto transition-[opacity,transform]'
+                    : 'invisible -translate-y-2 opacity-0 pointer-events-none transition-all'
             }`}
             role="dialog"
             aria-label="Search products"
