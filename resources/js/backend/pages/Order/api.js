@@ -74,6 +74,13 @@ export async function confirmCustomerReturn(id, paymentIntentId) {
     });
 }
 
+// reviews: [{ item_index, rating, comment }] for the items the customer rated
+export async function submitCustomerOrderReview(id, reviews) {
+    return requestJson(`/api/customer/orders/${id}/review`, {
+        method: 'POST',
+        body: JSON.stringify({ reviews }),
+    });
+}
 
 export async function fetchCustomerOrder(id) {
     return requestJson(`/api/customer/orders/${id}`);

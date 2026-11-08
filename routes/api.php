@@ -121,6 +121,7 @@ Route::middleware('auth:sanctum')->group(function () {
 		// POST, not PUT: PHP only parses multipart uploads (the damage video) on POST
 		Route::post('/customer/orders/{checkoutOrder}/return', [CheckoutOrderController::class, 'customerRequestReturn']);
 		Route::post('/customer/orders/{checkoutOrder}/return/confirm', [CheckoutOrderController::class, 'customerConfirmReturn']);
+		Route::post('/customer/orders/{checkoutOrder}/review', [CheckoutOrderController::class, 'customerReview']);
 		Route::put('/customer/profile', [CustomerProfileController::class, 'update']);
 		Route::get('/customer/cart', [CustomerCartController::class, 'index']);
 		Route::put('/customer/cart', [CustomerCartController::class, 'replace']);

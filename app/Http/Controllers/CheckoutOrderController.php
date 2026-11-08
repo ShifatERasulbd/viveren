@@ -15,6 +15,7 @@ use App\Services\ShippingRateService;
 use App\Services\VeeqoShippingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -188,7 +189,9 @@ class CheckoutOrderController extends Controller
 
     public function customerIndex(Request $request): JsonResponse
     {
-        $query = $this->customerScopedOrders($request)->latest();
+        $query = $this->customerScopedOrders($request)
+            ->withExists('reviews as is_reviewed')
+            ->latest();
 
         if ($request->filled('status')) {
             $query->where('status', $request->input('status'));
@@ -292,6 +295,7 @@ class CheckoutOrderController extends Controller
             'cancellable_until',
             $this->customerCancelDeadline($checkoutOrder)?->toJSON()
         );
+        $checkoutOrder->setAttribute('is_reviewed', $checkoutOrder->reviews()->exists());
 
         return response()->json($checkoutOrder);
     }
@@ -484,6 +488,63 @@ class CheckoutOrderController extends Controller
             'message' => 'Return request submitted',
             'order' => $ownedOrder->fresh(),
         ]);
+    }
+
+    // One submission per delivered order, rating any of its items. Unrated items are skipped.
+    public function customerReview(Request $request, CheckoutOrder $checkoutOrder): JsonResponse
+    {
+        $validated = $request->validate([
+            'reviews' => 'required|array|min:1',
+            'reviews.*.item_index' => 'required|integer|min:0|distinct',
+            'reviews.*.rating' => 'required|integer|between:1,5',
+            'reviews.*.comment' => 'nullable|string|max:1000',
+        ]);
+
+        $ownedOrder = $this->customerOwnedOrderOrFail($request, $checkoutOrder);
+
+        if ($ownedOrder->status !== 'delivered') {
+            return response()->json([
+                'message' => 'You can review an order once it has been delivered.',
+            ], 422);
+        }
+
+        if ($ownedOrder->reviews()->exists()) {
+            return response()->json([
+                'message' => 'You have already reviewed this order.',
+            ], 422);
+        }
+
+        $items = is_array($ownedOrder->items) ? $ownedOrder->items : [];
+
+        foreach ($validated['reviews'] as $row) {
+            if (! is_array($items[$row['item_index']] ?? null)) {
+                return response()->json([
+                    'message' => 'One of the reviewed items is not part of this order.',
+                ], 422);
+            }
+        }
+
+        DB::transaction(function () use ($validated, $ownedOrder, $items, $request) {
+            foreach ($validated['reviews'] as $row) {
+                $item = $items[$row['item_index']];
+                $comment = trim((string) ($row['comment'] ?? ''));
+                $productId = trim((string) ($item['productId'] ?? ''));
+
+                $ownedOrder->reviews()->create([
+                    'user_id' => $request->user()->id,
+                    'item_index' => $row['item_index'],
+                    'product_id' => $productId !== '' ? $productId : null,
+                    'product_name' => (string) ($item['name'] ?? 'Item'),
+                    'rating' => $row['rating'],
+                    'comment' => $comment !== '' ? $comment : null,
+                ]);
+            }
+        });
+
+        return response()->json([
+            'message' => 'Thanks for your review',
+            'reviews' => $ownedOrder->reviews()->get(),
+        ], 201);
     }
 
     // An admin reviews the request, then ships the replacement or marks the order refunded.

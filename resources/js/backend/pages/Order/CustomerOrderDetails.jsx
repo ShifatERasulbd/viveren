@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Check, Package } from 'lucide-react';
+import { ArrowLeft, Check, Package, Star } from 'lucide-react';
 
 import {
     AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -10,6 +10,7 @@ import {
 import { useAppContext } from '@/context/AppContext';
 
 import { cancelCustomerOrder, fetchCustomerOrder } from './api';
+import OrderReviewDialog, { canReview, useReviewPrompt } from './OrderReviewDialog';
 import { StatusBadge } from './shared';
 
 const STEPS = ['pending', 'approved', 'processing', 'shipped', 'delivered'];
@@ -98,6 +99,10 @@ export default function CustomerOrderDetails() {
     const [confirmCancel, setConfirmCancel] = useState(false);
     const [isCancelling, setIsCancelling] = useState(false);
     const [now, setNow] = useState(() => Date.now());
+    const [isReviewing, setIsReviewing] = useState(false);
+
+    const promptOrders = useMemo(() => (order ? [order] : []), [order]);
+    useReviewPrompt(promptOrders, () => setIsReviewing(true));
 
     const isCancellableStatus = CANCELLABLE.includes(order?.status);
     const cancelDeadline = order?.cancellable_until ? Date.parse(order.cancellable_until) : 0;
@@ -193,10 +198,21 @@ export default function CustomerOrderDetails() {
                             Available for {cancelMinutesLeft} more {cancelMinutesLeft === 1 ? 'minute' : 'minutes'}
                         </p>
                     </div>
-                ) : isCancellableStatus && (
+                ) : isCancellableStatus ? (
                     <p className="max-w-[240px] text-right text-xs text-zinc-500">
                         The cancellation window for this order has closed.{' '}
                         <a href="/contact" className="underline hover:text-zinc-900">Contact us</a> if you need help.
+                    </p>
+                ) : canReview(order) ? (
+                    <button
+                        onClick={() => setIsReviewing(true)}
+                        className="flex h-9 items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-4 text-sm font-medium text-amber-900 hover:bg-amber-100"
+                    >
+                        <Star className="h-4 w-4 fill-amber-400 text-amber-400" /> Write a review
+                    </button>
+                ) : order.status === 'delivered' && order.is_reviewed && (
+                    <p className="flex items-center gap-1.5 text-sm text-zinc-500">
+                        <Check className="h-4 w-4 text-green-600" /> Thanks, you've reviewed this order
                     </p>
                 )}
             </div>
@@ -294,6 +310,14 @@ export default function CustomerOrderDetails() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {isReviewing && (
+                <OrderReviewDialog
+                    order={order}
+                    onClose={() => setIsReviewing(false)}
+                    onSubmitted={load}
+                />
+            )}
         </div>
     );
 }

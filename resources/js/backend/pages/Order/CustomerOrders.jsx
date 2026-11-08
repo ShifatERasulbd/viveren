@@ -10,6 +10,7 @@ import {
 import { useAppContext } from '@/context/AppContext';
 
 import { cancelCustomerOrder, fetchCustomerOrders, fetchCustomerRecentItems } from './api';
+import OrderReviewDialog, { canReview, useReviewPrompt } from './OrderReviewDialog';
 import ReturnRequestDialog from './ReturnRequestDialog';
 import { STATUS_DOT, STATUS_OPTIONS, StatusBadge, Pagination, useOrdersList, cap } from './shared';
 
@@ -19,8 +20,8 @@ const fmtDate = (d) => (d ? new Date(d).toLocaleDateString() : '');
 const canCancel = (o) => CANCELLABLE.includes(o.status) && Date.parse(o.cancellable_until) > Date.now();
 const canReturn = (o) => o.status === 'delivered';
 
-// Cancel and return never overlap: cancel is for unshipped orders, return only for delivered ones
-function OrderActions({ order, onCancel, onReturn }) {
+// Cancel and return never overlap: cancel is for unshipped orders, return and review only for delivered ones
+function OrderActions({ order, onCancel, onReturn, onReview }) {
     if (canCancel(order)) {
         return (
             <button
@@ -33,12 +34,22 @@ function OrderActions({ order, onCancel, onReturn }) {
     }
     if (canReturn(order)) {
         return (
-            <button
-                onClick={() => onReturn(order)}
-                className="h-8 whitespace-nowrap rounded-md border border-zinc-300 px-3 text-xs font-medium text-zinc-800 hover:bg-zinc-100"
-            >
-                Return &amp; Refund
-            </button>
+            <>
+                {canReview(order) && (
+                    <button
+                        onClick={() => onReview(order)}
+                        className="h-8 whitespace-nowrap rounded-md border border-amber-300 bg-amber-50 px-3 text-xs font-medium text-amber-900 hover:bg-amber-100"
+                    >
+                        Review
+                    </button>
+                )}
+                <button
+                    onClick={() => onReturn(order)}
+                    className="h-8 whitespace-nowrap rounded-md border border-zinc-300 px-3 text-xs font-medium text-zinc-800 hover:bg-zinc-100"
+                >
+                    Return &amp; Refund
+                </button>
+            </>
         );
     }
     return null;
@@ -181,6 +192,9 @@ export default function CustomerOrders() {
     const [recent, setRecent] = useState([]);
     const [cancelId, setCancelId] = useState(null);
     const [returnOrder, setReturnOrder] = useState(null);
+    const [reviewOrder, setReviewOrder] = useState(null);
+
+    useReviewPrompt(list.orders, setReviewOrder);
 
     useEffect(() => { setPageTitle('My Orders'); }, [setPageTitle]);
 
@@ -254,7 +268,7 @@ export default function CustomerOrders() {
                         <div className="mt-3 flex items-center justify-between gap-3">
                             <span className="text-sm font-semibold text-zinc-900">{money(o.total)}</span>
                             <div className="flex items-center gap-2">
-                                <OrderActions order={o} onCancel={setCancelId} onReturn={setReturnOrder} />
+                                <OrderActions order={o} onCancel={setCancelId} onReturn={setReturnOrder} onReview={setReviewOrder} />
                                 <button
                                     onClick={() => openOrder(o.id)}
                                     className="h-8 rounded-md bg-gradient-to-r from-[#2f4d73] to-[#1b2e4b] px-3 text-xs font-medium text-white"
@@ -299,7 +313,7 @@ export default function CustomerOrders() {
                                         <button title="View order" onClick={() => openOrder(o.id)} className="text-zinc-500 hover:text-zinc-900">
                                             <Eye className="h-4 w-4" />
                                         </button>
-                                        <OrderActions order={o} onCancel={setCancelId} onReturn={setReturnOrder} />
+                                        <OrderActions order={o} onCancel={setCancelId} onReturn={setReturnOrder} onReview={setReviewOrder} />
                                     </div>
                                 </td>
                             </tr>
@@ -330,6 +344,15 @@ export default function CustomerOrders() {
                     key={returnOrder.id}
                     order={returnOrder}
                     onClose={() => setReturnOrder(null)}
+                    onSubmitted={list.reload}
+                />
+            )}
+
+            {reviewOrder && (
+                <OrderReviewDialog
+                    key={reviewOrder.id}
+                    order={reviewOrder}
+                    onClose={() => setReviewOrder(null)}
                     onSubmitted={list.reload}
                 />
             )}
