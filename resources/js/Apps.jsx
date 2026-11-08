@@ -11,6 +11,7 @@ import { CartProvider } from './frontend/context/CartContext.jsx';
 import { bootstrapPublicSettings, getSettingsPayload, onSettingsUpdated } from './utils/siteSettings.js';
 import { initializeGoogleAnalytics, trackPageView } from './utils/googleAnalytics.js';
 import { hasSiteAccess, onSiteAccessChanged } from './utils/siteAccess.js';
+import { blockPageZoom } from './utils/blockPageZoom.js';
 
 const ComingSoonPage = lazy(() => import('./frontend/pages/comming-soon.jsx'));
 const HomePage = lazy(() => import('./frontend/pages/HomePage.jsx'));
@@ -287,6 +288,8 @@ function AppRouter() {
 }
 
 const rootElement = document.getElementById('app');
+
+blockPageZoom();
 
 if (rootElement) {
     ReactDOM.createRoot(rootElement).render(

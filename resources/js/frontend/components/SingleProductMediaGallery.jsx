@@ -1,6 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 
+import ProductImageLightbox from './ProductImageLightbox.jsx';
 import ResponsiveImage from './ResponsiveImage.jsx';
+
+// Phones and touch tablets open the full-screen viewer instead of the hover zoom.
+const LIGHTBOX_MEDIA_QUERY = '(max-width: 767px), (hover: none) and (pointer: coarse)';
+
+function shouldUseLightbox() {
+    return typeof window !== 'undefined' && Boolean(window.matchMedia?.(LIGHTBOX_MEDIA_QUERY).matches);
+}
 
 // One frame size for every gallery item. Change here to resize all of them
 // (e.g. 'aspect-square', 'aspect-[4/5]', 'aspect-[2/3]').
@@ -101,12 +109,15 @@ export default function SingleProductMediaGallery({
     // Tracks which single image box currently has in-place zoom enabled, plus its focus point.
     const [zoomedKey, setZoomedKey] = useState(null);
     const [zoomPosition, setZoomPosition] = useState({ x: 50, y: 50 });
+    // Index of the image open in the full-screen viewer (mobile), or null when closed.
+    const [lightboxIndex, setLightboxIndex] = useState(null);
 
     if (!primaryVideo && !activeImage) return null;
 
+    const galleryImages = safeImages.slice(0, 6);
     const galleryItems = [
         ...(primaryVideo ? [{ type: 'video', key: 'video' }] : []),
-        ...safeImages.slice(0, 6).map((image, index) => ({
+        ...galleryImages.map((image, index) => ({
             type: 'image',
             key: `${image}-${index}`,
             image,
@@ -116,6 +127,13 @@ export default function SingleProductMediaGallery({
 
     const handleImageClick = (item) => {
         onSelectImage(item.image);
+
+        if (shouldUseLightbox()) {
+            setZoomedKey(null);
+            setLightboxIndex(item.index);
+            return;
+        }
+
         setZoomedKey((current) => {
             if (current === item.key) return null;
             setZoomPosition({ x: 50, y: 50 });
@@ -166,6 +184,14 @@ export default function SingleProductMediaGallery({
             <div className="grid grid-cols-1 gap-0 border border-zinc-200 sm:grid-cols-2">
                 {galleryItems.map(renderItem)}
             </div>
+
+            {lightboxIndex !== null ? (
+                <ProductImageLightbox
+                    images={galleryImages}
+                    startIndex={lightboxIndex}
+                    onClose={() => setLightboxIndex(null)}
+                />
+            ) : null}
         </div>
     );
 }
