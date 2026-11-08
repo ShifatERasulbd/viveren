@@ -179,7 +179,7 @@ export default function HomeBackgroundImageSection() {
                                     fetchPriority={index === 0 ? 'high' : 'auto'}
                                 />
 
-                                <div className="absolute inset-0 flex flex-col justify-end bg-black/20 p-8 md:p-12">
+                                <div className="absolute inset-0 flex flex-col justify-end p-8 md:p-12">
                                     <div className="w-fit max-w-[90%] bg-black/30 p-6 backdrop-blur-sm">
                                         <h3 className="text-xl font-bold uppercase tracking-widest text-white md:text-2xl">
                                             {item.title || 'Untitled Slide'}
