@@ -96,16 +96,19 @@ Route::middleware('public-api-key')->prefix('/public/return-requests-feed')->gro
 Route::post('/create-payment-intent', [StripeController::class, 'createPaymentIntent']);
 Route::post('auth/google/callback', [GoogleAuthController::class, 'handleGoogleCallback']);
 Route::post('/shipping/orders', [ShipStationController::class, 'storeOrder']);
+// The storefront calls this while bootstrapping both guest and authenticated sessions.
+// Return a JSON null for guests instead of a 401 so a guest page does not report a
+// failed resource before the user has chosen to log in.
+Route::get('/user', function (Request $request) {
+	return response()->json($request->user());
+});
+
 Route::middleware('auth:sanctum')->group(function () {
 
     // Admin: update trending personalization
     Route::post('/trending-section', [TrendingSectionController::class, 'update']);
 
     // Public endpoints below are also defined above (outside this group) for reading.
-
-	Route::get('/user', function (Request $request) {
-		return response()->json($request->user());
-	});
 
 	Route::post('/logout', [AuthController::class, 'logout'])->middleware('web');
 

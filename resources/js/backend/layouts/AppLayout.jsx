@@ -90,6 +90,16 @@ export default function AppLayout() {
 
                 const payload = await response.json();
                 if (!ignore) {
+                    if (!payload) {
+                        setUser(null);
+                        if (isCustomerRoute) {
+                            window.location.href = '/login';
+                        } else {
+                            navigate('/admin');
+                        }
+                        return;
+                    }
+
                     setUser(payload);
                 }
             } catch {
