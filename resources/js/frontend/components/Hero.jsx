@@ -187,11 +187,14 @@ export default function Hero() {
                 ))}
               </h1>
 
-              {Boolean(displayHeroData?.button_enabled ?? true) && (
-                <a href={displayHeroData?.button_url || '/new-arrivals'} className={sectionTypography.heroPrimaryButton}>
-                  {displayHeroData?.button_enabled ? 'Shop New Arrivals' : ''}
-                </a>
-              )}
+             {Boolean(displayHeroData?.button_enabled ?? true) && (
+                  <a
+                    href={displayHeroData?.button_url || '/new-arrivals'}
+                    className="inline-block text-white text-sm font-normal underline underline-offset-2 decoration-1 bg-transparent border-0 p-0 mt-2 hover:opacity-70 transition-opacity"
+                  >
+                    {displayHeroData?.button_text || 'Shop Now'}
+                  </a>
+                )}
             </>
           )}
         </div>
