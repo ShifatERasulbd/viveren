@@ -188,13 +188,13 @@ export default function Hero() {
               </h1>
 
              {Boolean(displayHeroData?.button_enabled ?? true) && (
-                  <a
+                <a
                     href={displayHeroData?.button_url || '/new-arrivals'}
-                    className="inline-block text-white text-sm font-normal underline underline-offset-2 decoration-1 bg-transparent border-0 p-0 mt-2 hover:opacity-70 transition-opacity"
+                    className="inline-block text-white text-lg sm:text-xl font-normal underline underline-offset-4 decoration-1 bg-transparent border-0 p-0 mt-3 hover:opacity-70 transition-opacity"
                   >
                     {displayHeroData?.button_text || 'Shop Now'}
                   </a>
-                )}
+              )}
             </>
           )}
         </div>
