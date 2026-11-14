@@ -123,7 +123,7 @@ export default function Hero() {
     () => splitHeroTitle(displayHeroData?.title, displayHeroData?.title_display_mode || 'double'),
     [displayHeroData?.title, displayHeroData?.title_display_mode]
   );
-  
+
   const heroImage = useMemo(
     () => displayHeroData?.image_url || '',
     [displayHeroData?.image_url]
@@ -140,7 +140,15 @@ export default function Hero() {
     event.preventDefault();
     event.stopPropagation();
     const [xField, yField] = partOffsetFields[part] || [];
-    dragStateRef.current = { part, xField, yField, startX: event.clientX, startY: event.clientY, baseOffsetX: Number(displayHeroData?.[xField]) || 0, baseOffsetY: Number(displayHeroData?.[yField]) || 0 };
+    dragStateRef.current = {
+      part,
+      xField,
+      yField,
+      startX: event.clientX,
+      startY: event.clientY,
+      baseOffsetX: Number(displayHeroData?.[xField]) || 0,
+      baseOffsetY: Number(displayHeroData?.[yField]) || 0,
+    };
   }
 
   useEffect(() => {
@@ -150,34 +158,58 @@ export default function Hero() {
       const drag = dragStateRef.current;
       const deltaXPercent = ((event.clientX - drag.startX) / Math.max(window.innerWidth, 1)) * 100;
       const deltaYPercent = ((event.clientY - drag.startY) / Math.max(window.innerHeight, 1)) * 100;
-      setPreviewOverride((prev) => ({ ...(prev || {}), [drag.xField]: Math.max(-55, Math.min(55, drag.baseOffsetX + deltaXPercent)), [drag.yField]: Math.max(-55, Math.min(55, drag.baseOffsetY + deltaYPercent)) }));
+      setPreviewOverride((prev) => ({
+        ...(prev || {}),
+        [drag.xField]: Math.max(-55, Math.min(55, drag.baseOffsetX + deltaXPercent)),
+        [drag.yField]: Math.max(-55, Math.min(55, drag.baseOffsetY + deltaYPercent)),
+      }));
     }
     const handlePointerUp = () => (dragStateRef.current = null);
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handlePointerUp);
-    return () => { window.removeEventListener('mousemove', handleMouseMove); window.removeEventListener('mouseup', handlePointerUp); };
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handlePointerUp);
+    };
   }, [isBuilderPreview]);
 
   const renderBackground = useMemo(() => {
     if (isLoading) return <div className="absolute inset-0 -z-30 h-full w-full bg-neutral-900" />;
-    return <ResponsiveImage src={heroImage} sizes="100vw" fetchPriority="high" alt="Hero background" className="hero-media absolute inset-0 -z-30 h-full w-full object-cover object-center" />;
+    return (
+      <ResponsiveImage
+        src={heroImage}
+        sizes="100vw"
+        fetchPriority="high"
+        alt="Hero background"
+        className="hero-media absolute inset-0 -z-30 h-full w-full object-cover object-center"
+      />
+    );
   }, [heroImage, isLoading]);
 
   return (
-    <section 
+    <section
       className={`${timelessFontClass} hero-section relative isolate min-h-[calc(100vh-90px)] overflow-hidden text-zinc-900`}
     >
       {renderBackground}
       <div className="hero-shell mx-auto flex min-h-[calc(100vh-90px)] w-full max-w-[1920px] items-end justify-start px-5 py-10 sm:px-8 lg:px-12">
-        <div className="hero-content relative flex w-full max-w-[760px] flex-col items-start space-y-3 text-left overflow-hidden" style={{ transform: `translate(${(Number(displayHeroData?.text_offset_x) || 0) * mobileOffsetFactor}%, ${(Number(displayHeroData?.text_offset_y) || 0) * mobileOffsetFactor}%)` }}>
-          {isLoading ? <div className="space-y-3"><div className="h-12 w-4/5 rounded bg-white/20" /></div> : (
+        <div
+          className="hero-content relative flex w-full max-w-[760px] flex-col items-start space-y-0 text-left overflow-hidden"
+          style={{
+            transform: `translate(${(Number(displayHeroData?.text_offset_x) || 0) * mobileOffsetFactor}%, ${(Number(displayHeroData?.text_offset_y) || 0) * mobileOffsetFactor}%)`,
+          }}
+        >
+          {isLoading ? (
+            <div className="space-y-3">
+              <div className="h-12 w-4/5 rounded bg-white/20" />
+            </div>
+          ) : (
             <>
-              <h1 
-                className="text-white w-full break-words"
-                onMouseDown={(e) => beginPartDrag('title', e)} 
-                style={{ 
-                  fontFamily: titleFamily, 
-                  fontSize: `clamp(1.6rem, 6vw, ${displayTitleSize}px)` 
+              <h1
+                className="text-white w-full break-words leading-none"
+                onMouseDown={(e) => beginPartDrag('title', e)}
+                style={{
+                  fontFamily: titleFamily,
+                  fontSize: `clamp(1.6rem, 6vw, ${displayTitleSize}px)`,
                 }}
               >
                 {titleLines.map((line, i) => (
@@ -187,13 +219,13 @@ export default function Hero() {
                 ))}
               </h1>
 
-             {Boolean(displayHeroData?.button_enabled ?? true) && (
+              {Boolean(displayHeroData?.button_enabled ?? true) && (
                 <a
-                    href={displayHeroData?.button_url || '/new-arrivals'}
-                    className="inline-block text-white text-lg sm:text-xl font-normal underline underline-offset-4 decoration-1 bg-transparent border-0 p-0 mt-3 hover:opacity-70 transition-opacity"
-                  >
-                    {displayHeroData?.button_text || 'Shop Now'}
-                  </a>
+                  href={displayHeroData?.button_url || '/new-arrivals'}
+                  className="inline-block text-white text-2xl sm:text-3xl lg:text-4xl font-normal underline underline-offset-4 decoration-2 bg-transparent border-0 p-0 mt-1 hover:opacity-70 transition-opacity"
+                >
+                  {displayHeroData?.button_text || 'Shop Now'}
+                </a>
               )}
             </>
           )}
